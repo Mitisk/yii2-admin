@@ -1,0 +1,71 @@
+/*!========================================================================
+* File: bootstrap-iconpicker.css v1.10.0 by @victor-valencia
+* https://victor-valencia.github.com/bootstrap-iconpicker
+* ========================================================================
+* Copyright 2013-2018 Victor Valencia Rico.
+* Licensed under MIT license.
+* https://github.com/victor-valencia/bootstrap-iconpicker/blob/master/LICENSE
+* ========================================================================
+*/
+
+.iconpicker .caret {
+    margin-left: 0.625rem !important;
+}
+
+.iconpicker {
+    min-width: 60px;
+}
+
+.iconpicker input.search-control {
+    margin-bottom: 0.375rem;
+    margin-top: 0.375rem;
+}
+
+div.iconpicker.start .table-icons {
+    margin-right: auto;
+    margin-left: 0;
+}
+
+div.iconpicker.center .table-icons {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+div.iconpicker.end .table-icons {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+.table-icons .btn {
+    min-height: 30px;
+    min-width: 35px;
+    text-align: center;
+    padding: 0.375rem 0.75rem;
+    margin: 0.125rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.table-icons td {
+    min-width: 39px;
+    padding: 0.25rem;
+}
+
+.popover {
+    --bs-popover-max-width: none;
+    --bs-popover-border-color: rgba(0,0,0,.2);
+    --bs-popover-border-radius: 0.375rem;
+    --bs-popover-box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+}
+
+.iconpicker-popover {
+  z-index: 1050 !important;
+  --bs-popover-max-width: none;
+  --bs-popover-border-color: rgba(0,0,0,.2);
+}
+
+.iconpicker-popover .search-control {
+    margin-bottom: 0.375rem;
+    margin-top: 0.375rem;
+}
