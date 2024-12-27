@@ -14,6 +14,8 @@ use Yii;
  * @property string $list
  * @property string|null $model_class
  * @property string|null $data
+ * @property boolean $in_menu
+ * @property boolean $can_create
  * @property int|null $view
  */
 class AdminModel extends \yii\db\ActiveRecord
@@ -34,7 +36,7 @@ class AdminModel extends \yii\db\ActiveRecord
         return [
             //[['table_name'], 'required'],
             [['view'], 'integer'],
-            [['data', 'in_menu', 'list'], 'safe'],
+            [['data', 'in_menu', 'can_create', 'list'], 'safe'],
             [['alias'], 'Mitisk\Yii2Admin\components\AliasValidator', 'skipOnEmpty' => false],
             [['alias'], 'unique'],
             [['alias'], 'checkAlias'],
@@ -58,7 +60,8 @@ class AdminModel extends \yii\db\ActiveRecord
             'id' => 'ID',
             'name' => 'Название',
             'alias' => 'Алиас',
-            'in_menu' => '',
+            'in_menu' => '', //Добавить в меню справа
+            'can_create' => '', //Можно создавать новые записи
             'list' => 'Колонки в списке',
             'table_name' => 'Таблица',
             'model_class' => 'Class',
@@ -71,7 +74,6 @@ class AdminModel extends \yii\db\ActiveRecord
         if($this->data) {
             $this->data = str_replace('\n', '', $this->data);
         }
-
 
         if($this->list && is_array($this->list)) {
             $this->list = json_encode($this->list);
