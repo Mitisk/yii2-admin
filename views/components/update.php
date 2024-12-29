@@ -65,18 +65,6 @@ $this->params['breadcrumbs'][] = $this->title;
             <h4>Столбцы в списке</h4>
             <div class="list-box-value mb-10 list-draggable-container">
 
-                <!--div class="box-value-item list-draggable">
-                    <input class="total-checkbox" name="<?= Html::getInputName($model, 'list') ?>[number][on]" value="1" type="checkbox"
-                        <?= ArrayHelper::getValue($model->list, 'number.on') ? 'checked' : '' ?>>
-                        <?= Html::hiddenInput(Html::getInputName($model, 'list').'[number][ordering]', '1') ?>
-                    <div class="body-text">
-                        No
-                        <span class="block-pending">Порядковый номер</span>
-                    </div>
-                    <div class="drag-area"><a class="grid-button btn formbuilder-icon-grid" title="Переместить"></a></div>
-                </div-->
-
-
                 <?php foreach($model->list as $key => $column): ?>
 
                     <?= $this->render("_list_item", [
@@ -88,21 +76,6 @@ $this->params['breadcrumbs'][] = $this->title;
                     ]) ?>
 
                 <?php endforeach; ?>
-
-                <!--div class="box-value-item list-draggable">
-                    <input class="total-checkbox" name="<?= Html::getInputName($model, 'list') ?>[actions][on]" value="1" type="checkbox"
-                        <?= ArrayHelper::getValue($model->list, 'actions.on') ? 'checked' : '' ?>>
-                    <?= Html::hiddenInput(Html::getInputName($model, 'list').'[actions][ordering]', '1') ?>
-                    <div class="body-text">
-                        Действия
-                        <span class="block-pending">
-                            <i class="icon-eye active"><?= Html::hiddenInput(Html::getInputName($model, 'list').'[actions][data][]', 'view') ?></i>
-                            <i class="icon-edit-3 active"><?= Html::hiddenInput(Html::getInputName($model, 'list').'[actions][data][]', 'update') ?></i>
-                            <i class="icon-trash-2 active"><?= Html::hiddenInput(Html::getInputName($model, 'list').'[actions][data][]', 'delete') ?></i>
-                        </span>
-                    </div>
-                    <div class="drag-area"><a class="grid-button btn formbuilder-icon-grid" title="Переместить"></a></div>
-                </div-->
 
             </div>
 

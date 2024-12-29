@@ -24,12 +24,18 @@ class AdminController extends \yii\web\Controller
     /** @var string Шаблон формы */
     public $actionSFormTemplate = '_form';
 
+    public function beforeAction($action)
+    {
+        $this->_modelName = Yii::$app->request->get('model_class');
+        return parent::beforeAction($action);
+    }
+
     public function actionIndex()
     {
         $model = \Yii::createObject(['class' => $this->_modelName]);
-        $dataProvider = $model->search(\Yii::$app->request->queryParams);
+        $dataProvider = $model/*->search(\Yii::$app->request->queryParams)*/;
 
-        return $this->render($this->actionIndexTemplate, [
+        return $this->render('\views\admin\\' . $this->actionIndexTemplate, [
             'model' => $model,
             'dataProvider' => $dataProvider,
         ]);

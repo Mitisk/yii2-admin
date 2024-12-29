@@ -25,7 +25,7 @@ class AdminModel extends \yii\db\ActiveRecord
      */
     public static function tableName()
     {
-        return 'admin_model';
+        return '{{%admin_model}}';
     }
 
     /**
@@ -60,7 +60,7 @@ class AdminModel extends \yii\db\ActiveRecord
             'id' => 'ID',
             'name' => 'Название',
             'alias' => 'Алиас',
-            'in_menu' => '', //Добавить в меню справа
+            'in_menu' => '', //Добавить в меню слева
             'can_create' => '', //Можно создавать новые записи
             'list' => 'Колонки в списке',
             'table_name' => 'Таблица',
@@ -79,5 +79,18 @@ class AdminModel extends \yii\db\ActiveRecord
             $this->list = json_encode($this->list);
         }
         return parent::beforeSave($insert);
+    }
+
+    public function afterSave($insert, $changedAttributes) {
+        if ($this->in_menu && $this->alias) {
+            Menu::addToMenu('admin', [
+                'text' => $this->name,
+                'href' => '/admin/'.$this->alias.'/',
+                'icon' => 'fa fa-list',
+                'target' => '_self',
+                'title' => $this->name,
+            ]);
+        }
+        parent::afterSave($insert, $changedAttributes);
     }
 }

@@ -114,7 +114,7 @@ class ComponentsController extends Controller
 
         if($modelInstance) {
             foreach ($allColumns as $column) {
-                $list[$column] = [];
+                $list[$column] = ArrayHelper::getValue($list, $column, []);
                 $list[$column]['name'] = $modelInstance->getAttributeLabel($column);
                 $list[$column]['description'] = $column;
             }
