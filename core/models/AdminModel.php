@@ -59,7 +59,33 @@ class AdminModel extends BaseObject
      */
     public function getName()
     {
+        if($this->_model) {
+            if(isset($this->_model->name)) {
+                return $this->_model->name;
+            }
+            if(isset($this->_model->title)) {
+                return $this->_model->title;
+            }
+        }
         return $this->component->name;
+    }
+
+    /**
+     * Return component name
+     * @return string
+     */
+    public function getComponentName()
+    {
+        return $this->component->name;
+    }
+
+    /**
+     * Return can create
+     * @return boolean
+     */
+    public function canCreate()
+    {
+        return filter_var($this->component->can_create, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -73,6 +99,6 @@ class AdminModel extends BaseObject
             json_decode($this->component->data, true)
         );
 
-        return $helper->getGridColumns();
+        return $helper->getColumns();
     }
 }

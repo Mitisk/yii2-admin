@@ -3,6 +3,7 @@ namespace Mitisk\Yii2Admin\components;
 
 use Mitisk\Yii2Admin\models\AdminModel;
 use Yii;
+use yii\helpers\ArrayHelper;
 use yii\web\UrlRuleInterface;
 use yii\base\BaseObject;
 
@@ -20,15 +21,44 @@ class UrlRule extends \yii\web\UrlRule
         $pathInfo = trim($request->pathInfo, '/');
         $parts = explode('/', $pathInfo);
 
-        $alias = $parts[count($parts) - 1];
+        $alias = ArrayHelper::getValue($parts, 1, $parts[count($parts) - 1]);
 
-        $page = AdminModel::find()->where(['alias' => $alias,'view' => 1])->one();
+        ArrayHelper::removeValue($parts, 'admin');
+        ArrayHelper::removeValue($parts, $alias);
+
+        $page = AdminModel::find()->where(['alias' => $alias, 'view' => 1])->one();
 
         if ($page) {
-            return ['admin/core', ['model_class' => $page->model_class]];
+            $path = 'admin/core/';
+            if($parts) {
+                $path .= implode('/', $parts);
+            }
+            return [$path, ['model_class' => $page->model_class]];
         }
 
         return false;
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function createUrl($manager, $route, $params)
+    {
+        if($alias = ArrayHelper::getValue($params, 'page-alias')) {
+            unset($params['page-alias']);
+
+            $url = str_replace('core', $alias, $route) . '/';
+
+            if (!empty($params) && ($query = http_build_query($params)) !== '') {
+                $url .= '?' . $query;
+            }
+
+            return str_replace('index/', '', $url);
+        }
+        return false;
+    }
+
+
+
 
 }

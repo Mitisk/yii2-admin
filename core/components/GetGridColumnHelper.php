@@ -1,6 +1,8 @@
 <?php
 namespace Mitisk\Yii2Admin\core\components;
 
+use yii\helpers\ArrayHelper;
+
 /**
  * Компонент для получения колонок в листинге
  *
@@ -35,23 +37,52 @@ class GetGridColumnHelper extends \yii\base\BaseObject
      */
     public function getColumns() {
 
+        $columns = [];
+        if($this->columns) {
+            foreach ($this->columns as $column => $data) {
+                if(ArrayHelper::getValue($data, 'on')) {
+                    if($column == 'number') {
+                        $columns[] = [
+                            'header'=>'No',
+                            'class' => 'yii\grid\SerialColumn'
+                        ];
+                    } elseif($column == 'actions') {
+                        $template = [];
+                        if(ArrayHelper::getValue($data, 'data')) {
+                            foreach (ArrayHelper::getValue($data, 'data') as $name => $on) {
+                                if($on) {
+                                    $template[] = '{' . $name . '}';
+                                }
+                            }
+                        }
+                        $columns[] = [
+                            'class' => 'Mitisk\Yii2Admin\widgets\ActionColumn',
+                            'template' => implode(' ', $template),
+                            'urlCreator' => function ($action, $model, $key, $index) {
 
-        return [
-            [
-                'header'=>'No',
-                'class' => 'yii\grid\SerialColumn'
-            ],
-            'name',
-            'description',
-            'ruleName' => [
-                'attribute' => 'ruleName',
-                'filter' => [],
-            ],
-            [
-                'class' => 'Mitisk\Yii2Admin\widgets\ActionColumn',
-                'buttonOptions' => ['class' => '']
-            ],
-        ];
+                                if ($action === 'view') {
+                                    return 'view/?id=' . $key;
+                                }
+
+                                if ($action === 'update') {
+                                    return 'update/?id=' . $key;
+                                }
+                                if ($action === 'delete') {
+                                    return 'delete/?id=' . $key;
+                                }
+                            },
+                            'buttonOptions' => ['class' => '']
+                        ];
+                    } else {
+                        $columns[] = [
+                            'attribute' => $column,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $columns;
     }
 
 

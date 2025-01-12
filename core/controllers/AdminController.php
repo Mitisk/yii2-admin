@@ -3,6 +3,7 @@ namespace Mitisk\Yii2Admin\core\controllers;
 
 use Mitisk\Yii2Admin\core\models\AdminModel;
 use Yii;
+use yii\data\ActiveDataProvider;
 
 class AdminController extends \yii\web\Controller
 {
@@ -22,7 +23,7 @@ class AdminController extends \yii\web\Controller
     public $actionViewTemplate = 'view';
 
     /** @var string Шаблон формы */
-    public $actionSFormTemplate = '_form';
+    public $formTemplate = '_form';
 
     public function beforeAction($action)
     {
@@ -35,9 +36,11 @@ class AdminController extends \yii\web\Controller
         $model = \Yii::createObject(['class' => $this->_modelName]);
         $dataProvider = $model/*->search(\Yii::$app->request->queryParams)*/;
 
-        return $this->render('\views\admin\\' . $this->actionIndexTemplate, [
-            'model' => $model,
-            'dataProvider' => $dataProvider,
+        return $this->render($this->actionIndexTemplate, [
+            'model' => new AdminModel($model),
+            'dataProvider' => new ActiveDataProvider([
+                'query' => $model->find(),
+            ]),
         ]);
     }
 
@@ -54,7 +57,8 @@ class AdminController extends \yii\web\Controller
         }
 
         return $this->render($this->actionCreateTemplate, [
-            'model' => $model,
+            'model' => new AdminModel($model),
+            'formTemplate' => $this->formTemplate,
         ]);
     }
 
@@ -72,6 +76,7 @@ class AdminController extends \yii\web\Controller
 
         return $this->render($this->actionUpdateTemplate, [
             'model' => $model,
+            'formTemplate' => $this->formTemplate,
         ]);
     }
 

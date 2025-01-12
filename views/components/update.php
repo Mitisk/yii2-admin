@@ -85,6 +85,10 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="wg-box mb-20">
             <?php if($columns): ?>
                 <h4>Настройка полей</h4>
+                <div class="flex gap10 mb-24">
+                    <?= Html::ActiveCheckbox($model, 'can_create', ['class' => 'total-checkbox']) ?>
+                    <label for="adminmodel-can_create" class="body-text">Разрешить создание новых записей из панели администратора.</label>
+                </div>
                 <div class="list-box-value mb-10">
 
                     <?php foreach($columns as $column): ?>
