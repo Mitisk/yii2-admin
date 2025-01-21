@@ -14,8 +14,10 @@ class NumberField extends Field
     /** @var int Шаг */
     public $step;
 
-    public function run()
+    public $subtype;
+
+    public function renderField()
     {
-        return $this->render('number');
+        return $this->render('number', ['field' => $this, 'model' => $this->model, 'fieldId' => $this->fieldId]);
     }
 }

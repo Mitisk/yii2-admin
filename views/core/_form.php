@@ -18,10 +18,14 @@ $form = ActiveForm::begin([
         'inputOptions' => ['class' => ''],
         'errorOptions' => ['class' => 'col-lg-7 invalid-feedback'],
     ],
-    'options' => ['class' => 'form-login flex flex-column gap24']
+    'options' => ['class' => 'row gap24']
 ]) ?>
 
-
+<?php
+foreach ($model->getFormFields() as $value) {
+    echo $value;
+}
+?>
 
 
 <div class="bot">
@@ -43,8 +47,6 @@ $form = ActiveForm::begin([
             ]) : '' ?>
         </div>
     </div>
-
-
 
 </div>
 <?php ActiveForm::end() ?>

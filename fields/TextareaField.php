@@ -14,8 +14,8 @@ class TextareaField extends Field
     /** @var int Количество строк */
     public $rows;
 
-    public function run()
+    public function renderField()
     {
-        return $this->render('textarea');
+        return $this->render('textarea', ['field' => $this, 'model' => $this->model, 'fieldId' => $this->fieldId]);
     }
 }

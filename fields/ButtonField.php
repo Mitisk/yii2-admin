@@ -2,6 +2,7 @@
 namespace Mitisk\Yii2Admin\fields;
 
 use Yii;
+use yii\helpers\Html;
 
 class ButtonField extends Field
 {
@@ -11,8 +12,8 @@ class ButtonField extends Field
     /** @var string subtype [button, submit, reset] */
     public $subtype;
 
-    public function run()
+    public function renderField()
     {
-        return $this->render('button');
+        return Html::tag($this->subtype, $this->label, ['class' => $this->className]);
     }
 }

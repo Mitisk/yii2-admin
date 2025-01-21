@@ -8,8 +8,8 @@ class FileField extends Field
     /** @var boolean Мультизагрузка */
     public $multiple;
 
-    public function run()
+    public function renderField()
     {
-        return $this->render('file');
+        return $this->render('file', ['field' => $this, 'model' => $this->model, 'fieldId' => $this->fieldId]);
     }
 }

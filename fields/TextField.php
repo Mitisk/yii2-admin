@@ -2,6 +2,7 @@
 namespace Mitisk\Yii2Admin\fields;
 
 use Yii;
+use yii\helpers\Html;
 
 class TextField extends Field
 {
@@ -11,8 +12,8 @@ class TextField extends Field
     /** @var string Подтип поля */
     public $subtype;
 
-    public function run()
+    public function renderField()
     {
-        return $this->render('text');
+        return $this->render('text', ['field' => $this, 'model' => $this->model, 'fieldId' => $this->fieldId]);
     }
 }

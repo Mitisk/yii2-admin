@@ -1,6 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\core\models;
 
+use Mitisk\Yii2Admin\fields\Field;
 use Yii;
 use yii\base\BaseObject;
 
@@ -13,7 +14,7 @@ class AdminModel extends BaseObject
     protected $_model;
 
     /** @var string */
-    protected $_className;
+    protected $_modelClassName;
 
     /** @var \Mitisk\Yii2Admin\models\AdminModel */
     public $component;
@@ -41,7 +42,7 @@ class AdminModel extends BaseObject
     public function setModel(\yii\db\BaseActiveRecord $model)
     {
         $this->_model = $model;
-        $this->_className = get_class($model);
+        $this->_modelClassName = get_class($model);
     }
 
     /**
@@ -50,7 +51,14 @@ class AdminModel extends BaseObject
      */
     private function setComponent()
     {
-        $this->component = \Mitisk\Yii2Admin\models\AdminModel::find()->where(['model_class' => $this->_className])->andWhere(['view' => 1])->one();
+        $this->component = \Mitisk\Yii2Admin\models\AdminModel::find()
+            ->where(['model_class' => $this->_modelClassName])
+            ->andWhere(['view' => 1])
+            ->one();
+
+        if ($this->component === null) {
+            throw new \Exception("Component not found for model class: " . $this->_modelClassName);
+        }
     }
 
     /**
@@ -59,15 +67,11 @@ class AdminModel extends BaseObject
      */
     public function getName()
     {
-        if($this->_model) {
-            if(isset($this->_model->name)) {
-                return $this->_model->name;
-            }
-            if(isset($this->_model->title)) {
-                return $this->_model->title;
-            }
+        if ($this->_model) {
+            return $this->_model->name ?? $this->_model->title ?? $this->component->name ?? null;
         }
-        return $this->component->name;
+
+        return $this->component->name ?? null;
     }
 
     /**
@@ -100,5 +104,23 @@ class AdminModel extends BaseObject
         );
 
         return $helper->getColumns();
+    }
+
+    /**
+     * Return form inputs
+     * @return array
+     */
+    public function getFormFields()
+    {
+        $inputs = json_decode($this->component->data, true);
+        $return = [];
+
+        if($inputs) {
+            foreach ($inputs as $input) {
+                $field = new Field(['input' => $input, 'model' => $this]);
+                $return[] = $field->getFormInput();
+            }
+        }
+        return $return;
     }
 }

@@ -52,10 +52,8 @@ class ComponentsController extends Controller
         }
 
         if(Yii::$app->request->isPost) {
-            if($model->load(\Yii::$app->request->post()) && $model->validate()) {
-                if($model->save(false)) {
-                    Yii::$app->session->setFlash('success', 'Компонент обновлен.');
-                }
+            if($model->load(\Yii::$app->request->post()) && $model->save()) {
+                Yii::$app->session->setFlash('success', 'Компонент обновлен.');
             }
         }
 
@@ -114,9 +112,10 @@ class ComponentsController extends Controller
 
         if($modelInstance) {
             foreach ($allColumns as $column) {
-                $list[$column] = ArrayHelper::getValue($list, $column, []);
+                $list[$column] = is_array(ArrayHelper::getValue($list, $column, [])) ? ArrayHelper::getValue($list, $column, []) : [ArrayHelper::getValue($list, $column, [])];
                 $list[$column]['name'] = $modelInstance->getAttributeLabel($column);
                 $list[$column]['description'] = $column;
+
             }
         }
 

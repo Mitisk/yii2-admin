@@ -17,8 +17,8 @@ class DateField extends Field
     /** @var string Подтип поля */
     public $subtype;
 
-    public function run()
+    public function renderField()
     {
-        return $this->render('date');
+        return $this->render('date', ['field' => $this, 'model' => $this->model, 'fieldId' => $this->fieldId]);
     }
 }

@@ -2,14 +2,15 @@
 namespace Mitisk\Yii2Admin\fields;
 
 use Yii;
+use yii\helpers\Html;
 
 class ParagraphField extends Field
 {
     /** @var int Тип [p, address, blockquote, canvas, output] */
     public $subtype;
 
-    public function run()
+    public function renderField()
     {
-        return $this->render('paragraph');
+        return Html::tag($this->subtype, $this->label, ['class' => $this->className]);
     }
 }

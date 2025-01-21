@@ -2,11 +2,12 @@
 namespace Mitisk\Yii2Admin\fields;
 
 use Yii;
+use yii\helpers\Html;
 
 class HiddenField extends Field
 {
-    public function run()
+    public function renderField()
     {
-        return $this->render('hidden');
+        return Html::activeHiddenInput($this->model->getModel(), $this->name, ['value' => $this->value]);
     }
 }

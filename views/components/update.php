@@ -80,7 +80,6 @@ $this->params['breadcrumbs'][] = $this->title;
             </div>
 
         <?php endif; ?>
-        <?= $form->field($model, 'data')->hiddenInput()->label(false) ?>
     </div>
     <div class="wg-box mb-20">
             <?php if($columns): ?>
@@ -116,7 +115,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
         <div class="bot">
             <div></div>
-            <button class="tf-button w208" type="submit"><?= ($model->model_class) ? 'Сохранить' : 'Продолжить'?></button>
+            <button class="tf-button w208 js-check-to-save" type="submit"><?= ($model->model_class) ? 'Сохранить' : 'Продолжить'?></button>
         </div>
 
     <?php ActiveForm::end() ?>
@@ -128,7 +127,8 @@ $this->registerJsFile('/web/js/form-builder.min.js', ['depends' => [\yii\web\Jqu
 $this->registerJsFile('/web/js/form-render.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 $this->registerJsFile('/web/js/drag-arrange/drag-arrange.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 
-$this->registerJs("
+if($model->model_class) {
+    $this->registerJs("
 
     $('.list-draggable').arrangeable({dragSelector: '.drag-area'});
 
@@ -302,10 +302,8 @@ $this->registerJs("
         
         function checkFields() {
             var fields = formBuilder.formData;
-            
             if(fields !== false) {
                 $('#adminmodel-data').val(fields);
-                
                 if(fields.length > 0) {
                     fields = JSON.parse(fields);
                         
@@ -342,5 +340,13 @@ $this->registerJs("
             $(this).toggleClass('active');
             $(this).find('input').val($(this).find('input').val() == 1 ? 0 : 1);
         });
+        
+        $(document).on('click', '.js-check-to-save', function(e) {
+            e.preventDefault();
+            checkFields();
+            $(this).closest('form').submit();
+        });
 ");
+}
+
 ?>

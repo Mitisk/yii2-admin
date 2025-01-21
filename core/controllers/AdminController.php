@@ -46,18 +46,23 @@ class AdminController extends \yii\web\Controller
 
     public function actionCreate()
     {
-        $model = \Yii::createObject(['class' => $this->_modelName]);
+        /** @var AdminModel $model */
+        $model = $this->findModel();
+
+        if(!$model->canCreate()) {
+            throw new \yii\web\ForbiddenHttpException();
+        }
 
         if(\Yii::$app->request->isPost)
         {
-            if($model->load(\Yii::$app->request->post()) && $model->save()) {
+            if($model->getModel()->load(\Yii::$app->request->post()) && $model->getModel()->save()) {
                 Yii::$app->session->setFlash('success', 'Запись успешно добавлена');
                 return $this->redirect(['index']);
             }
         }
 
         return $this->render($this->actionCreateTemplate, [
-            'model' => new AdminModel($model),
+            'model' => $model,
             'formTemplate' => $this->formTemplate,
         ]);
     }
