@@ -164,14 +164,14 @@ if($model->model_class) {
                 'date',
                 'file',
 
-                'autocomplete',
-                'button',
+                //'autocomplete',
+                //'button',
 
 
                 'hidden',
                 'number',
 
-                'radio-group',
+                //'radio-group',
 
                 'header',
                 'paragraph',
@@ -200,7 +200,11 @@ if($model->model_class) {
             disabledSubtypes: {},
 
             // disabled fields
-            disableFields: [],
+            disableFields: [
+                'autocomplete',
+                'button',
+                'radio-group',
+            ],
 
             // disables html in field labels
             disableHTMLLabels: false,
@@ -216,7 +220,12 @@ if($model->model_class) {
             editOnAdd: false,
 
             // adds custom control configs
-            fields: [],
+            fields: [{
+              label: 'Email',
+              type: 'text',
+              subtype: 'email',
+              icon: '✉'
+            }],
 
             // warns user if before the remove a field from the stage
             fieldRemoveWarn: false,

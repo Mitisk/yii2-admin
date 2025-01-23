@@ -18,7 +18,11 @@ $form = ActiveForm::begin([
         'inputOptions' => ['class' => ''],
         'errorOptions' => ['class' => 'col-lg-7 invalid-feedback'],
     ],
-    'options' => ['class' => 'row gap24']
+    'options' => [
+        'class' => 'row',
+        'style' => 'row-gap: 25px',
+        'enctype' => 'multipart/form-data'
+    ]
 ]) ?>
 
 <?php

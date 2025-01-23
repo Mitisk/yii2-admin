@@ -28,6 +28,9 @@ class AdminController extends \yii\web\Controller
     public function beforeAction($action)
     {
         $this->_modelName = Yii::$app->request->get('model_class');
+        if (!class_exists($this->_modelName)) {
+            throw new \yii\web\BadRequestHttpException("Модель не найдена: " . $this->_modelName);
+        }
         return parent::beforeAction($action);
     }
 
@@ -49,16 +52,18 @@ class AdminController extends \yii\web\Controller
         /** @var AdminModel $model */
         $model = $this->findModel();
 
-        if(!$model->canCreate()) {
+        if (!$model->canCreate()) {
             throw new \yii\web\ForbiddenHttpException();
         }
 
-        if(\Yii::$app->request->isPost)
-        {
-            if($model->getModel()->load(\Yii::$app->request->post()) && $model->getModel()->save()) {
+        if (\Yii::$app->request->isPost) {
+            $modelData = $model->getModel();
+            if ($modelData->load(\Yii::$app->request->post()) && $modelData->save()) {
                 Yii::$app->session->setFlash('success', 'Запись успешно добавлена');
                 return $this->redirect(['index']);
             }
+
+            Yii::$app->session->setFlash('error', 'Ошибка при добавлении записи: ' . implode(', ', $modelData->getFirstErrors()));
         }
 
         return $this->render($this->actionCreateTemplate, [
@@ -71,12 +76,14 @@ class AdminController extends \yii\web\Controller
     {
         $model = $this->findModel();
 
-        if(\Yii::$app->request->isPost)
-        {
-            if($model->getModel()->load(\Yii::$app->request->post()) && $model->getModel()->save()) {
+        if (\Yii::$app->request->isPost) {
+            $modelData = $model->getModel();
+            if ($modelData->load(\Yii::$app->request->post()) && $modelData->save()) {
                 Yii::$app->session->setFlash('success', 'Запись успешно обновлена');
                 return $this->redirect(['index']);
             }
+
+            Yii::$app->session->setFlash('error', 'Ошибка при обновлении записи: ' . implode(', ', $modelData->getFirstErrors()));
         }
 
         return $this->render($this->actionUpdateTemplate, [
@@ -110,17 +117,20 @@ class AdminController extends \yii\web\Controller
     protected function findModel()
     {
         $modelName = $this->_modelName;
-
         $keys = [];
-        foreach($modelName::primaryKey() as $key)
-        {
-            if(\Yii::$app->request->get($key))
-                $keys[$key] = \Yii::$app->request->get($key);
-        }
-        if(!($keys))
-            $keys['id'] = -1;
 
-        if($model = $modelName::find()->andWhere($keys)->one()) {
+        foreach ($modelName::primaryKey() as $key) {
+            if ($id = Yii::$app->request->get($key)) {
+                $keys[$key] = $id;
+            }
+        }
+
+        if (empty($keys)) {
+            throw new \yii\web\NotFoundHttpException("Не удалось найти модель с таким идентификатором.");
+        }
+
+        $model = $modelName::find()->andWhere($keys)->one();
+        if ($model !== null) {
             return new AdminModel($model);
         }
 

@@ -1,18 +1,23 @@
 <?php
+/* @var $this yii\web\View */
+/** @var $field \Mitisk\Yii2Admin\fields\TextField  */
+/** @var $model \Mitisk\Yii2Admin\core\models\AdminModel  */
+/** @var $fieldId string  */
 
+$this->registerJsFile('/web/component/fileuploader/dist/jquery.fileuploader.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
+$this->registerJsFile('/web/component/fileuploader/js/custom.js', ['depends' => [\yii\web\JqueryAsset::class]]);
+
+$this->registerCssFile('/web/component/fileuploader/dist/jquery.fileuploader.min.css');
+$this->registerCssFile('/web/component/fileuploader/dist/font/font-fileuploader.css');
+$this->registerCssFile('/web/component/fileuploader/css/jquery.fileuploader-theme-thumbnails.css');
+
+$this->registerCss('.fileuploader {max-width: 643px;}');
 ?>
-<fieldset>
-    <div class="body-title mb-10">Upload images</div>
-    <div class="upload-image mb-16">
-        <div class="item up-load">
-            <label class="uploadfile" for="myFile">
-                                                        <span class="icon">
-                                                            <i class="icon-upload-cloud"></i>
-                                                        </span>
-                <span class="text-tiny">Drop your images here or select <span class="tf-color">click to browse</span></span>
-                <input type="file" id="myFile" name="filename">
-            </label>
-        </div>
-    </div>
-    <div class="body-text">You need to add at least 4 images. Pay attention to the quality of the pictures you add, comply with the background color standards. Pictures must be in certain dimensions. Notice that the product shows all the details</div>
-</fieldset>
+<div class="body-title mb-10">
+    <?= $field->label ?>
+    <?php if ($field->required) { ?><span class="tf-color-1">*</span><?php } ?>
+</div>
+
+<input type="file" class="fileuploader-multiple" name="<?= \yii\helpers\Html::getInputName($model->getModel(), $field->name) ?>">
+
+<?= $this->render('_help_block', ['field' => $field]) ?>

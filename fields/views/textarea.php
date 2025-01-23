@@ -3,31 +3,25 @@
 /** @var $model \Mitisk\Yii2Admin\core\models\AdminModel  */
 /** @var $fieldId string  */
 ?>
-    <fieldset>
-        <div class="form-group">
-            <label class="body-title mb-10" for="<?= $fieldId ?>">
-                <?= $field->label ?>
-                <?php if ($field->required) { ?><span class="tf-color-1">*</span><?php } ?>
-            </label>
+<div class="form-group">
+    <label class="body-title mb-10" for="<?= $fieldId ?>">
+        <?= $field->label ?>
+        <?php if ($field->required) { ?><span class="tf-color-1">*</span><?php } ?>
+    </label>
 
-            <?= \yii\helpers\Html::activeTextarea($model->getModel(), $field->name, [
-                'placeholder' => $field->placeholder,
-                'maxlength' => $field->maxlength,
-                'id' => $fieldId,
-                'required' => $field->required,
-                'autocomplete' => 'off',
-                'rows' => $field->rows,
-            ]); ?>
+    <?= \yii\helpers\Html::activeTextarea($model->getModel(), $field->name, [
+        'placeholder' => $field->placeholder,
+        'maxlength' => $field->maxlength,
+        'id' => $fieldId,
+        'required' => $field->required,
+        'autocomplete' => 'off',
+        'rows' => $field->rows,
+    ]); ?>
 
-            <div class="col-lg-7 invalid-feedback"></div>
-        </div>
-    </fieldset>
-<?php if ($field->description) { ?>
-    <div class="block-warning type-main w-full mb-24">
-        <i class="icon-alert-octagon"></i>
-        <div class="body-title-2"><?= $field->description ?></div>
-    </div>
-<?php }?>
+    <div class="col-lg-7 invalid-feedback"></div>
+</div>
+
+<?= $this->render('_help_block', ['field' => $field]) ?>
 
 <?php if ($field->subtype == 'tinymce') {
     $this->registerJsFile('https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js', ['position' => \yii\web\View::POS_END]);

@@ -55,8 +55,7 @@ class Field extends Widget
                 $fieldClass->fieldId = Yii::$app->security->generateRandomString();
             }
 
-
-            return $fieldClass->renderField();
+            return '<fieldset class="' . FieldsHelper::getColumns($fieldClass->className) .'">' . $fieldClass->renderField() . '</fieldset>';
         }
 
         return '<div class="form-group">Нет описания поля ' . $name . '</div>';
