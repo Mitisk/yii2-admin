@@ -1,7 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
-use Yii;
+use yii\helpers\ArrayHelper;
 
 class SelectField extends Field
 {
@@ -11,8 +11,20 @@ class SelectField extends Field
     /** @var array Values [label, value, selected] */
     public $values;
 
-    public function run()
+    /** @var boolean Только для чтения */
+    public $readonly;
+
+    /** @var string Публичный статический метод, который возвращает массив значений */
+    public $publicStaticMethod;
+
+    public function renderField()
     {
-        return $this->render('select');
+        return $this->render('select', [
+            'field' => $this,
+            'model' => $this->model,
+            'fieldId' => $this->fieldId,
+            'values' => FieldsHelper::getValues($this)
+        ]);
     }
+
 }

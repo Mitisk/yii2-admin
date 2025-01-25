@@ -25,6 +25,7 @@ class FieldsHelper extends BaseObject
             case 'text':
             case 'data':
             case 'json':
+            case 'html':
             case 'textarea':
                 return 'textarea';
                 break;
@@ -33,6 +34,10 @@ class FieldsHelper extends BaseObject
             case 'files':
             case 'images':
                 return 'file';
+                break;
+            case 'published':
+            case 'active':
+                return 'checkbox-group';
                 break;
             default:
                 return 'text';
@@ -59,5 +64,37 @@ class FieldsHelper extends BaseObject
         }
 
         return '';
+    }
+
+
+    /**
+     * Возвращает массив значений
+     * @return array
+     */
+    public static function getValues($field): array
+    {
+        $values = [];
+
+        if ($field->publicStaticMethod) {
+            $reflectionClass = $field->model->getReflectionClass();
+            $reflectionMethod = $reflectionClass->getMethod($field->publicStaticMethod);
+
+            if ($reflectionMethod) {
+                // Вызываем метод статически
+                $values = $reflectionMethod->invoke(null);
+            }
+        }
+
+        if (!$values && $field->values) {
+            foreach ($field->values as $key => $value) {
+                $values[ArrayHelper::getValue($value, 'value')] = ArrayHelper::getValue($value, 'label');
+            }
+        }
+
+        if (!$field->required && $values) {
+            $values = array_merge([null => '---'], $values);
+        }
+
+        return $values;
     }
 }

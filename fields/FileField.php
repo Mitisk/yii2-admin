@@ -1,12 +1,13 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
-use Yii;
-
 class FileField extends Field
 {
     /** @var boolean Мультизагрузка */
     public $multiple;
+
+    /** @var boolean Только для чтения */
+    public $readonly;
 
     public function renderField()
     {

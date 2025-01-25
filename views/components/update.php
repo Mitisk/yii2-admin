@@ -11,6 +11,7 @@ use yii\widgets\ActiveForm;
 /* @var $columns array */
 /* @var $allColumns array */
 /* @var $this yii\web\View */
+/* @var $publicStaticMethods string */
 
 $this->title = 'Редактирование компонента';
 
@@ -120,242 +121,17 @@ $this->params['breadcrumbs'][] = $this->title;
 
     <?php ActiveForm::end() ?>
 
-
+    <script>
+        window.formData = '<?= $model->data ?>';
+        window.publicStaticMethods = <?= $publicStaticMethods ?>;
+        window.roles = {
+            1: 'Администратор',
+        };
+    </script>
 <?php
 $this->registerJsFile('https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 $this->registerJsFile('/web/js/form-builder.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 $this->registerJsFile('/web/js/form-render.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 $this->registerJsFile('/web/js/drag-arrange/drag-arrange.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
-
-if($model->model_class) {
-    $this->registerJs("
-
-    $('.list-draggable').arrangeable({dragSelector: '.drag-area'});
-
-    const fbTemplate = document.getElementById('build-wrap');
-    if(fbTemplate) {
-        var formBuilder = $(fbTemplate).formBuilder({
-            i18n: {
-                locale: 'ru-RU',
-                location: '/web/lang/'
-            },
-            
-            formData: '" . ($model->data) . "',
-            dataType: 'json',
-           
-
-            // additional form action buttons- save, data, clear
-            actionButtons: [],
-
-            // enables/disables stage sorting
-            allowStageSort: true,
-
-            // append/prepend non-editable content to the form.
-            append: false,
-            prepend: false,
-
-            // control order
-            controlOrder: [
-                'text',
-                'textarea',
-                'select',
-                'checkbox-group',
-                'checkbox',
-                'date',
-                'file',
-
-                //'autocomplete',
-                //'button',
-
-
-                'hidden',
-                'number',
-
-                //'radio-group',
-
-                'header',
-                'paragraph',
-
-            ],
-
-            // or left
-            controlPosition: 'right',
-
-            // or 'xml'
-            dataType: 'json',
-
-            // default fields
-            defaultFields: [],
-
-            // save, data, clear
-            disabledActionButtons: ['save', 'data', 'clear'],
-
-            // disabled attributes
-            disabledAttrs: [],
-
-            // disabled buttons
-            disabledFieldButtons: {},
-
-            // disabled subtypes
-            disabledSubtypes: {},
-
-            // disabled fields
-            disableFields: [
-                'autocomplete',
-                'button',
-                'radio-group',
-            ],
-
-            // disables html in field labels
-            disableHTMLLabels: false,
-
-            // disables embedded bootstrap classes
-            // setting to true will disable all styles
-            disableInjectedStyle: 'bootstrap',
-
-            // removes the injected style
-            disableInjectedStyle: false,
-
-            // opens the edit panel on added field
-            editOnAdd: false,
-
-            // adds custom control configs
-            fields: [{
-              label: 'Email',
-              type: 'text',
-              subtype: 'email',
-              icon: '✉'
-            }],
-
-            // warns user if before the remove a field from the stage
-            fieldRemoveWarn: false,
-
-            // DOM node or selector
-            fieldEditContainer: null,
-
-            // add groups of fields at a time
-            inputSets: [],
-
-            // custom notifications
-            notify: {
-                error: console.error,
-                success: console.log,
-                warning: console.warn,
-            },
-
-            // prevent clearAll from remove default fields
-            persistDefaultFields: false,
-
-            // callbakcs
-            //onAddField: (fieldData, fieldId) => fieldData,
-            onAddField: function(editPanel) {
-                checkFields();
-            },
-            onAddOption: () => null,
-            onClearAll: function(editPanel) {
-                checkFields();
-            },
-            onCloseFieldEdit: function(editPanel) {
-                checkFields();
-            },
-            onOpenFieldEdit: () => null,
-            onSave: function(evt, formData) {
-                $('#adminmodel-data').val((formData));
-            },
-
-            // replaces an existing field by id.
-            replaceFields: [],
-
-            // user roles
-            roles: {
-                1: 'Администратор',
-            },
-
-            // smoothly scrolls to a field when its added to the stage
-            scrollToFieldOnAdd: true,
-
-            // shows action buttons
-            showActionButtons: true,
-
-            // sortable controls
-            sortableControls: false,
-
-            // sticky controls
-            stickyControls: {
-                enable: true,
-                offset: {
-                    top: 5,
-                    bottom: 'auto',
-                    right: 'auto',
-                },
-            },
-
-            // defines new types to be used with field base types such as button and input
-            subtypes: {},
-
-            // defines a custom output for new or existing fields.
-            templates: {},
-
-            // defines custom attributes for field types
-            typeUserAttrs: {},
-
-            // disabled attributes for specific field types
-            typeUserDisabledAttrs: {},
-
-            // adds functionality to existing and custom attributes using onclone and onadd events. Events return JavaScript DOM elements.
-            typeUserEvents: {},
-            
-            enableEnhancedBootstrapGrid: true,
-        });
-    }
-        
-        function checkFields() {
-            var fields = formBuilder.formData;
-            if(fields !== false) {
-                $('#adminmodel-data').val(fields);
-                if(fields.length > 0) {
-                    fields = JSON.parse(fields);
-                        
-                    $('.js-click-to-attr').removeAttr('checked').removeAttr('disabled');
-                    
-                    $.each(fields, function(i, item) {
-                        if(item.name) {
-                            $('.js-click-to-attr[data-name=\"' + item.name + '\"]').attr('checked', 'checked').attr('disabled', 'disabled');
-                        }
-                    });
-                }
-            }
-        }
-
-        $(document).on('click', '.js-click-to-attr', function(e) {
-           
-            var field = {
-                type: $(this).data('type'),
-                className: 'form-control',
-                name: $(this).data('name'),
-                label: $(this).data('label'),
-                required: $(this).data('required'),
-            };
-            if(!$(this).attr('disabled')) {
-                formBuilder.actions.addField(field);
-            }
-            
-            $(this).attr('disabled', 'disabled');
-            checkFields();
-        });
-        
-        
-        $(document).on('click', '.js-list-actions', function(e) {
-            $(this).toggleClass('active');
-            $(this).find('input').val($(this).find('input').val() == 1 ? 0 : 1);
-        });
-        
-        $(document).on('click', '.js-check-to-save', function(e) {
-            e.preventDefault();
-            checkFields();
-            $(this).closest('form').submit();
-        });
-");
-}
-
+$this->registerJsFile('/web/js/component-builder.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 ?>

@@ -1,8 +1,6 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
-use Yii;
-
 class NumberField extends Field
 {
     /** @var int Минимальное значение */
@@ -14,7 +12,11 @@ class NumberField extends Field
     /** @var int Шаг */
     public $step;
 
+    /** @var string Подтип поля */
     public $subtype;
+
+    /** @var boolean Только для чтения */
+    public $readonly;
 
     public function renderField()
     {

@@ -38,13 +38,13 @@ class Field extends Widget
 
     /**
      * Конструктор
-     * @return void
+     * @return string
      */
-    public function getFormInput()
+    public function getFormInput(): string
     {
-        $name = ArrayHelper::getValue($this->input, 'type', 'text');
+        $name = str_replace('-', ' ', ArrayHelper::getValue($this->input, 'type', 'text'));
 
-        $fieldName = ucfirst($name).'Field';
+        $fieldName = str_replace(' ', '', ucfirst($name)).'Field';
         if($fieldName = static::resolveFiedClass($fieldName)) {
             $fieldClass = Yii::createObject(['class' => $fieldName], [$this->input]);
             $fieldClass->model = $this->model;

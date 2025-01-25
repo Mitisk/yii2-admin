@@ -1,9 +1,6 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
-use Yii;
-use yii\helpers\Html;
-
 class TextField extends Field
 {
     /** @var int Максимальная длина поля */
@@ -11,6 +8,9 @@ class TextField extends Field
 
     /** @var string Подтип поля */
     public $subtype;
+
+    /** @var boolean Только для чтения */
+    public $readonly;
 
     public function renderField()
     {

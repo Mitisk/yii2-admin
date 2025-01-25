@@ -1,8 +1,6 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
-use Yii;
-
 class DateField extends Field
 {
     /** @var string Минимальное значение */
@@ -16,6 +14,9 @@ class DateField extends Field
 
     /** @var string Подтип поля */
     public $subtype;
+
+    /** @var boolean Только для чтения */
+    public $readonly;
 
     public function renderField()
     {

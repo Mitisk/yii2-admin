@@ -1,7 +1,6 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
-use Yii;
 use yii\helpers\Html;
 
 class ParagraphField extends Field

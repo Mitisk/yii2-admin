@@ -1,18 +1,19 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
-use Yii;
-
 class TextareaField extends Field
 {
     /** @var int Максимальная длина поля */
     public $maxlength;
 
-    /** @var string Подтип поля [textarea, tinymce, quill] */
-    public $subtype;
+    /** @var string Подтип поля [textarea, visual, html] */
+    public $viewtype;
 
     /** @var int Количество строк */
     public $rows;
+
+    /** @var boolean Только для чтения */
+    public $readonly;
 
     public function renderField()
     {

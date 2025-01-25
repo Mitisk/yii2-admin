@@ -9,12 +9,13 @@
         <?php if ($field->required) { ?><span class="tf-color-1">*</span><?php } ?>
     </label>
 
-    <?= \yii\helpers\Html::activeInput($field->subtype, $model->getModel(), $field->name, [
+    <?= \yii\helpers\Html::activeInput('text', $model->getModel(), $field->name, [
         'class' => $field->className,
         'placeholder' => $field->placeholder,
         'maxlength' => $field->maxlength,
         'id' => $fieldId,
         'required' => $field->required,
+        'readonly' => $field->readonly,
         'autocomplete' => 'off',
     ]); ?>
 

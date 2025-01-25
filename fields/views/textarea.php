@@ -14,6 +14,7 @@
         'maxlength' => $field->maxlength,
         'id' => $fieldId,
         'required' => $field->required,
+        'readonly' => $field->readonly,
         'autocomplete' => 'off',
         'rows' => $field->rows,
     ]); ?>
@@ -23,40 +24,13 @@
 
 <?= $this->render('_help_block', ['field' => $field]) ?>
 
-<?php if ($field->subtype == 'tinymce') {
+<?php if ($field->viewtype == 'visual') {
     $this->registerJsFile('https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js', ['position' => \yii\web\View::POS_END]);
     $this->registerJs('tinymce.init({
     selector: "#' . $fieldId . '",
     });
     ');
 }
-
-if($field->subtype == 'quill') {
-    $this->registerJsFile('https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js', ['position' => \yii\web\View::POS_END]);
-    $this->registerCssFile('https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css');
-    $this->registerJs('
-    var quill_' . str_replace('-', '_', $fieldId) . ' = new Quill("#' . $fieldId . '", {
-        theme: "snow"
-    });
-    ');
+if ($field->viewtype == 'html') {
+    /** @todo Добавить редактор кода */
 }
-
-/*
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
-
-<!-- Create the editor container -->
-<div id="editor">
-    <p>Hello World!</p>
-    <p>Some initial <strong>bold</strong> text</p>
-    <p><br /></p>
-</div>
-
-<!-- Include the Quill library -->
-<script src=""></script>
-
-<!-- Initialize Quill editor -->
-<script>
-    const quill = new Quill('#editor', {
-        theme: 'snow'
-    });
-</script>*/

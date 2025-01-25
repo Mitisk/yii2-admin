@@ -132,7 +132,47 @@ class ComponentsController extends Controller
 
         $model->list = $list;
 
-        return $this->render('update', compact(['model', 'columns', 'modelInstance', 'requiredColumns', 'addedAttributes', 'allColumns']));
+        $publicStaticMethods = json_encode($model->model_class ? self::getPublicStaticMethods($model->model_class) : []);
+
+        return $this->render('update', compact(['model', 'columns', 'modelInstance', 'requiredColumns', 'addedAttributes', 'allColumns', 'publicStaticMethods']));
+    }
+
+    /**
+     * Получаем все методы класса
+     * @return array
+     */
+    public static function getPublicStaticMethods($className)
+    {
+        // Получаем все методы текущего класса
+        $methods = get_class_methods($className);
+
+        // Используем рефлексию для фильтрации методов
+        $reflectionClass = new \ReflectionClass($className);
+        $publicStaticMethods = [];
+
+        foreach ($methods as $method) {
+            $reflectionMethod = $reflectionClass->getMethod($method);
+
+            // Проверяем, что метод публичный и статический, и что он определен в данном классе
+            if ($reflectionMethod->isPublic() && $reflectionMethod->isStatic() &&
+                $reflectionMethod->getDeclaringClass()->getName() === $className) {
+
+                // Вызываем метод статически
+                $returnValue = $reflectionMethod->invoke(null);
+
+                // Проверяем, возвращает ли метод массив
+                if (is_array($returnValue)) {
+                    $publicStaticMethods[$method] = $className . '::' . $method . '()';
+                }
+            }
+        }
+
+        //Добавляем пустую строку
+        if($publicStaticMethods) {
+            $publicStaticMethods = array_merge([null => '---'], $publicStaticMethods);
+        }
+
+        return $publicStaticMethods;
     }
 
     public function actionDelete($id)

@@ -36,6 +36,16 @@ class AdminModel extends BaseObject
     }
 
     /**
+     * Return reflection class
+     * @return \ReflectionClass
+     * @throws \ReflectionException
+     */
+    public function getReflectionClass()
+    {
+        return new \ReflectionClass($this->_modelClassName);
+    }
+
+    /**
      * Set model
      * @param \yii\db\BaseActiveRecord $model
      */

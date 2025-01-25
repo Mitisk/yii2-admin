@@ -14,6 +14,7 @@
         'placeholder' => $field->placeholder,
         'id' => $fieldId,
         'required' => $field->required,
+        'readonly' => $field->readonly,
         'autocomplete' => 'off',
     ]); ?>
 
