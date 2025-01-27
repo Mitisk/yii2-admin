@@ -46,7 +46,7 @@ class AdminModel extends \yii\db\ActiveRecord
     }
 
     public function checkAlias($attribute, $params) {
-        if (in_array($this->alias, ['components', 'role', 'user', 'menu', 'auth', 'default'])) {
+        if (in_array($this->alias, ['components', 'role', 'user', 'menu', 'auth', 'default', 'index', 'settings'])) {
             $this->addError($attribute, 'Этот алиас уже используется');
         }
     }

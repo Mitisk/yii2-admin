@@ -1,9 +1,7 @@
 <?php
-
 namespace Mitisk\Yii2Admin\components;
 
 use yii\validators\StringValidator;
-
 
 class AliasValidator extends StringValidator
 {
@@ -19,12 +17,21 @@ class AliasValidator extends StringValidator
     {
         $value = $model->$attribute;
 
-        if((!$value && $model->hasAttribute($this->name_attribute)) || strlen(trim($value)) == 0 && ($model->hasAttribute($this->name_attribute) || $model->hasProperty($this->name_attribute)))
+        if ((!$value && $model->hasAttribute($this->name_attribute)) ||
+            (strlen(trim($value)) === 0 &&
+                ($model->hasAttribute($this->name_attribute) || $model->hasProperty($this->name_attribute)))) {
             $value = $model->{$this->name_attribute};
+        }
 
-        $model->$attribute = strtolower($this->translit(trim($value)));
-        $model->$attribute = preg_replace('~[^-a-z0-9_]+~u', '-', $model->$attribute);
-        $model->$attribute = trim($model->$attribute, "-");
+        // Применяем преобразования с использованием стрелочных функций и более точных указателей на типы
+        $processValue = function($value) {
+            return trim(
+                preg_replace('~[^-a-z0-9_]+~u', '-',
+                    strtolower($this->translit(trim($value))))
+                , '-');
+        };
+
+        $model->$attribute = $processValue($value);
         parent::validateAttribute($model, $attribute);
     }
 
