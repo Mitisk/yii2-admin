@@ -117,6 +117,19 @@ class AdminModel extends BaseObject
     }
 
     /**
+     * Return detail view helper
+     * @return array
+     */
+    public function getDetailViewHelper()
+    {
+        $helper = new \Mitisk\Yii2Admin\core\components\GetDetailViewHelper(
+            json_decode($this->component->data, true)
+        );
+
+        return $helper->getColumns();
+    }
+
+    /**
      * Return form inputs
      * @return array
      */
