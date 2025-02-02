@@ -9,6 +9,7 @@ use Yii;
  *
  * @property int $id
  * @property string $name
+ * @property string $admin_label
  * @property string $alias
  * @property string $table_name
  * @property string $list
@@ -40,8 +41,8 @@ class AdminModel extends \yii\db\ActiveRecord
             [['alias'], 'Mitisk\Yii2Admin\components\AliasValidator', 'skipOnEmpty' => false],
             [['alias'], 'unique'],
             [['alias'], 'checkAlias'],
-            [['alias', 'model_class', 'name'], 'trim'],
-            [['table_name', 'model_class', 'name', 'alias'], 'string', 'max' => 255],
+            [['alias', 'model_class', 'name', 'admin_label'], 'trim'],
+            [['table_name', 'model_class', 'name', 'alias', 'admin_label'], 'string', 'max' => 255],
         ];
     }
 
@@ -67,6 +68,7 @@ class AdminModel extends \yii\db\ActiveRecord
             'model_class' => 'Class',
             'data' => 'json настроек форм',
             'view' => 'Показывать в списке',
+            'admin_label' => 'Название по установленному полю в панели администратора',
         ];
     }
 

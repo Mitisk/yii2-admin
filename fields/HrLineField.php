@@ -5,8 +5,17 @@ use yii\helpers\Html;
 
 class HrLineField extends Field
 {
-    public function renderField()
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    public function renderField(): string
     {
         return Html::tag('hr');
+    }
+
+    public function renderView(): string
+    {
+        return '';
     }
 }

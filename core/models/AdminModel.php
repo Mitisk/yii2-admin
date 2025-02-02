@@ -4,6 +4,7 @@ namespace Mitisk\Yii2Admin\core\models;
 use Mitisk\Yii2Admin\fields\Field;
 use Yii;
 use yii\base\BaseObject;
+use yii\helpers\ArrayHelper;
 
 /**
  * Общий объект модели администратора
@@ -77,6 +78,12 @@ class AdminModel extends BaseObject
      */
     public function getName()
     {
+        if($admin_label = $this->component->admin_label) {
+            if($this->_model->hasAttribute($admin_label)) {
+                return $this->_model->{$admin_label};
+            }
+        }
+
         if ($this->_model) {
             return $this->_model->name ?? $this->_model->title ?? $this->component->name ?? null;
         }
@@ -91,6 +98,26 @@ class AdminModel extends BaseObject
     public function getComponentName()
     {
         return $this->component->name;
+    }
+
+    /**
+     * @param string|null $toAction
+     * @return array[]
+     */
+    public function getUrls(string|null $toAction = null): array
+    {
+        $return = [
+            'index' => ['index', 'page-alias' => $this->component->alias],
+            'create' => ['create', 'page-alias' => $this->component->alias],
+            'update' => ['update', 'id' => $this->_model->id, 'page-alias' => $this->component->alias],
+            'delete' => ['delete', 'id' => $this->_model->id, 'page-alias' => $this->component->alias],
+        ];
+
+        if ($toAction) {
+            return ArrayHelper::getValue($return, $toAction, ['index', 'page-alias' => $this->component->alias]);
+        }
+
+        return $return;
     }
 
     /**
@@ -120,13 +147,13 @@ class AdminModel extends BaseObject
      * Return detail view helper
      * @return array
      */
-    public function getDetailViewHelper()
+    public function getDetailView()
     {
         $helper = new \Mitisk\Yii2Admin\core\components\GetDetailViewHelper(
-            json_decode($this->component->data, true)
+            json_decode($this->component->data, true),
+            $this
         );
-
-        return $helper->getColumns();
+        return $helper->getColumnsData();
     }
 
     /**

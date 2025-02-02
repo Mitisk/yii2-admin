@@ -2,6 +2,7 @@
 namespace Mitisk\Yii2Admin\fields;
 
 use yii\helpers\ArrayHelper;
+use yii\helpers\Html;
 
 class SelectField extends Field
 {
@@ -17,7 +18,11 @@ class SelectField extends Field
     /** @var string Публичный статический метод, который возвращает массив значений */
     public $publicStaticMethod;
 
-    public function renderField()
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    public function renderField(): string
     {
         return $this->render('select', [
             'field' => $this,
@@ -25,6 +30,17 @@ class SelectField extends Field
             'fieldId' => $this->fieldId,
             'values' => FieldsHelper::getValues($this)
         ]);
+    }
+
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    public function renderView(): string
+    {
+        $values = FieldsHelper::getValues($this);
+        $value = Html::getAttributeValue($this->model->getModel(), $this->name);
+        return ArrayHelper::getValue($values, $value, '-');
     }
 
 }

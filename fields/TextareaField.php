@@ -1,6 +1,8 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
+use yii\helpers\Html;
+
 class TextareaField extends Field
 {
     /** @var int Максимальная длина поля */
@@ -15,8 +17,21 @@ class TextareaField extends Field
     /** @var boolean Только для чтения */
     public $readonly;
 
-    public function renderField()
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    public function renderField(): string
     {
         return $this->render('textarea', ['field' => $this, 'model' => $this->model, 'fieldId' => $this->fieldId]);
+    }
+
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    public function renderView(): string
+    {
+        return Html::getAttributeValue($this->model->getModel(), $this->name) ?: '-';
     }
 }

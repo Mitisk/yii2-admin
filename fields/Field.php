@@ -37,36 +37,75 @@ class Field extends Widget
     public $fieldId;
 
     /**
-     * Конструктор
+     * Рендер поля
      * @return string
      */
     public function getFormInput(): string
     {
-        $name = str_replace('-', ' ', ArrayHelper::getValue($this->input, 'type', 'text'));
+        $fieldClass = $this->buildField();
+        $fieldClass->model = $this->model;
 
-        $fieldName = str_replace(' ', '', ucfirst($name)).'Field';
-        if($fieldName = static::resolveFiedClass($fieldName)) {
-            $fieldClass = Yii::createObject(['class' => $fieldName], [$this->input]);
-            $fieldClass->model = $this->model;
-
-            if($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
-                $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);
-            } else {
-                $fieldClass->fieldId = Yii::$app->security->generateRandomString();
-            }
-
-            return '<fieldset class="' . FieldsHelper::getColumns($fieldClass->className) .'">' . $fieldClass->renderField() . '</fieldset>';
+        if($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
+            $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);
+        } else {
+            $fieldClass->fieldId = Yii::$app->security->generateRandomString();
         }
 
-        return '<div class="form-group">Нет описания поля ' . $name . '</div>';
+        return '<fieldset class="' . FieldsHelper::getColumns($fieldClass->className) .'">' . $fieldClass->renderField() . '</fieldset>';
     }
 
+    /**
+     * Значение для просмотра
+     * @return string
+     */
+    public function getViewData(): string
+    {
+        $fieldClass = $this->buildField();
+        $fieldClass->model = $this->model;
+
+        if($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
+            $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);
+        } else {
+            $fieldClass->fieldId = Yii::$app->security->generateRandomString();
+        }
+
+        return $fieldClass->renderView();
+    }
+
+    /**
+     * @return Field
+     */
+    private function buildField(): Field
+    {
+        $name = str_replace('-', ' ', ArrayHelper::getValue($this->input, 'type', 'text'));
+
+        $fieldName = static::resolveFieldClass(str_replace(' ', '', ucfirst($name)).'Field');
+
+        if(!$fieldName) {
+            $fieldName = 'Mitisk\\Yii2Admin\\fields\\Field';
+        }
+
+        return Yii::createObject(['class' => $fieldName], [$this->input]);
+    }
+
+    /**
+     * Отдавет название поля
+     * @return string
+     */
+    public function getLabel(): string
+    {
+        $fieldName = ArrayHelper::getValue($this->input, 'name');
+        if($fieldName) {
+            return $this->model->getModel()->getAttributeLabel($fieldName);
+        }
+        return ArrayHelper::getValue($this->input, 'label');
+    }
 
     /**
      * @param string $class
      * @return string|null
      */
-    public static function resolveFiedClass($class)
+    public static function resolveFieldClass(string $class): string|null
     {
         $classname = null;
         if(class_exists($class)) {
@@ -78,9 +117,19 @@ class Field extends Widget
     }
 
     /**
+     * Вывод поля при редактировании
      * @return string
      */
-    public function renderField()
+    public function renderField(): string
+    {
+        return '<div class="form-group">Нет описания поля ' . $this->name . '</div>';
+    }
+
+    /**
+     * Вывод поля при просмотре
+     * @return string
+     */
+    public function renderView(): string
     {
         return '<div class="form-group">Нет описания поля ' . $this->name . '</div>';
     }

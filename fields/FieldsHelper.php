@@ -11,7 +11,7 @@ class FieldsHelper extends BaseObject
      * @param string $name Название поля
      * @return string
      */
-    public static function getFieldsTypeByName($name) : string
+    public static function getFieldsTypeByName(string $name) : string
     {
         switch ($name) {
             case 'created_at':
@@ -47,10 +47,10 @@ class FieldsHelper extends BaseObject
 
     /**
      * Возвращает массив колонок из строки
-     * @param string $string Строка с колонками
+     * @param string|null $string Строка с колонками
      * @return string
      */
-    public static function getColumns($string) : string
+    public static function getColumns(string|null $string = '') : string
     {
         if ($string) {
             // Регулярное выражение для поиска маски col-md-99, где 99 - любое число
@@ -65,7 +65,6 @@ class FieldsHelper extends BaseObject
 
         return '';
     }
-
 
     /**
      * Возвращает массив значений

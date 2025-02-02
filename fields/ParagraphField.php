@@ -8,8 +8,21 @@ class ParagraphField extends Field
     /** @var int Тип [p, address, blockquote, canvas, output] */
     public $subtype;
 
-    public function renderField()
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    public function renderField(): string
     {
         return Html::tag($this->subtype, $this->label, ['class' => $this->className]);
+    }
+
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    public function renderView(): string
+    {
+        return '';
     }
 }

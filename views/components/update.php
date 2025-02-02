@@ -62,6 +62,22 @@ $this->params['breadcrumbs'][] = $this->title;
     <?php if($model->model_class): ?>
 
     <div class="wg-box mb-20">
+        <?php if($columns): ?>
+            <h4>Настройка администрирования</h4>
+            <div class="flex gap10 mb-24">
+                <?= Html::ActiveCheckbox($model, 'can_create', ['class' => 'total-checkbox']) ?>
+                <label for="adminmodel-can_create" class="body-text">Разрешить создание новых записей из панели администратора.</label>
+            </div>
+
+            <fieldset class="select">
+                <?= $form->field($model, 'admin_label')->dropDownList(array_combine($allColumns, $allColumns)) ?>
+            </fieldset>
+
+            //Экранирование + modules/admin/core/components/GetDetailViewHelper.php:58
+        <?php endif; ?>
+    </div>
+
+    <div class="wg-box mb-20">
         <?php if($allColumns): ?>
             <h4>Столбцы в списке</h4>
             <div class="list-box-value mb-10 list-draggable-container">
@@ -84,11 +100,7 @@ $this->params['breadcrumbs'][] = $this->title;
     </div>
     <div class="wg-box mb-20">
             <?php if($columns): ?>
-                <h4>Настройка полей</h4>
-                <div class="flex gap10 mb-24">
-                    <?= Html::ActiveCheckbox($model, 'can_create', ['class' => 'total-checkbox']) ?>
-                    <label for="adminmodel-can_create" class="body-text">Разрешить создание новых записей из панели администратора.</label>
-                </div>
+                <h4>Столбцы в редакторе</h4>
                 <div class="list-box-value mb-10">
 
                     <?php foreach($columns as $column): ?>
