@@ -20,7 +20,7 @@ class AdminModel extends BaseObject
     /** @var \Mitisk\Yii2Admin\models\AdminModel */
     public $component;
 
-    public function __construct(\yii\db\BaseActiveRecord $model)
+    public function __construct($model)
     {
         $this->setModel($model);
         $this->setComponent();
@@ -137,7 +137,8 @@ class AdminModel extends BaseObject
     {
         $helper = new \Mitisk\Yii2Admin\core\components\GetGridColumnHelper(
             json_decode($this->component->list, true),
-            json_decode($this->component->data, true)
+            json_decode($this->component->data, true),
+            $this
         );
 
         return $helper->getColumns();

@@ -17,6 +17,7 @@ use Yii;
  * @property string|null $data
  * @property boolean $in_menu
  * @property boolean $can_create
+ * @property boolean $non_encode
  * @property int|null $view
  */
 class AdminModel extends \yii\db\ActiveRecord
@@ -37,7 +38,7 @@ class AdminModel extends \yii\db\ActiveRecord
         return [
             //[['table_name'], 'required'],
             [['view'], 'integer'],
-            [['data', 'in_menu', 'can_create', 'list'], 'safe'],
+            [['data', 'in_menu', 'can_create', 'non_encode', 'list'], 'safe'],
             [['alias'], 'Mitisk\Yii2Admin\components\AliasValidator', 'skipOnEmpty' => false],
             [['alias'], 'unique'],
             [['alias'], 'checkAlias'],
@@ -63,6 +64,7 @@ class AdminModel extends \yii\db\ActiveRecord
             'alias' => 'Алиас',
             'in_menu' => '', //Добавить в меню слева
             'can_create' => '', //Можно создавать новые записи
+            'non_encode' => '', //Разрешить вывод данных без экранирования
             'list' => 'Колонки в списке',
             'table_name' => 'Таблица',
             'model_class' => 'Class',

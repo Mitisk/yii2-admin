@@ -107,8 +107,11 @@ class ComponentsController extends Controller
 
         $list = $model->list ? json_decode($model->list, true) : ($allColumns ? array_flip($allColumns) : []);
 
-        $list['number']['name'] = 'No';
-        $list['number']['description'] = 'Порядковый номер';
+        $list['admin_number']['name'] = 'No';
+        $list['admin_number']['description'] = 'Порядковый номер';
+
+        $list['admin_checkbox']['name'] = 'Чекбокс';
+        $list['admin_checkbox']['description'] = 'Выбрать строку';
 
         if($modelInstance) {
             foreach ($allColumns as $column) {
@@ -119,15 +122,15 @@ class ComponentsController extends Controller
             }
         }
 
-        $list['actions']['name'] = 'Действия';
-        $list['actions']['description'] = '<i class="icon-eye js-list-actions ' . (ArrayHelper::getValue($list, 'actions.data.view') ? 'active' : '') . '">'
-            . Html::hiddenInput(Html::getInputName($model, 'list').'[actions][data][view]', ArrayHelper::getValue($list, 'actions.data.view', '0'))
+        $list['admin_actions']['name'] = 'Действия';
+        $list['admin_actions']['description'] = '<i class="icon-eye js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.view') ? 'active' : '') . '">'
+            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][view]', ArrayHelper::getValue($list, 'admin_actions.data.view', '0'))
             . '</i>
-            <i class="icon-edit-3 js-list-actions ' . (ArrayHelper::getValue($list, 'actions.data.update') ? 'active' : '') . '">'
-            . Html::hiddenInput(Html::getInputName($model, 'list').'[actions][data][update]', ArrayHelper::getValue($list, 'actions.data.update', '0'))
+            <i class="icon-edit-3 js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.update') ? 'active' : '') . '">'
+            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][update]', ArrayHelper::getValue($list, 'admin_actions.data.update', '0'))
             . '</i>
-            <i class="icon-trash-2 js-list-actions ' . (ArrayHelper::getValue($list, 'actions.data.delete') ? 'active' : '') . '">'
-            . Html::hiddenInput(Html::getInputName($model, 'list').'[actions][data][delete]', ArrayHelper::getValue($list, 'actions.data.delete', '0'))
+            <i class="icon-trash-2 js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.delete') ? 'active' : '') . '">'
+            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][delete]', ArrayHelper::getValue($list, 'admin_actions.data.delete', '0'))
             . '</i>';
 
         $model->list = $list;

@@ -1,6 +1,8 @@
 <?php
 namespace Mitisk\Yii2Admin\core\components;
 
+use Mitisk\Yii2Admin\core\models\AdminModel;
+use Mitisk\Yii2Admin\fields\Field;
 use yii\helpers\ArrayHelper;
 
 /**
@@ -19,14 +21,20 @@ class GetGridColumnHelper extends \yii\base\BaseObject
     public $columnsData = [];
 
     /**
+     * @var AdminModel
+     */
+    public $model;
+
+    /**
      * @param array $columns Массив колонок из AdminModel
      * @param array $columnsData Массив настроек колонок из AdminModel
      */
-    public function __construct(array $columns = [], array $columnsData = [])
+    public function __construct(array $columns = [], array $columnsData = [], AdminModel $model = null)
     {
         parent::__construct();
         $this->columns = $columns;
-        $this->columnsData = $columnsData;
+        $this->columnsData = self::prepareData($columnsData);
+        $this->model = $model;
     }
 
     /**
@@ -53,17 +61,27 @@ class GetGridColumnHelper extends \yii\base\BaseObject
     private function createColumn(string $column, array $data): array
     {
         switch ($column) {
-            case 'number':
+            case 'admin_number':
                 return [
                     'header' => 'No',
                     'class' => 'yii\grid\SerialColumn',
                 ];
-            case 'actions':
+            case 'admin_checkbox':
+                return [
+                    'class' => 'yii\grid\CheckboxColumn',
+                ];
+            case 'admin_actions':
                 return $this->createActionColumn($data);
             default:
-                return [
-                    'attribute' => $column,
-                ];
+                if (ArrayHelper::getValue($this->columnsData, $column . '.type')) {
+
+                    $field = new Field(['input' => ArrayHelper::getValue($this->columnsData, $column), 'model' => $this->model]);
+                    return $field->getListData($column);
+                } else {
+                    return [
+                        'attribute' => $column
+                    ];
+                }
         }
     }
 
@@ -124,6 +142,23 @@ class GetGridColumnHelper extends \yii\base\BaseObject
             default:
                 return null;
         }
+    }
+
+    /**
+     * Подготавливает данные для колонок
+     *
+     * @param array $data Данные колонок
+     * @return array Подготовленные данные колонок
+     */
+    private function prepareData(array $data): array
+    {
+        $return = [];
+        foreach ($data as $value) {
+            if (ArrayHelper::getValue($value, 'name')) {
+                $return[ArrayHelper::getValue($value, 'name')] = $value;
+            }
+        }
+        return $return;
     }
 
 }
