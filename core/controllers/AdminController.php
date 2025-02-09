@@ -4,6 +4,7 @@ namespace Mitisk\Yii2Admin\core\controllers;
 use Mitisk\Yii2Admin\core\models\AdminModel;
 use Yii;
 use yii\data\ActiveDataProvider;
+use yii\helpers\Url;
 
 class AdminController extends \yii\web\Controller
 {
@@ -50,7 +51,7 @@ class AdminController extends \yii\web\Controller
     public function actionCreate()
     {
         /** @var AdminModel $model */
-        $model = $this->findModel();
+        $model = new AdminModel(\Yii::createObject(['class' => $this->_modelName]));
 
         if (!$model->canCreate()) {
             throw new \yii\web\ForbiddenHttpException();
@@ -104,13 +105,13 @@ class AdminController extends \yii\web\Controller
 
     public function actionDelete()
     {
-        if($this->findModel()->getModel()->delete()) {
+        if($this->findModel()?->getModel()?->delete()) {
             Yii::$app->session->setFlash('success', 'Запись успешно удалена');
         } else {
             Yii::$app->session->setFlash('error', 'Ошибка удаления');
         }
 
-        return $this->redirect(['index']);
+        return $this->redirect(Url::to(['index']));
     }
 
 

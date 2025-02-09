@@ -29,7 +29,7 @@ class UrlRule extends \yii\web\UrlRule
             $path = 'admin/core/';
             $path .= !empty($parts) ? implode('/', $parts) : ''; // Проверяем, не пуст ли массив
 
-            return [$path, ['model_class' => $page->model_class]];
+            return [$path, ['model_class' => $page->model_class, 'page-alias' => $alias]];
         }
 
         return false;
@@ -42,13 +42,32 @@ class UrlRule extends \yii\web\UrlRule
     {
         if ($alias = ArrayHelper::getValue($params, 'page-alias')) {
             unset($params['page-alias']);
+            ArrayHelper::remove($params, 'model_class');
 
             $url = str_replace('core', $alias, $route) . '/';
             if (!empty($params) && ($query = http_build_query($params)) !== '') {
                 $url .= '?' . $query;
             }
 
-            return str_replace('index/', '', $url);
+            return str_replace(['index/', 'index'], '', $url);
+        } elseif (str_contains($route, '/core/')) {
+            // Если page-alias отсутствует, строим стандартный URL
+            $url = $route;
+
+            $pathInfo = \Yii::$app->request->getPathInfo();
+            $pathInfo = trim($pathInfo, '/');
+            $pathinfoArr = explode('/', $pathInfo);
+
+            if(isset($pathinfoArr[1])) {
+                $url = str_replace('core', $pathinfoArr[1], $url);
+            }
+
+            // Добавляем параметры в виде query string
+            if (!empty($params) && ($query = http_build_query($params)) !== '') {
+                $url .= '?' . $query;
+            }
+
+            return str_replace(['index/', 'index'], '', $url);
         }
 
         return false;
