@@ -5,8 +5,6 @@
 $this->title = 'Компоненты';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-
-
 <div class="wg-box">
     <div class="wg-table table-all-attribute">
         <ul class="table-title flex gap20 mb-14">
@@ -25,7 +23,7 @@ $this->params['breadcrumbs'][] = $this->title;
             <?php foreach ($models as $model): ?>
                 <li class="attribute-item flex items-center justify-between gap20">
                     <div class="name">
-                        <a href="add-attributes.html" class="body-title-2"><?= $model->name ?></a>
+                        <a href="#" class="body-title-2"><?= $model->name ?></a>
                     </div>
                     <div class="body-text"><?= $model->table_name ?></div>
                     <div class="list-icon-function">

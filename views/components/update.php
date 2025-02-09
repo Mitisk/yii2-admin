@@ -66,14 +66,21 @@ $this->params['breadcrumbs'][] = $this->title;
             <h4>Настройка администрирования</h4>
             <div class="flex gap10 mb-24">
                 <?= Html::ActiveCheckbox($model, 'can_create', ['class' => 'total-checkbox']) ?>
-                <label for="adminmodel-can_create" class="body-text">Разрешить создание новых записей из панели администратора.</label>
+                <label for="<?= Html::getInputId($model, 'can_create') ?>" class="body-text">
+                    Разрешить создание новых записей из панели администратора.
+                </label>
+            </div>
+
+            <div class="flex gap10 mb-24">
+                <?= Html::ActiveCheckbox($model, 'non_encode', ['class' => 'total-checkbox']) ?>
+                <label for="<?= Html::getInputId($model, 'non_encode') ?>" class="body-text">
+                    Разрешить вывод данных без экранирования.
+                </label>
             </div>
 
             <fieldset class="select">
                 <?= $form->field($model, 'admin_label')->dropDownList(array_combine($allColumns, $allColumns)) ?>
             </fieldset>
-
-            //Экранирование + modules/admin/core/components/GetDetailViewHelper.php:58
         <?php endif; ?>
     </div>
 

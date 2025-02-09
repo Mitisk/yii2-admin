@@ -11,9 +11,21 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="col-12 mb-20">
     <div class="wg-box">
+
+        <div class="flex items-center justify-between gap10 flex-wrap">
+            <div class="wg-filter flex-grow">
+            </div>
+            <?= Html::a('<div class="item trash"><i class="icon-trash-2"></i></div>', ['delete', 'id' => $model->getModel()->id], [
+                'class' => 'tf-button style-1',
+                'data' => [
+                    'confirm' => 'Вы уверены, что хотите удалить этот элемент?',
+                    'method' => 'post',
+                ],
+            ]) ?>
+        </div>
+
         <div class="row">
             <div class="col-12 mb-20">
-
                 <div class="wg-table table-all-attribute">
 
                     <?= DetailView::widget([

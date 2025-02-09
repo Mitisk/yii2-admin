@@ -6,7 +6,7 @@ use Mitisk\Yii2Admin\widgets\GridView;
 /* @var $model \Mitisk\Yii2Admin\core\models\AdminModel */
 /* @var $dataProvider \yii\data\ActiveDataProvider */
 
-$this->title = $model->getName();
+$this->title = $model->getComponentName();
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="wg-box">
