@@ -11,6 +11,18 @@ class FileField extends Field
 
     /**
      * @inheritdoc
+     * @param string $column Выводимое поле
+     * @return array Массив с данным для GridView
+     */
+    public function renderList(string $column): array
+    {
+        return [
+            'attribute' => $column
+        ];
+    }
+
+    /**
+     * @inheritdoc
      * @return string
      */
     public function renderField(): string

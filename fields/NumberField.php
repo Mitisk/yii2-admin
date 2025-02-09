@@ -35,6 +35,7 @@ class NumberField extends Field
      */
     public function renderView(): string
     {
-        return Html::getAttributeValue($this->model->getModel(), $this->name) ?: '-';
+        $value = Html::getAttributeValue($this->model->getModel(), $this->name) ?: '-';
+        return $this->model->component->non_encode ? $value : Html::encode($value);
     }
 }

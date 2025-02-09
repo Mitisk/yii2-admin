@@ -20,6 +20,23 @@ class SelectField extends Field
 
     /**
      * @inheritdoc
+     * @param string $column Выводимое поле
+     * @return array Массив с данным для GridView
+     */
+    public function renderList(string $column): array
+    {
+        $values = FieldsHelper::getValues($this);
+
+        return [
+            'attribute' => $column,
+            'value' => function ($data) use ($values, $column) {
+                return ArrayHelper::getValue($values, $data->{$column});
+            }
+        ];
+    }
+
+    /**
+     * @inheritdoc
      * @return string
      */
     public function renderField(): string

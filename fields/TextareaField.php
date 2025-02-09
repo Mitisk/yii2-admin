@@ -19,6 +19,21 @@ class TextareaField extends Field
 
     /**
      * @inheritdoc
+     * @param string $column Выводимое поле
+     * @return array Массив с данным для GridView
+     */
+    public function renderList(string $column): array
+    {
+        return [
+            'attribute' => $column,
+            'value' => function ($data) use ($column) {
+                return strip_tags($data->{$column});
+            }
+        ];
+    }
+
+    /**
+     * @inheritdoc
      * @return string
      */
     public function renderField(): string
@@ -32,6 +47,7 @@ class TextareaField extends Field
      */
     public function renderView(): string
     {
-        return Html::getAttributeValue($this->model->getModel(), $this->name) ?: '-';
+        $value = Html::getAttributeValue($this->model->getModel(), $this->name) ?: '-';
+        return $this->model->component->non_encode ? $value : Html::encode($value);
     }
 }

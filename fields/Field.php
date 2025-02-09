@@ -37,21 +37,16 @@ class Field extends Widget
     public $fieldId;
 
     /**
-     * Рендер поля
-     * @return string
+     * Значение для листинга
+     * @param string $column Выводимое поле
+     * @return array|string
      */
-    public function getFormInput(): string
+    public function getListData(string $column): array
     {
         $fieldClass = $this->buildField();
         $fieldClass->model = $this->model;
 
-        if($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
-            $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);
-        } else {
-            $fieldClass->fieldId = Yii::$app->security->generateRandomString();
-        }
-
-        return '<fieldset class="' . FieldsHelper::getColumns($fieldClass->className) .'">' . $fieldClass->renderField() . '</fieldset>';
+        return $fieldClass->renderList($column);
     }
 
     /**
@@ -73,6 +68,24 @@ class Field extends Widget
     }
 
     /**
+     * Рендер поля
+     * @return string
+     */
+    public function getFormInput(): string
+    {
+        $fieldClass = $this->buildField();
+        $fieldClass->model = $this->model;
+
+        if($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
+            $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);
+        } else {
+            $fieldClass->fieldId = Yii::$app->security->generateRandomString();
+        }
+
+        return '<fieldset class="' . FieldsHelper::getColumns($fieldClass->className) .'">' . $fieldClass->renderField() . '</fieldset>';
+    }
+
+    /**
      * @return Field
      */
     private function buildField(): Field
@@ -80,10 +93,6 @@ class Field extends Widget
         $name = str_replace('-', ' ', ArrayHelper::getValue($this->input, 'type', 'text'));
 
         $fieldName = static::resolveFieldClass(str_replace(' ', '', ucfirst($name)).'Field');
-
-        if(!$fieldName) {
-            $fieldName = 'Mitisk\\Yii2Admin\\fields\\Field';
-        }
 
         return Yii::createObject(['class' => $fieldName], [$this->input]);
     }
@@ -107,13 +116,30 @@ class Field extends Widget
      */
     public static function resolveFieldClass(string $class): string|null
     {
-        $classname = null;
+        $classname = 'Mitisk\\Yii2Admin\\fields\\Field';
         if(class_exists($class)) {
             $classname = $class;
         } elseif(class_exists('Mitisk\\Yii2Admin\\fields\\'.$class)) {
             $classname = 'Mitisk\\Yii2Admin\\fields\\'.$class;
-        } else {}
+        }
         return $classname;
+    }
+
+    /**
+     * Вывод поля в списке
+     * @return string
+     */
+
+    /**
+     * Вывод поля в списке
+     * @param string $column Выводимое поле
+     * @return array Массив с данным для GridView
+     */
+    public function renderList(string $column): array
+    {
+        return [
+            'attribute' => $column
+        ];
     }
 
     /**

@@ -22,6 +22,27 @@ class DateField extends Field
 
     /**
      * @inheritdoc
+     * @param string $column Выводимое поле
+     * @return array Массив с данным для GridView
+     */
+    public function renderList(string $column): array
+    {
+        return [
+            'attribute' => $column,
+            'value' => function ($data) use ($column) {
+                $date = $data->{$column};
+
+                if($date) {
+                    $date = \Yii::$app->formatter->asDate($date, 'php:d.m.Y H:i:s');
+                }
+
+                return $date ?: '-';
+            }
+        ];
+    }
+
+    /**
+     * @inheritdoc
      * @return string
      */
     public function renderField(): string

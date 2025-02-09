@@ -1,6 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
+use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 
 class CheckboxGroupField extends Field
@@ -22,6 +23,35 @@ class CheckboxGroupField extends Field
 
     /** @var string Публичный статический метод, который возвращает массив значений */
     public $publicStaticMethod;
+
+    /**
+     * @inheritdoc
+     * @param string $column Выводимое поле
+     * @return array Массив с данным для GridView
+     */
+    public function renderList(string $column): array
+    {
+        $values = FieldsHelper::getValues($this);
+
+        if (!$values || $values && count($values) == 1) {
+            return [
+                'attribute' => $column,
+                'format' => 'html',
+                'value' => function ($data) use ($column) {
+                    return $data->{$column}
+                        ? '<div class="block-available">да</div>'
+                        : '<div class="block-not-available">нет</div>';
+                }
+            ];
+        }
+
+        return [
+            'attribute' => $column,
+            'value' => function ($data) use ($values, $column) {
+                return ArrayHelper::getValue($values, $data->{$column});
+            }
+        ];
+    }
 
     /**
      * @inheritdoc
@@ -61,6 +91,6 @@ class CheckboxGroupField extends Field
             }
             return '<div class="block-not-available">нет</div>';
         }
-        return Html::getAttributeValue($this->model->getModel(), $this->name);
+        return ArrayHelper::getValue($values, Html::getAttributeValue($this->model->getModel(), $this->name));
     }
 }
