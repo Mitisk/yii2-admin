@@ -2,8 +2,6 @@
 
 namespace Mitisk\Yii2Admin\widgets;
 
-use Yii;
-
 class ActionColumn extends \yii\grid\ActionColumn
 {
     public $icons = [
@@ -11,5 +9,4 @@ class ActionColumn extends \yii\grid\ActionColumn
         'pencil' => '<div class="item edit"><i class="icon-edit-3"></i></div>',
         'trash' => '<div class="item trash"><i class="icon-trash-2"></i></div>'
     ];
-
 }

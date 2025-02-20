@@ -2,14 +2,8 @@
 
 namespace Mitisk\Yii2Admin\widgets;
 
-use Yii;
-use yii\base\InvalidConfigException;
-use yii\base\Widget;
 use yii\grid\Column;
-use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
-use yii\i18n\Formatter;
-use yii\widgets\LinkPager;
 
 class GridView extends \yii\grid\GridView
 {
@@ -183,5 +177,4 @@ class GridView extends \yii\grid\GridView
 
         return \Mitisk\Yii2Admin\widgets\LinkPager::widget($pager);
     }
-
 }
