@@ -86,14 +86,18 @@ class AdminModel extends \yii\db\ActiveRecord
     }
 
     public function afterSave($insert, $changedAttributes) {
+        // Проверяем, добавляется ли элемент в меню или его состояние изменяется
         if ($this->in_menu && $this->alias) {
             Menu::addToMenu('admin', [
                 'text' => $this->name,
-                'href' => '/admin/'.$this->alias.'/',
+                'href' => '/admin/' . $this->alias . '/',
                 'icon' => 'fa fa-list',
                 'target' => '_self',
                 'title' => $this->name,
             ]);
+        } elseif (!$this->in_menu && isset($changedAttributes['in_menu'])) {
+            // Удаляем элемент из меню, если флаг in_menu изменился на false
+            Menu::removeFromMenu('admin', '/admin/' . $this->alias . '/');
         }
         parent::afterSave($insert, $changedAttributes);
     }

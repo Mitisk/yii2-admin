@@ -2,7 +2,6 @@
 
 namespace Mitisk\Yii2Admin\models;
 
-use Yii;
 use yii\helpers\ArrayHelper;
 
 /**
@@ -20,7 +19,7 @@ class Menu extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public static function tableName()
+    public static function tableName() : string
     {
         return '{{%menu}}';
     }
@@ -28,7 +27,7 @@ class Menu extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules() : array
     {
         return [
             [['data'], 'string'],
@@ -42,7 +41,7 @@ class Menu extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public function attributeLabels()
+    public function attributeLabels() : array
     {
         return [
             'id' => 'ID',
@@ -58,23 +57,57 @@ class Menu extends \yii\db\ActiveRecord
      * Добавить в меню
      * @param string $alias Алиас меню
      * @param array $data Массив вида ['text' => 'Название', 'href' => 'URL', 'target' => '_blank', 'icon' => 'icon', 'title' => 'title']
-     * @return bool
+     * @return bool|int
+     * @throws \Exception
      */
-    public static function addToMenu($alias, $data)
+    public static function addToMenu(string $alias, array $data) : bool|int
+    {
+        return self::updateMenu($alias, $data, true);
+    }
+
+    /**
+     * Удалить из меню
+     * @param string $alias Алиас меню
+     * @param string $href Ссылка
+     * @return bool|int
+     * @throws \Exception
+     */
+    public static function removeFromMenu(string $alias, string $href) : bool|int
+    {
+        return self::updateMenu($alias, ['href' => $href], false);
+    }
+
+    /**
+     * Обновить меню
+     * @param string $alias Алиас меню
+     * @param array $data Массив вида ['text' => 'Название', 'href' => 'URL', 'target' => '_blank', 'icon' => 'icon', 'title' => 'title']
+     * @param bool $isAdd Добавить или удалить
+     * @return bool|int
+     * @throws \Exception
+     */
+    private static function updateMenu(string $alias, array $data, bool $isAdd) : bool|int
     {
         $menu = self::findOne(['alias' => $alias]);
         if ($menu) {
             $href = ArrayHelper::getValue($data, 'href');
-            if($href) {
+            if ($href) {
                 $menuData = json_decode($menu->data, true);
-                //Проверяем на наличие в меню
-                foreach ($menuData as $item) {
-                    if(ArrayHelper::getValue($item, 'href') == $href) {
-                        return true;
+                if ($isAdd) {
+                    // Проверяем на наличие в меню
+                    foreach ($menuData as $item) {
+                        if (ArrayHelper::getValue($item, 'href') == $href) {
+                            return true;  // Элемент уже существует, ничего не делаем
+                        }
                     }
+                    // Добавляем элемент в меню
+                    $menuData[] = $data;
+                } else {
+                    // Удаляем элемент из меню
+                    $menuData = array_filter($menuData, function ($item) use ($href) {
+                        return ArrayHelper::getValue($item, 'href') !== $href; // Условия для удаления
+                    });
                 }
-
-                return self::updateAll(['data' => json_encode(ArrayHelper::merge($menuData, [$data]))], ['id' => $menu->id]);
+                return self::updateAll(['data' => json_encode(array_values($menuData))], ['id' => $menu->id]);
             }
         }
         return false;
