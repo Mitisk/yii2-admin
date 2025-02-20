@@ -2,3 +2,7 @@ vendor/
 .DS_Store
 .idea/
 composer.lock
+*.css
+*.js
+!*.min.css
+!*.min.js
