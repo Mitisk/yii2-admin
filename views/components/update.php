@@ -12,6 +12,7 @@ use yii\widgets\ActiveForm;
 /* @var $allColumns array */
 /* @var $this yii\web\View */
 /* @var $publicStaticMethods string */
+/* @var $publicSaveMethods string */
 
 $this->title = 'Редактирование компонента';
 
@@ -91,13 +92,17 @@ $this->params['breadcrumbs'][] = $this->title;
 
                 <?php foreach($model->list as $key => $column): ?>
 
-                    <?= $this->render("_list_item", [
-                        'model' => $model,
-                        'column' => $key,
-                        'requiredColumns' => $requiredColumns,
-                        'name' => ArrayHelper::getValue($column, 'name'),
-                        'description' => ArrayHelper::getValue($column, 'description'),
-                    ]) ?>
+                    <?php if(ArrayHelper::getValue($column, 'name')): ?>
+
+                        <?= $this->render("_list_item", [
+                            'model' => $model,
+                            'column' => $key,
+                            'requiredColumns' => $requiredColumns,
+                            'name' => ArrayHelper::getValue($column, 'name'),
+                            'description' => ArrayHelper::getValue($column, 'description'),
+                        ]) ?>
+
+                    <?php endif;?>
 
                 <?php endforeach; ?>
 
@@ -143,6 +148,7 @@ $this->params['breadcrumbs'][] = $this->title;
     <script>
         window.formData = '<?= $model->data ?>';
         window.publicStaticMethods = <?= $publicStaticMethods ?>;
+        window.publicSaveMethods = <?= $publicSaveMethods ?>;
         window.roles = {
             1: 'Администратор',
         };

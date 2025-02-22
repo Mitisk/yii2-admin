@@ -2,6 +2,7 @@
 namespace Mitisk\Yii2Admin\fields;
 
 use yii\base\BaseObject;
+use yii\db\ActiveQuery;
 use yii\helpers\ArrayHelper;
 
 class FieldsHelper extends BaseObject
@@ -79,19 +80,48 @@ class FieldsHelper extends BaseObject
             $reflectionMethod = $reflectionClass->getMethod($field->publicStaticMethod);
 
             if ($reflectionMethod) {
-                // Вызываем метод статически
-                $values = $reflectionMethod->invoke(null);
+                // Создаем экземпляр модели
+                $modelInstance = new $reflectionClass->name();
+
+                // Вызываем метод (статический или нестатический)
+                $result = $reflectionMethod->isStatic()
+                    ? $reflectionMethod->invoke(null) // Статический метод
+                    : $reflectionMethod->invoke($modelInstance); // Нестатический метод
+
+                // Проверяем, является ли результат ActiveQuery
+                if ($result instanceof ActiveQuery) {
+                    $query = clone $result;
+                    $query->primaryModel = null;
+                    $query->link = null;
+                    $query->via = null;
+
+                    // Получаем данные из базы данных
+                    $queryResult = $query->all();
+
+                    // Преобразуем результат в массив ключ-значение
+                    foreach ($queryResult as $item) {
+                        $values[$item->id] = ArrayHelper::getValue($item, 'name'); // Заменить 'id' и 'name' на соответствующие поля
+                    }
+
+                } elseif (is_array($result)) {
+                    // Если результат уже массив, используем его напрямую
+                    $values = $result;
+                }
             }
         }
 
+        // Если значения не были получены через метод, используем field->values
         if (!$values && $field->values) {
             foreach ($field->values as $key => $value) {
                 $values[ArrayHelper::getValue($value, 'value')] = ArrayHelper::getValue($value, 'label');
             }
         }
 
-        if (!$field->required && $values) {
-            $values = array_merge([null => '---'], $values);
+        // Добавляем пустое значение, если поле необязательное
+        if ($field instanceof SelectField) {
+            if (!$field->required && $values) {
+                $values = array_merge([null => '---'], $values);
+            }
         }
 
         return $values;

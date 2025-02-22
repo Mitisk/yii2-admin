@@ -60,8 +60,10 @@ class AdminController extends \yii\web\Controller
         if (\Yii::$app->request->isPost) {
             $modelData = $model->getModel();
             if ($modelData->load(\Yii::$app->request->post()) && $modelData->save()) {
-                Yii::$app->session->setFlash('success', 'Запись успешно добавлена');
-                return $this->redirect(['index']);
+                if($model->afterSave()) {
+                    Yii::$app->session->setFlash('success', 'Запись успешно добавлена');
+                    return $this->redirect(['index']);
+                }
             }
 
             Yii::$app->session->setFlash('error', 'Ошибка при добавлении записи: ' . implode(', ', $modelData->getFirstErrors()));
@@ -75,13 +77,16 @@ class AdminController extends \yii\web\Controller
 
     public function actionUpdate($id)
     {
+        /** @var AdminModel $model */
         $model = $this->findModel();
 
         if (\Yii::$app->request->isPost) {
             $modelData = $model->getModel();
             if ($modelData->load(\Yii::$app->request->post()) && $modelData->save()) {
-                Yii::$app->session->setFlash('success', 'Запись успешно обновлена');
-                return $this->redirect(['index']);
+                if($model->afterSave()) {
+                    Yii::$app->session->setFlash('success', 'Запись успешно обновлена');
+                    return $this->redirect(['index']);
+                }
             }
 
             Yii::$app->session->setFlash('error', 'Ошибка при обновлении записи: ' . implode(', ', $modelData->getFirstErrors()));

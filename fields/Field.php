@@ -159,4 +159,24 @@ class Field extends Widget
     {
         return '<div class="form-group">Нет описания поля ' . $this->name . '</div>';
     }
+
+    /**
+     * Сохранение поля
+     * @return bool
+     */
+    public function afterSave() : bool
+    {
+        $fieldClass = $this->buildField();
+        $fieldClass->model = $this->model;
+
+        return $fieldClass->save();
+    }
+    /**
+     * Сохранение поля
+     * @return bool
+     */
+    public function save() : bool
+    {
+        return true;
+    }
 }

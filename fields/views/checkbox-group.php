@@ -3,7 +3,7 @@
 /** @var $model \Mitisk\Yii2Admin\core\models\AdminModel  */
 /** @var $fieldId string  */
 /** @var $values array  */
-
+/** @var $selected array  */
 ?>
     <div class="form-group">
 
@@ -13,12 +13,27 @@
         </label>
 
         <div class="active-checkbox-list">
-            <?= \yii\helpers\Html::activeCheckboxList($model->getModel(), $field->name, $values, [
-                'id' => $fieldId,
-                'required' => $field->required,
-                'readonly' => $field->readonly,
-                'autocomplete' => 'off',
-            ]); ?>
+            <?php if ($selected) : ?>
+                <?= \yii\helpers\Html::checkboxList(
+                        \yii\helpers\Html::getInputName($model->getModel(), $field->name),
+                        $selected,
+                        $values,
+                        [
+                            'id' => $fieldId,
+                            'required' => $field->required,
+                            'readonly' => $field->readonly,
+                            'autocomplete' => 'off'
+                        ]); ?>
+
+            <?php else : ?>
+                <?= \yii\helpers\Html::activeCheckboxList($model->getModel(), $field->name, $values, [
+                    'id' => $fieldId,
+                    'required' => $field->required,
+                    'readonly' => $field->readonly,
+                    'autocomplete' => 'off'
+                ]); ?>
+
+            <?php endif; ?>
 
         </div>
 

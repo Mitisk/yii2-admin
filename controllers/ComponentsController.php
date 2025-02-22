@@ -135,47 +135,87 @@ class ComponentsController extends Controller
 
         $model->list = $list;
 
-        $publicStaticMethods = json_encode($model->model_class ? self::getPublicStaticMethods($model->model_class) : []);
+        $publicStaticMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class) : []);
+        $publicSaveMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class, true) : []);
 
-        return $this->render('update', compact(['model', 'columns', 'modelInstance', 'requiredColumns', 'addedAttributes', 'allColumns', 'publicStaticMethods']));
+        return $this->render('update', compact([
+            'model',
+            'columns',
+            'modelInstance',
+            'requiredColumns',
+            'addedAttributes',
+            'allColumns',
+            'publicStaticMethods',
+            'publicSaveMethods'
+        ]));
     }
 
     /**
-     * Получаем все методы класса
+     * Получаем методы класса
+     * @param string $className Имя класса
+     * @param bool $forSave Классы для сохранения
      * @return array
      */
-    public static function getPublicStaticMethods($className)
+    public static function getPublicMethods(string $className, bool $forSave = false) : array
     {
         // Получаем все методы текущего класса
         $methods = get_class_methods($className);
 
         // Используем рефлексию для фильтрации методов
         $reflectionClass = new \ReflectionClass($className);
-        $publicStaticMethods = [];
+        $publicMethods = [];
 
         foreach ($methods as $method) {
             $reflectionMethod = $reflectionClass->getMethod($method);
 
-            // Проверяем, что метод публичный и статический, и что он определен в данном классе
-            if ($reflectionMethod->isPublic() && $reflectionMethod->isStatic() &&
+            // Проверяем, что метод публичный, и что он определен в данном классе
+            if ($reflectionMethod->isPublic() &&
                 $reflectionMethod->getDeclaringClass()->getName() === $className) {
 
-                // Вызываем метод статически
-                $returnValue = $reflectionMethod->invoke(null);
+                //Поиск методов, возвращающих массив значений
+                if(!$forSave) {
+                    if ($reflectionMethod->isStatic()) {
+                        // Вызываем метод статически
+                        $returnValue = $reflectionMethod->invoke(null);
+                        // Проверяем, возвращает ли метод массив
+                        if (is_array($returnValue)) {
+                            $publicMethods[$method] = $className . '::' . $method . '()';
+                        }
+                    } else {
+                        //Если есть зависимости через viaTable
+                        $returnType = $reflectionMethod->getReturnType();
 
-                // Проверяем, возвращает ли метод массив
-                if (is_array($returnValue)) {
-                    $publicStaticMethods[$method] = $className . '::' . $method . '()';
+                        if ($returnType && $returnType->allowsNull() === false && $returnType->getName() === \yii\db\ActiveQuery::class) {
+                            // Вызываем метод связи, чтобы получить экземпляр ActiveQuery
+                            $query = (new $className)->{$method}();
+
+                            if ($query instanceof \yii\db\ActiveQuery) {
+                                // Проверяем, использует ли связь viaTable
+                                if ($query->via !== null) {
+                                    $publicMethods[$method] = $className . '::' . $method . '()';
+                                }
+                            }
+                        }
+
+                    }
+                } else  {
+                    //Поиск методов для сохранения значений
+                    $returnType = $reflectionMethod->getReturnType();
+
+                    if ($returnType && $returnType->allowsNull() === false && $returnType->getName() === \yii\db\ActiveQuery::class) {
+                        $publicMethods[$method] = $className . '::' . $method . '()';
+                    }
                 }
+
             }
         }
 
         //Добавляем пустую строку
-        if($publicStaticMethods) {
-            $publicStaticMethods = array_merge([null => '---'], $publicStaticMethods);
+        if($publicMethods) {
+            $publicMethods = array_merge([null => '---'], $publicMethods);
         }
 
-        return $publicStaticMethods;
+        return $publicMethods;
     }
 
     public function actionDelete($id)
