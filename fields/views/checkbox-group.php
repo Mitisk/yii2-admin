@@ -7,7 +7,7 @@
 ?>
     <div class="form-group">
 
-        <label for="<?= $fieldId ?>" class="body-text">
+        <label for="<?= $fieldId ?>" class="<?= ($selected) ? 'body-title mb-10' : 'body-text' ?>">
             <?= $field->label ?>
             <?php if ($field->required) { ?><span class="tf-color-1">*</span><?php } ?>
         </label>

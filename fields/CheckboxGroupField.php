@@ -92,7 +92,6 @@ class CheckboxGroupField extends Field
 
                     if (count($filteredKeys) === 1) {
                         $selected = $relation->select($filteredKeys)->asArray()->all();
-                        var_dump($selected);die();
                         $selected = ArrayHelper::map($selected, $filteredKeys[0], $filteredKeys[0]);
                     }
 

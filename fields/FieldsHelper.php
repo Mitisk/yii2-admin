@@ -120,7 +120,7 @@ class FieldsHelper extends BaseObject
         // Добавляем пустое значение, если поле необязательное
         if ($field instanceof SelectField) {
             if (!$field->required && $values) {
-                $values = array_merge([null => '---'], $values);
+                $values = [null => '---'] + $values;
             }
         }
 
