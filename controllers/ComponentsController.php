@@ -71,7 +71,7 @@ class ComponentsController extends Controller
             }
         }
 
-        $columns = array_keys($columns);
+        $columns = ArrayHelper::merge(array_keys($columns), self::getPublicProperties($model->model_class));
         $allColumns = array_keys($allColumns);
 
         $modelInstance = null;
@@ -98,7 +98,6 @@ class ComponentsController extends Controller
         }
 
         if($model->data) {
-            $data = $model->data;
             $data = json_decode($model->data, true);
             if($data && is_array($data)) {
                 $addedAttributes = ArrayHelper::map($data, 'name', 'name');
@@ -151,12 +150,33 @@ class ComponentsController extends Controller
     }
 
     /**
-     * Получаем методы класса
+     * Получаем все свойства класса
+     * @return array
+     */
+    private static function getPublicProperties(string $className) : array
+    {
+        // Создаем объект ReflectionClass для текущего класса
+        $reflection = new \ReflectionClass($className);
+
+        // Получаем все публичные свойства
+        $publicProperties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
+
+        // Извлекаем имена свойств в массив
+        $propertyNames = [];
+        foreach ($publicProperties as $property) {
+            $propertyNames[] = $property->getName();
+        }
+
+        return $propertyNames;
+    }
+
+    /**
+     * Получаем все методы класса
      * @param string $className Имя класса
      * @param bool $forSave Классы для сохранения
      * @return array
      */
-    public static function getPublicMethods(string $className, bool $forSave = false) : array
+    private static function getPublicMethods(string $className, bool $forSave = false) : array
     {
         // Получаем все методы текущего класса
         $methods = get_class_methods($className);
