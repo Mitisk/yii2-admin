@@ -110,7 +110,9 @@ class AdminController extends \yii\web\Controller
 
     public function actionDelete()
     {
-        if($this->findModel()?->getModel()?->delete()) {
+        $adminModel = $this->findModel();
+
+        if($adminModel?->beforeDelete() && $adminModel?->getModel()?->delete()) {
             Yii::$app->session->setFlash('success', 'Запись успешно удалена');
         } else {
             Yii::$app->session->setFlash('error', 'Ошибка удаления');

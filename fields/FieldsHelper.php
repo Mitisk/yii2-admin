@@ -1,6 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\fields;
 
+use Mitisk\Yii2Admin\models\File;
 use yii\base\BaseObject;
 use yii\db\ActiveQuery;
 use yii\helpers\ArrayHelper;
@@ -125,5 +126,14 @@ class FieldsHelper extends BaseObject
         }
 
         return $values;
+    }
+
+    public static function getFiles($model, $field)
+    {
+        return File::find()->where([
+            'class_name' => get_class($model),
+            'item_id' => $model->id,
+            'field_name' => $field,
+        ])->all();
     }
 }

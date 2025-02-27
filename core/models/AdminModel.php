@@ -175,7 +175,7 @@ class AdminModel extends BaseObject
         return $return;
     }
 
-    public function afterSave()
+    public function afterSave() : bool
     {
         $inputs = json_decode($this->component->data, true);
 
@@ -183,6 +183,21 @@ class AdminModel extends BaseObject
             foreach ($inputs as $input) {
                 $field = new Field(['input' => $input, 'model' => $this]);
                 if (!$field->afterSave()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public function beforeDelete() : bool
+    {
+        $inputs = json_decode($this->component->data, true);
+
+        if($inputs) {
+            foreach ($inputs as $input) {
+                $field = new Field(['input' => $input, 'model' => $this]);
+                if (!$field->beforeDelete()) {
                     return false;
                 }
             }

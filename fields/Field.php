@@ -58,7 +58,7 @@ class Field extends Widget
         $fieldClass = $this->buildField();
         $fieldClass->model = $this->model;
 
-        if($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
+        if ($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
             $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);
         } else {
             $fieldClass->fieldId = Yii::$app->security->generateRandomString();
@@ -171,11 +171,33 @@ class Field extends Widget
 
         return $fieldClass->save();
     }
+
+    /**
+     * Удаление поля
+     * @return bool
+     */
+    public function beforeDelete() : bool
+    {
+        $fieldClass = $this->buildField();
+        $fieldClass->model = $this->model;
+
+        return $fieldClass->delete();
+    }
+
     /**
      * Сохранение поля
      * @return bool
      */
     public function save() : bool
+    {
+        return true;
+    }
+
+    /**
+     * Удаление поля
+     * @return bool
+     */
+    public function delete() : bool
     {
         return true;
     }
