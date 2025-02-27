@@ -16,7 +16,7 @@ $form = ActiveForm::begin([
         'template' => "{label}\n{input}\n{error}",
         'labelOptions' => ['class' => 'body-title mb-10'],
         'inputOptions' => ['class' => ''],
-        'errorOptions' => ['class' => 'col-lg-7 invalid-feedback'],
+        'errorOptions' => ['class' => 'col-lg-7 invalid-feedback']
     ],
     'options' => [
         'class' => 'row',

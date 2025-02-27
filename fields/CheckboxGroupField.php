@@ -72,12 +72,28 @@ class CheckboxGroupField extends Field
             ]);
         }
 
+        $selected = $this->getSelected();
+
+        return $this->render('checkbox-group', [
+            'field' => $this,
+            'model' => $this->model,
+            'fieldId' => $this->fieldId,
+            'selected' => $selected,
+            'values' => $values
+        ]);
+    }
+
+    /**
+     * Получаем выбранные значения
+     * @return array
+     */
+    private function getSelected() : array
+    {
         $selected = [];
 
         if ($this->publicSaveMethod) {
             // Проверяем, существует ли метод связи
             if (method_exists($this->model->getModel(), $this->publicSaveMethod)) {
-
                 $selected = $this->model->getModel()->{$this->getRelationName()};
                 if ($selected) {
                     $selected = ArrayHelper::map(ArrayHelper::toArray($selected), 'id', 'id');
@@ -85,7 +101,6 @@ class CheckboxGroupField extends Field
 
                 // Получаем объект связи
                 $relation = $this->model->getModel()->getRelation($this->getRelationName());
-
                 if (!$relation->via instanceof \yii\db\ActiveQuery) {
 
                     $filteredKeys = $this->getRelationAttribute($relation);
@@ -100,14 +115,7 @@ class CheckboxGroupField extends Field
             }
 
         }
-
-        return $this->render('checkbox-group', [
-            'field' => $this,
-            'model' => $this->model,
-            'fieldId' => $this->fieldId,
-            'selected' => $selected,
-            'values' => $values
-        ]);
+        return $selected;
     }
 
     /**
@@ -124,7 +132,16 @@ class CheckboxGroupField extends Field
             }
             return '<div class="block-not-available">нет</div>';
         }
-        return ArrayHelper::getValue($values, Html::getAttributeValue($this->model->getModel(), $this->name));
+
+        if($selected = $this->getSelected()) {
+            $result = array_map(function ($key) use ($values) {
+                return $values[$key] ?? null; // Если ключ не найден, возвращаем null
+            }, $selected);
+
+            return implode('<br>', $result);
+        }
+
+        return ArrayHelper::getValue($values, Html::getAttributeValue($this->model->getModel(), $this->name), '');
     }
 
     /**
@@ -238,6 +255,27 @@ class CheckboxGroupField extends Field
             } else {
                 $this->model->getModel()->addError($this->getRelationName(), 'Невозможно сохранить. Метод "' . $this->publicSaveMethod . '" отсутствует в классе ' . get_class($this->model->getModel()));
                 return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     * @return bool
+     */
+    public function delete() : bool
+    {
+        if ($this->publicSaveMethod) {
+            if (method_exists($this->model->getModel(), $this->publicSaveMethod)) {
+                // Получаем объект связи
+                $relation = $this->model->getModel()->getRelation($this->getRelationName());
+
+                // Используем связь
+                if ($relation instanceof \yii\db\ActiveQuery) {
+                    // Удаляем все существующие связи
+                    $this->model->getModel()->unlinkAll($this->getRelationName(), true);
+                }
             }
         }
         return true;

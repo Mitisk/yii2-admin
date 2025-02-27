@@ -44,12 +44,26 @@ class SelectField extends Field
      */
     public function renderField(): string
     {
+        return $this->render('select', [
+            'field' => $this,
+            'model' => $this->model,
+            'fieldId' => $this->fieldId,
+            'selected' => $this->getSelected(),
+            'values' => FieldsHelper::getValues($this)
+        ]);
+    }
+
+    /**
+     * Получаем выбранные значения
+     * @return array
+     */
+    private function getSelected() : array
+    {
         $selected = [];
 
         if ($this->publicSaveMethod) {
             // Проверяем, существует ли метод связи
             if (method_exists($this->model->getModel(), $this->publicSaveMethod)) {
-
                 $selected = $this->model->getModel()->{$this->getRelationName()};
                 if ($selected) {
                     $selected = ArrayHelper::map(ArrayHelper::toArray($selected), 'id', 'id');
@@ -59,7 +73,6 @@ class SelectField extends Field
                 $relation = $this->model->getModel()->getRelation($this->getRelationName());
 
                 if (!$relation->via instanceof \yii\db\ActiveQuery) {
-
                     $filteredKeys = $this->getRelationAttribute($relation);
 
                     if (count($filteredKeys) === 1) {
@@ -72,14 +85,7 @@ class SelectField extends Field
             }
 
         }
-
-        return $this->render('select', [
-            'field' => $this,
-            'model' => $this->model,
-            'fieldId' => $this->fieldId,
-            'selected' => $selected,
-            'values' => FieldsHelper::getValues($this)
-        ]);
+        return $selected;
     }
 
     /**
@@ -90,6 +96,15 @@ class SelectField extends Field
     {
         $values = FieldsHelper::getValues($this);
         $value = Html::getAttributeValue($this->model->getModel(), $this->name);
+
+        if($selected = $this->getSelected()) {
+            $result = array_map(function ($key) use ($values) {
+                return $values[$key] ?? null; // Если ключ не найден, возвращаем null
+            }, $selected);
+
+            return implode('<br>', $result);
+        }
+
         return ArrayHelper::getValue($values, $value, '-');
     }
 
@@ -186,6 +201,27 @@ class SelectField extends Field
             } else {
                 $this->model->getModel()->addError($this->getRelationName(), 'Невозможно сохранить. Метод "' . $this->publicSaveMethod . '" отсутствует в классе ' . get_class($this->model->getModel()));
                 return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     * @return bool
+     */
+    public function delete() : bool
+    {
+        if ($this->publicSaveMethod) {
+            if (method_exists($this->model->getModel(), $this->publicSaveMethod)) {
+                // Получаем объект связи
+                $relation = $this->model->getModel()->getRelation($this->getRelationName());
+
+                // Используем связь
+                if ($relation instanceof \yii\db\ActiveQuery) {
+                    // Удаляем все существующие связи
+                    $this->model->getModel()->unlinkAll($this->getRelationName(), true);
+                }
             }
         }
         return true;
