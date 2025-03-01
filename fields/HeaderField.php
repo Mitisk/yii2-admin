@@ -5,7 +5,7 @@ use yii\helpers\Html;
 
 class HeaderField extends Field
 {
-    /** @var int Тип [h1, h2, h3, h4, h5, h6] */
+    /** @var string Тип [h1, h2, h3, h4, h5, h6] */
     public $subtype;
 
     /**

@@ -2,6 +2,8 @@
 namespace Mitisk\Yii2Admin\fields;
 
 use Mitisk\Yii2Admin\models\File;
+use yii\db\Expression;
+use yii\helpers\ArrayHelper;
 use yii\web\UploadedFile;
 
 class FileField extends Field
@@ -34,7 +36,7 @@ class FileField extends Field
         $files = FieldsHelper::getFiles($this->model->getModel(), $this->name);
         $preloadedFiles = [];
 
-        foreach($files as $file) {
+        foreach ($files as $file) {
             $preloadedFiles[] = [
                 "type" => $file->mime_type,
                 "size" => $file->file_size,
@@ -43,6 +45,7 @@ class FileField extends Field
                 "data" => [
                     'alt' => $file->alt_attribute,
                     'file_id' => $file->id,
+                    'field_name' => $this->name
                     ],
             ];
         }
@@ -74,14 +77,74 @@ class FileField extends Field
 
     /**
      * @inheritdoc
-     * @return bool
      */
     public function save() : bool
     {
         $files = UploadedFile::getInstances($this->model->getModel(), $this->name);
 
+        $FileUploaderList = \Yii::$app->request->post('FileUploader');
+
+        $tempFiles = ArrayHelper::getValue($FileUploaderList, 'temp.' . $this->name) ?? [];
+
+        $allFiles = ArrayHelper::getValue($FileUploaderList, $this->name) ?
+            ArrayHelper::map(ArrayHelper::getValue($FileUploaderList, $this->name), 'id', 'alt') :
+            [];
+
+        //Сохраняем изменения в alt атрибутах
+        if($allFiles) {
+            try {
+                // Готовим выражение для CASE WHEN
+                $caseExpression = new Expression(
+                    'CASE ' . implode(' ', array_map(function ($id, $value) {
+                        return "WHEN id = $id THEN :alt_$id";
+                    }, array_keys($allFiles), $allFiles)) . ' ELSE alt_attribute END'
+                );
+
+                // Подготовка параметров для привязки значений
+                $params = [];
+                foreach ($allFiles as $id => $value) {
+                    $params[":alt_$id"] = $value;
+                }
+
+                // Выполняем массовое обновление
+                File::updateAll(
+                    ['alt_attribute' => $caseExpression],
+                    ['id' => array_keys($allFiles)],
+                    $params
+                );
+            } catch (\Exception $e) {}
+
+            // Удаляем записи, которые не находятся в массиве $allFiles
+            $toDelete = File::find()->where([
+                'and',
+                ['class_name' => get_class($this->model->getModel())],
+                ['item_id' => $this->model->getModel()->id],
+                ['field_name' => $this->name],
+                ['not in', 'id', array_keys($allFiles)]
+            ])->all();
+
+            foreach ($toDelete as $file) {
+                $file->delete();
+            }
+        } else {
+            // Удаляем все записи, которые привязаны к этому полю
+            $toDelete = File::find()->where([
+                'and',
+                ['class_name' => get_class($this->model->getModel())],
+                ['item_id' => $this->model->getModel()->id],
+                ['field_name' => $this->name]
+            ])->all();
+
+            foreach ($toDelete as $file) {
+                $file->delete();
+            }
+        }
+
+        //Добавляем новые файлы
         if($files) {
+            $i = 0;
             foreach ($files as $file) {
+                $i++;
                 $filePath = '/uploads/' . uniqid() . '.' . $file->extension;
                 $fileModel = new File();
                 $fileModel->class_name = get_class($this->model->getModel());
@@ -91,6 +154,7 @@ class FileField extends Field
                 $fileModel->file_size = $file->size;
                 $fileModel->mime_type = $file->type;
                 $fileModel->path = '/web' . $filePath;
+                $fileModel->alt_attribute = ArrayHelper::getValue($tempFiles, $i . '.alt');
 
                 $uploadsDir = \Yii::getAlias('@webroot');
 
@@ -108,7 +172,6 @@ class FileField extends Field
 
     /**
      * @inheritdoc
-     * @return bool
      */
     public function delete() : bool
     {

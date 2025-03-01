@@ -117,9 +117,9 @@ class Field extends Widget
     public static function resolveFieldClass(string $class): string|null
     {
         $classname = 'Mitisk\\Yii2Admin\\fields\\Field';
-        if(class_exists($class)) {
+        if (class_exists($class)) {
             $classname = $class;
-        } elseif(class_exists('Mitisk\\Yii2Admin\\fields\\'.$class)) {
+        } elseif (class_exists('Mitisk\\Yii2Admin\\fields\\'.$class)) {
             $classname = 'Mitisk\\Yii2Admin\\fields\\'.$class;
         }
         return $classname;
