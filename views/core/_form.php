@@ -1,7 +1,6 @@
 <?php
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use yii\helpers\ArrayHelper;
 
 /* @var $this yii\web\View */
 /* @var $model \Mitisk\Yii2Admin\core\models\AdminModel */
@@ -31,13 +30,12 @@ foreach ($model->getFormFields() as $value) {
 }
 ?>
 
-
 <div class="bot">
     <div class="list-box-value mb-10">
         <div>
             <?= Html::submitButton($formModel->isNewRecord
-                ? Yii::t('rbac', 'Create')
-                : Yii::t('rbac', 'Update role'), [
+                ? "Добавить"
+                : "Обновить", [
                 'class' => $formModel->isNewRecord
                     ? 'tf-button w208'
                     : 'tf-button w208'
@@ -51,6 +49,5 @@ foreach ($model->getFormFields() as $value) {
             ]) : '' ?>
         </div>
     </div>
-
 </div>
 <?php ActiveForm::end() ?>

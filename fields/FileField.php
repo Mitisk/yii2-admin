@@ -4,6 +4,7 @@ namespace Mitisk\Yii2Admin\fields;
 use Mitisk\Yii2Admin\models\File;
 use yii\db\Expression;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Html;
 use yii\web\UploadedFile;
 
 class FileField extends Field
@@ -22,7 +23,21 @@ class FileField extends Field
     public function renderList(string $column): array
     {
         return [
-            'attribute' => $column
+            'attribute' => $column,
+            'format' => 'html',
+            'value' => function ($data) use ($column) {
+                /** @var File[] $files */
+                $files = FieldsHelper::getFiles($data, $this->name);
+                $values = [];
+                foreach ($files as $file) {
+                    $values[] = Html::a(
+                        Html::img($file->path, ['style' => 'height: 60px;', 'alt' => $file->alt_attribute]),
+                        $file->path,
+                        ['target' => '_blank', 'class' => 'list-image-thumbnail']
+                    );
+                }
+                return implode(' ', $values);
+            }
         ];
     }
 

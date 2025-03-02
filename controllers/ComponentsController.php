@@ -8,9 +8,6 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\web\Controller;
 
-/**
- * Default controller for the `admin` module
- */
 class ComponentsController extends Controller
 {
     /**
@@ -24,7 +21,7 @@ class ComponentsController extends Controller
         /** @var $schema yii\db\mysql\Schema */
         $schema = $db->getSchema();
 
-        if($schema) {
+        if ($schema) {
             $tables = $schema->getTableNames();
             $exists = AdminModel::find()->select('table_name')->column();
 
@@ -47,12 +44,12 @@ class ComponentsController extends Controller
     {
         $model = AdminModel::findOne($id);
 
-        if(!$model) {
+        if (!$model) {
             throw new \yii\web\NotFoundHttpException('The requested page does not exist.');
         }
 
-        if(Yii::$app->request->isPost) {
-            if($model->load(\Yii::$app->request->post()) && $model->save()) {
+        if (Yii::$app->request->isPost) {
+            if ($model->load(\Yii::$app->request->post()) && $model->save()) {
                 Yii::$app->session->setFlash('success', 'Компонент обновлен.');
             }
         }
@@ -63,23 +60,23 @@ class ComponentsController extends Controller
         $schema = $db->getSchema();
         $columns = $allColumns = $schema->getTableSchema($model->table_name)->columns;
 
-        if($columns) {
+        if ($columns) {
             foreach ($columns as $key => $column) {
-                if($column->isPrimaryKey) {
+                if ($column->isPrimaryKey) {
                     unset($columns[$key]);
                 }
             }
         }
 
         $columns = ArrayHelper::merge(array_keys($columns), self::getPublicProperties($model->model_class));
-        $allColumns = array_keys($allColumns);
+        $allColumns = ArrayHelper::merge(array_keys($allColumns), self::getPublicProperties($model->model_class));
 
         $modelInstance = null;
         $requiredColumns = [];
         $addedAttributes = [];
 
 
-        if($model->model_class) {
+        if ($model->model_class) {
             if (!class_exists($model->model_class)) {
                 $model->model_class = null;
             } else {
@@ -97,9 +94,9 @@ class ComponentsController extends Controller
             }
         }
 
-        if($model->data) {
+        if ($model->data) {
             $data = json_decode($model->data, true);
-            if($data && is_array($data)) {
+            if ($data && is_array($data)) {
                 $addedAttributes = ArrayHelper::map($data, 'name', 'name');
             }
         }
@@ -112,12 +109,11 @@ class ComponentsController extends Controller
         $list['admin_checkbox']['name'] = 'Чекбокс';
         $list['admin_checkbox']['description'] = 'Выбрать строку';
 
-        if($modelInstance) {
+        if ($modelInstance) {
             foreach ($allColumns as $column) {
                 $list[$column] = is_array(ArrayHelper::getValue($list, $column, [])) ? ArrayHelper::getValue($list, $column, []) : [ArrayHelper::getValue($list, $column, [])];
                 $list[$column]['name'] = $modelInstance->getAttributeLabel($column);
                 $list[$column]['description'] = $column;
-
             }
         }
 
@@ -193,7 +189,7 @@ class ComponentsController extends Controller
                 $reflectionMethod->getDeclaringClass()->getName() === $className) {
 
                 //Поиск методов, возвращающих массив значений
-                if(!$forSave) {
+                if (!$forSave) {
                     if ($reflectionMethod->isStatic()) {
                         // Вызываем метод статически
                         $returnValue = $reflectionMethod->invoke(null);
@@ -231,7 +227,7 @@ class ComponentsController extends Controller
         }
 
         //Добавляем пустую строку
-        if($publicMethods) {
+        if ($publicMethods) {
             $publicMethods = array_merge([null => '---'], $publicMethods);
         }
 

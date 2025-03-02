@@ -37,4 +37,3 @@ $this->params['breadcrumbs'][] = $this->title;
         'columns' => $model->getGridColumns(),
     ]) ?>
 </div>
-

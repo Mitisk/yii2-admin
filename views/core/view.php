@@ -12,18 +12,6 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="col-12 mb-20">
     <div class="wg-box">
 
-        <div class="flex items-center justify-between gap10 flex-wrap">
-            <div class="wg-filter flex-grow">
-            </div>
-            <?= Html::a('<div class="item trash"><i class="icon-trash-2"></i></div>', ['delete', 'id' => $model->getModel()->id], [
-                'class' => 'tf-button style-1',
-                'data' => [
-                    'confirm' => 'Вы уверены, что хотите удалить этот элемент?',
-                    'method' => 'post',
-                ],
-            ]) ?>
-        </div>
-
         <div class="row">
             <div class="col-12 mb-20">
                 <div class="wg-table table-all-attribute">
@@ -39,9 +27,9 @@ $this->params['breadcrumbs'][] = $this->title;
                             <div class="body-title" {captionOptions}>{label}</div>
                             <div class="body-text" {contentOptions}>{value}</div>
                             <div class="justify-content-end list-icon-function">
-                                <a href="' . \yii\helpers\Url::to($model->getUrls('update')) . '" class="item edit">
+                                <!--a href="' . \yii\helpers\Url::to($model->getUrls('update')) . '" class="item edit">
                                     <i class="icon-edit-3"></i>
-                                </a>
+                                </a-->
                             </div>
                             </li>',
                     ])
@@ -51,5 +39,23 @@ $this->params['breadcrumbs'][] = $this->title;
 
             </div>
         </div>
+
+        <div class="bot">
+            <div class="list-box-value mb-10">
+                <div>
+                    <?= Html::a("Редактировать", $model->getUrls('update'), [
+                        'class' => 'tf-button w208'
+                    ]) ?>
+                </div>
+                <div>
+                    <?= Html::a(Yii::t('rbac', 'Delete'), ['delete', 'id' => $model->getModel()->id], [
+                        'class' => 'tf-button tf-button-danger w208',
+                        'data-confirm' => Yii::t('rbac', 'Are you sure to delete this item?'),
+                        'data-method' => 'post',
+                    ]) ?>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>

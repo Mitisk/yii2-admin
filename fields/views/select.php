@@ -55,6 +55,9 @@
 $this->registerJs(<<<JS
 $('select[multiple]').each(function() {
             $(this).chosen({
+                no_results_text: "Ничего не найдено по запросу: ",
+                placeholder_text_single: "Выбрать",
+                placeholder_text_multiple: "Выбрать",
                 // This option restricts the number
                 // of items for selection
                 max_selected_options: 15,
