@@ -31,12 +31,13 @@ class FileField extends Field
                 $values = [];
                 foreach ($files as $file) {
                     $values[] = Html::a(
-                        Html::img($file->path, ['style' => 'height: 60px;', 'alt' => $file->alt_attribute]),
+                        Html::img($file->path, ['alt' => $file->alt_attribute]),
                         $file->path,
-                        ['target' => '_blank', 'class' => 'list-image-thumbnail']
+                        ['target' => '_blank', 'class' => 'gallery-image']
                     );
                 }
-                return implode(' ', $values);
+                //<div class="gallery-container">
+                return Html::tag('div', implode(' ', $values), ['class' => 'gallery-container']);
             }
         ];
     }
