@@ -53,6 +53,54 @@ class Menu extends \yii\db\ActiveRecord
         ];
     }
 
+    public function afterSave($insert, $changedAttributes)
+    {
+        if ($this->alias == 'admin') {
+            $newMenuData = json_decode($this->data, true);
+            // Создаем индексированный массив для быстрой проверки href в newMenuData
+            $newHrefs = array_column($newMenuData, 'href');
+
+            if (isset($changedAttributes['data'])) {
+                $oldMenuData = json_decode($changedAttributes['data'], true);
+
+                if ($oldMenuData && $newMenuData) {
+
+                    // Находим удаленные элементы
+                    $deletedItems = array_diff_key($oldMenuData, $newMenuData);
+
+                    // Если есть удаленные элементы
+                    if (!empty($deletedItems)) {
+                        foreach ($deletedItems as $key => $value) {
+                            if (!in_array($value['href'], $newHrefs, true)) {
+                                // Если href не найден в newMenuData, считаем элемент полностью удаленным
+                                $href = str_replace(['/admin/', '/'], '', $value['href']);
+                                AdminModel::updateAll(['in_menu' => 0], ['alias' => $href]);
+                            }
+                        }
+                    }
+                } elseif ($oldMenuData && empty($newMenuData)) {
+                    // Если новые данные пусты, все старые элементы считаются удаленными
+                    AdminModel::updateAll(['in_menu' => 0]);
+                }
+            }
+
+            if ($newHrefs) {
+                // Фильтруем массив, исключая "/admin/" и "/"
+                $filteredArray = [];
+                foreach ($newHrefs as $value) {
+                    if ($val = str_replace(['/admin/', '/'], '', $value)) {
+                        $filteredArray[] = $val;
+                    }
+                }
+                if ($filteredArray) {
+                    AdminModel::updateAll(['in_menu' => 1], ['in', 'alias', $filteredArray]);
+                }
+            }
+        }
+
+        parent::afterSave($insert, $changedAttributes);
+    }
+
     /**
      * Добавить в меню
      * @param string $alias Алиас меню
