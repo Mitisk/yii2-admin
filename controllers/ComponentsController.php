@@ -103,30 +103,7 @@ class ComponentsController extends Controller
 
         $list = $model->list ? json_decode($model->list, true) : ($allColumns ? array_flip($allColumns) : []);
 
-        $list['admin_number']['name'] = 'No';
-        $list['admin_number']['description'] = 'Порядковый номер';
-
-        $list['admin_checkbox']['name'] = 'Чекбокс';
-        $list['admin_checkbox']['description'] = 'Выбрать строку';
-
-        if ($modelInstance) {
-            foreach ($allColumns as $column) {
-                $list[$column] = is_array(ArrayHelper::getValue($list, $column, [])) ? ArrayHelper::getValue($list, $column, []) : [ArrayHelper::getValue($list, $column, [])];
-                $list[$column]['name'] = $modelInstance->getAttributeLabel($column);
-                $list[$column]['description'] = $column;
-            }
-        }
-
-        $list['admin_actions']['name'] = 'Действия';
-        $list['admin_actions']['description'] = '<i class="icon-eye js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.view') ? 'active' : '') . '">'
-            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][view]', ArrayHelper::getValue($list, 'admin_actions.data.view', '0'))
-            . '</i>
-            <i class="icon-edit-3 js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.update') ? 'active' : '') . '">'
-            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][update]', ArrayHelper::getValue($list, 'admin_actions.data.update', '0'))
-            . '</i>
-            <i class="icon-trash-2 js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.delete') ? 'active' : '') . '">'
-            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][delete]', ArrayHelper::getValue($list, 'admin_actions.data.delete', '0'))
-            . '</i>';
+        $this->configureList($list, $allColumns, $modelInstance, $model);
 
         $model->list = $list;
 
@@ -145,25 +122,22 @@ class ComponentsController extends Controller
         ]));
     }
 
+    public function actionDelete($id)
+    {
+        AdminModel::updateAll(['view' => 0], ['id' => $id]);
+        return $this->redirect(['index']);
+    }
+
     /**
      * Получаем все свойства класса
      * @return array
      */
-    private static function getPublicProperties(string $className) : array
+    private static function getPublicProperties(string $className): array
     {
-        // Создаем объект ReflectionClass для текущего класса
-        $reflection = new \ReflectionClass($className);
-
-        // Получаем все публичные свойства
-        $publicProperties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
-
-        // Извлекаем имена свойств в массив
-        $propertyNames = [];
-        foreach ($publicProperties as $property) {
-            $propertyNames[] = $property->getName();
-        }
-
-        return $propertyNames;
+        return array_map(
+            static fn(\ReflectionProperty $property) => $property->getName(),
+            (new \ReflectionClass($className))->getProperties(\ReflectionProperty::IS_PUBLIC)
+        );
     }
 
     /**
@@ -234,9 +208,40 @@ class ComponentsController extends Controller
         return $publicMethods;
     }
 
-    public function actionDelete($id)
+    /**
+     * Настройка списка
+     * @param array $list
+     * @param array $allColumns
+     * @param object|null $modelInstance
+     * @param AdminModel $model
+     * @return void
+     * @throws \Exception
+     */
+    private function configureList(array &$list, array $allColumns, ?object $modelInstance, AdminModel $model): void
     {
-        AdminModel::updateAll(['view' => 0], ['id' => $id]);
-        return $this->redirect(['index']);
+        $list['admin_number']['name'] = 'No';
+        $list['admin_number']['description'] = 'Порядковый номер';
+
+        $list['admin_checkbox']['name'] = 'Чекбокс';
+        $list['admin_checkbox']['description'] = 'Выбрать строку';
+
+        if ($modelInstance) {
+            foreach ($allColumns as $column) {
+                $list[$column] = is_array(ArrayHelper::getValue($list, $column, [])) ? ArrayHelper::getValue($list, $column, []) : [ArrayHelper::getValue($list, $column, [])];
+                $list[$column]['name'] = $modelInstance->getAttributeLabel($column);
+                $list[$column]['description'] = $column;
+            }
+        }
+
+        $list['admin_actions']['name'] = 'Действия';
+        $list['admin_actions']['description'] = '<i class="icon-eye js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.view') ? 'active' : '') . '">'
+            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][view]', ArrayHelper::getValue($list, 'admin_actions.data.view', '0'))
+            . '</i>
+            <i class="icon-edit-3 js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.update') ? 'active' : '') . '">'
+            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][update]', ArrayHelper::getValue($list, 'admin_actions.data.update', '0'))
+            . '</i>
+            <i class="icon-trash-2 js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.delete') ? 'active' : '') . '">'
+            . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][delete]', ArrayHelper::getValue($list, 'admin_actions.data.delete', '0'))
+            . '</i>';
     }
 }
