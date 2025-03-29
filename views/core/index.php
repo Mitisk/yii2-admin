@@ -14,8 +14,8 @@ $this->params['breadcrumbs'][] = $this->title;
         <div class="wg-filter flex-grow">
             <form class="form-search">
                 <fieldset class="name">
-                    <input type="text" placeholder="Поиск..." class="" name="AuthItem[search]" tabindex="2" aria-required="true"
-                           value="<?= \yii\helpers\ArrayHelper::getValue(Yii::$app->request->get(), 'AuthItem.search') ?>">
+                    <input type="text" placeholder="Поиск..." class="" name="<?= $model->getModel()->formName() ?>[search]" tabindex="2" aria-required="true"
+                           value="<?= \yii\helpers\ArrayHelper::getValue(Yii::$app->request->get(), $model->getModel()->formName() . '.search') ?>">
                 </fieldset>
                 <div class="button-submit">
                     <button class="" type="submit"><i class="icon-search"></i></button>

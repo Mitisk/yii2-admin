@@ -2,9 +2,9 @@
 namespace Mitisk\Yii2Admin\core\models;
 
 use Mitisk\Yii2Admin\fields\Field;
-use Yii;
 use yii\base\BaseObject;
 use yii\helpers\ArrayHelper;
+use yii\data\ActiveDataProvider;
 
 /**
  * Общий объект модели администратора
@@ -19,6 +19,9 @@ class AdminModel extends BaseObject
 
     /** @var \Mitisk\Yii2Admin\models\AdminModel */
     public $component;
+
+    /** @var string */
+    public $search;
 
     public function __construct($model)
     {
@@ -173,6 +176,51 @@ class AdminModel extends BaseObject
             }
         }
         return $return;
+    }
+
+    /**
+     * Метод для поиска по всем полям модели.
+     *
+     * @param string $text Поисковой запрос
+     * @return ActiveDataProvider
+     */
+    public function search($text)
+    {
+        $query = $this->_model->find();
+
+        // Создаем провайдер данных
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+        ]);
+
+        // Загружаем параметры формы
+        if (!$text || ($text && !is_string($text))) {
+            return $dataProvider;
+        }
+
+        // Добавляем условие поиска по всем полям
+        $searchValue = trim($text);
+
+        if (!empty($searchValue)) {
+            $query->andFilterWhere(['or', ...$this->buildSearchConditions($searchValue)]);
+        }
+
+        return $dataProvider;
+    }
+
+    /**
+     * Генерирует массив условий для поиска по всем полям модели.
+     *
+     * @param string $searchValue Значение для поиска
+     * @return array Массив условий
+     */
+    protected function buildSearchConditions($searchValue)
+    {
+        $conditions = [];
+        foreach ($this->_model->attributes() as $attribute) {
+            $conditions[] = ['like', $attribute, $searchValue];
+        }
+        return $conditions;
     }
 
     public function afterSave() : bool

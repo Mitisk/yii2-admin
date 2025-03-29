@@ -4,6 +4,7 @@ namespace Mitisk\Yii2Admin\core\controllers;
 use Mitisk\Yii2Admin\core\models\AdminModel;
 use Yii;
 use yii\data\ActiveDataProvider;
+use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 
 class AdminController extends \yii\web\Controller
@@ -37,14 +38,15 @@ class AdminController extends \yii\web\Controller
 
     public function actionIndex()
     {
-        $model = \Yii::createObject(['class' => $this->_modelName]);
-        $dataProvider = $model/*->search(\Yii::$app->request->queryParams)*/;
+        /** @var AdminModel $model */
+        $model = new AdminModel(\Yii::createObject(['class' => $this->_modelName]));
+
+        // Используем метод search для получения ActiveDataProvider
+        $dataProvider = $model->search(ArrayHelper::getValue(\Yii::$app->request->get(), $model->getModel()->formName().'.search'));
 
         return $this->render($this->actionIndexTemplate, [
-            'model' => new AdminModel($model),
-            'dataProvider' => new ActiveDataProvider([
-                'query' => $model->find(),
-            ]),
+            'model' => $model,
+            'dataProvider' => $dataProvider,
         ]);
     }
 
