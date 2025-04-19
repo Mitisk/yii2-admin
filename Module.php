@@ -2,6 +2,9 @@
 
 namespace Mitisk\Yii2Admin;
 
+use Yii;
+use kak\rbac\components\AccessControl;
+use Mitisk\Yii2Admin\components\PermissionConst;
 use yii\base\BootstrapInterface;
 
 /**
@@ -9,6 +12,39 @@ use yii\base\BootstrapInterface;
  */
 class Module extends \yii\base\Module implements BootstrapInterface
 {
+    /*public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    [
+                        'actions' => ['login'],
+                        'allow' => true,
+                        'roles' => ['?']
+                    ],
+                    [
+                        'actions' => ['index', 'create'],
+                        'allow' => true,
+                        'roles' => ['@']
+                    ],
+                    [
+                        'class' => 'kak\rbac\rules\ContextAccessRule',
+                        'modelClass' => 'app\models\Stream',
+                        'actions' => ['update'],
+                        'roles' => [PermissionConst::UpdateOwn]
+                    ],
+                    [
+                        'class' => 'kak\rbac\rules\ContextAccessRule',
+                        'modelClass' => 'app\models\Stream',
+                        'actions' => ['delete'],
+                        'roles' => [PermissionConst::DeleteOwn]
+                    ]
+                ],
+            ],
+        ];
+    }*/
+
     /**
      * {@inheritdoc}
      */
@@ -31,9 +67,18 @@ class Module extends \yii\base\Module implements BootstrapInterface
     public function bootstrap($app)
     {
         $app->getUrlManager()->addRules([
-            ['class' => \Mitisk\Yii2Admin\components\UrlRule::class],
-            '<module:(partner|cabinet|message|admin)>/<controller:\w+>' => '<module>/<controller>/index',
-            '<module>/<controller:\w+>/<action:\w+>' => '<module>/<controller>/<action>',
+            [
+                'class' => \Mitisk\Yii2Admin\components\UrlRule::class,
+                'pattern' => 'admin/<controller:\w+>/<action:\w+>', // Шаблон URL
+                'route' => 'admin/<controller>/<action>',          // Маршрут для обработки
+            ],
+
+            'admin/login' => 'admin/default/login',  // Маршрут для страницы входа
+            'admin/logout' => 'admin/default/logout', // Маршрут для выхода
+
+            'admin/<controller:\w+>' => 'admin/<controller>/index', // Только для модуля admin
+            'admin/<controller:\w+>/<action:\w+>' => 'admin/<controller>/<action>', // Только для модуля admin
+
         ], false);
     }
 
@@ -43,5 +88,16 @@ class Module extends \yii\base\Module implements BootstrapInterface
     public function init()
     {
         parent::init();
+
+        if (Yii::$app->user->isGuest) {
+            $currentRoute = trim(Yii::$app->request->getPathInfo(), '/');
+
+            if ($currentRoute !== 'admin/login') {
+                // Перенаправление на страницу входа
+                Yii::$app->getResponse()->redirect('/admin/login/')->send();
+                Yii::$app->end();
+            }
+
+        }
     }
 }
