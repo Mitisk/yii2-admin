@@ -57,7 +57,7 @@ class Module extends \yii\base\Module implements BootstrapInterface
 
     public $controllerMap = ['core' => 'Mitisk\Yii2Admin\core\controllers\AdminController'];
 
-    //public $mainLayout = '@app/vendor/Mitisk/Yii2Admin/views/layouts/admin.php';
+    public $layout = '@Mitisk/Yii2Admin/views/layouts/main.php';
 
 
     /**
@@ -88,6 +88,8 @@ class Module extends \yii\base\Module implements BootstrapInterface
     public function init()
     {
         parent::init();
+
+        \Yii::setAlias('@Mitisk/Yii2Admin', __DIR__);
 
         if (Yii::$app->user->isGuest) {
             $currentRoute = trim(Yii::$app->request->getPathInfo(), '/');
