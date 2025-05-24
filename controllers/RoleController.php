@@ -14,7 +14,7 @@ class RoleController extends BaseController
     public function init()
     {
         parent::init();
-        $this->view->params['breadcrumbs'][] = ['label' => 'Роли', 'url' => ['index'] ];
+        $this->view->params['breadcrumbs'][] = ['label' => 'Роли', 'url' => ['index']];
     }
 
     public function actionIndex()

@@ -12,7 +12,19 @@ class AdminDashboardHelper extends BaseObject
      */
     public static function getCurrentUserRoleName()
     {
-        $roles = \Yii::$app->authManager->getRolesByUser(\Yii::$app->user->getId());
+        $array = self::getRolesById(\Yii::$app->user->getId());
+        return implode('<br>', $array);
+    }
+
+    /**
+     * Возвращает название ролей пользователя по идентификатору
+     * @param int $id - идентификатор пользователя
+     * @param bool $all - показывать все роли или только одну
+     * @return array|string
+     */
+    public static function getRolesById(int $id, bool $all = true)
+    {
+        $roles = \Yii::$app->authManager->getRolesByUser($id);
         $array = [];
 
         if ($roles) {
@@ -25,6 +37,10 @@ class AdminDashboardHelper extends BaseObject
             $array = ['Гость'];
         }
 
-        return implode('<br>', $array);
+        if (!$all) {
+            return array_shift($array);
+        }
+
+        return $array;
     }
 }

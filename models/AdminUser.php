@@ -3,8 +3,13 @@
 namespace Mitisk\Yii2Admin\models;
 
 use Yii;
+use yii\base\Model;
 use yii\base\NotSupportedException;
 use yii\behaviors\TimestampBehavior;
+use yii\data\ActiveDataProvider;
+use yii\data\ArrayDataProvider;
+use yii\helpers\ArrayHelper;
+use yii\rbac\Item;
 use yii\web\IdentityInterface;
 
 /**
@@ -13,17 +18,25 @@ use yii\web\IdentityInterface;
  * @property int $id
  * @property int $created_at
  * @property int $updated_at
+ * @property int $last_login_at
  * @property string $username
  * @property string $name
  * @property string|null $auth_key
  * @property string $password_hash
  * @property string $email
+ * @property string $image
  * @property int $status
  */
 class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
 {
     const STATUS_BLOCKED = 0;
     const STATUS_ACTIVE = 1;
+
+    public $password;
+
+    public $role;
+
+    public $search;
 
     public function behaviors()
     {
@@ -45,11 +58,17 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
      */
     public function rules()
     {
+        if ($this->scenario == 'search') {
+            return [
+
+                [['username', 'name', 'email', 'status', 'search'], 'safe'],
+            ];
+        }
         return [
             ['username', 'required'],
             ['username', 'match', 'pattern' => '#^[\w_-]+$#is'],
             ['username', 'unique'],
-            [['username', 'name'], 'string', 'min' => 2, 'max' => 255],
+            [['username'], 'string', 'min' => 2, 'max' => 255],
 
             ['email', 'required'],
             ['email', 'email'],
@@ -58,7 +77,8 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
 
             ['status', 'integer'],
             ['status', 'default', 'value' => self::STATUS_ACTIVE],
-            //['status', 'in', 'range' => array_keys(self::getStatusesArray())],
+
+            [['password', 'name', 'password_hash', 'role', 'image', 'search'], 'string', 'skipOnEmpty' => true],
         ];
     }
 
@@ -81,9 +101,13 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             'id' => 'ID',
             'created_at' => 'Создан',
             'updated_at' => 'Обновлён',
-            'username' => 'Имя пользователя',
+            'last_login_at' => 'Заходил',
+            'username' => 'Логин',
+            'name' => 'Имя пользователя',
             'email' => 'Email',
             'status' => 'Статус',
+            'image' => 'Аватар',
+            'password' => 'Пароль',
         ];
     }
 
@@ -151,5 +175,90 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
     public function validateAuthKey($authKey)
     {
         return $this->getAuthKey() === $authKey;
+    }
+
+    public function scenarios()
+    {
+        $scenarios = parent::scenarios();
+        $scenarios['search'] = ['id', 'username', 'email', 'status']; // Добавляем сценарий 'search'
+        return $scenarios;
+    }
+
+    /**
+     * Сохранение пользователя в админке
+     * @return bool
+     * @throws \yii\db\Exception
+     */
+    public function saveUser() : bool
+    {
+        if ($this->isNewRecord && !$this->password) {
+            $this->addError('password', 'Пароль обязателен для заполнения');
+            return false;
+        }
+        if ($this->validate()) {
+
+            if ($this->password) {
+                $this->password_hash = Yii::$app->security->generatePasswordHash($this->password);
+            }
+
+            return $this->save();
+        }
+        return false;
+    }
+
+    /**
+     * Метод поиска.
+     *
+     * @param array $params Параметры запроса (например, $_GET).
+     * @return ActiveDataProvider
+     */
+    public function search($params)
+    {
+        $this->scenario = 'search';
+
+        // Создаем запрос к базе данных
+        $query = AdminUser::find();
+
+        $search = trim(ArrayHelper::getValue($params, $this->formName() . '.search'));
+
+        if ($search) {
+            $query = $query->andWhere(['OR',
+                ['like', 'username', '%' . $search . '%', false],
+                ['like', 'name', '%' . $search . '%', false],
+                ['like', 'email', '%' . $search . '%', false]
+            ]);
+        }
+
+        // Настройка провайдера данных
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => 20, // Количество элементов на странице
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'id' => SORT_DESC, // Сортировка по умолчанию
+                ],
+            ],
+        ]);
+
+        return $dataProvider;
+    }
+
+    /**
+     * Метод для удаления аватарки пользователя.
+     * @return void
+     */
+    public function deleteImage()
+    {
+        if ($this->image && !str_contains( $this->image, 'noPhoto')) {
+
+            $path = Yii::getAlias('@webroot') . str_replace('/web', '', $this->image);
+            if (file_exists($path)) {
+                unlink($path);
+            }
+
+            $this->updateAttributes(['image' => null]);
+        }
     }
 }

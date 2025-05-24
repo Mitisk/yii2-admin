@@ -21,7 +21,6 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 
 <?php $form = ActiveForm::begin([
-    'id' => 'login-form',
     'fieldConfig' => [
         'template' => "{label}\n{input}\n{error}",
         'labelOptions' => ['class' => 'body-title mb-10'],

@@ -10,21 +10,21 @@ use yii\helpers\Html;
         <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton3" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="header-user wg-user">
                 <span class="image">
-                    <img src="/web/images/avatar/user-1.png" alt="">
+                    <img src="<?= Yii::$app->user->identity->image ?>" alt="">
                 </span>
                 <span class="flex flex-column">
-                    <span class="body-title mb-2"><?= Yii::$app->user->identity->name ?></span>
+                    <span class="body-title mb-2"><?= Html::encode(Yii::$app->user->identity->name) ?></span>
                     <span class="text-tiny"><?= AdminDashboardHelper::getCurrentUserRoleName() ?></span>
                 </span>
             </span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end has-content" aria-labelledby="dropdownMenuButton3" >
             <li>
-                <a href="#" class="user-item">
+                <a href="/admin/user/update/?id=<?= Yii::$app->user->id ?>" class="user-item">
                     <div class="icon">
                         <i class="icon-user"></i>
                     </div>
-                    <div class="body-title-2">Account</div>
+                    <div class="body-title-2">Профиль</div>
                 </a>
             </li>
             <li>
