@@ -55,7 +55,13 @@ use yii\helpers\ArrayHelper;
             <div class="center-heading">Настройки</div>
             <ul class="menu-list">
                 <li class="menu-item">
-                    <a href="/admin/components" class="">
+                    <a href="/admin/settings/" class="">
+                        <div class="icon"><i class="icon-settings"></i></div>
+                        <div class="text">Основные</div>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/admin/components/" class="">
                         <div class="icon"><i class="icon-database"></i></div>
                         <div class="text">Компоненты</div>
                     </a>

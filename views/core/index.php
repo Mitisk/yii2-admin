@@ -23,8 +23,12 @@ $this->params['breadcrumbs'][] = $this->title;
             </form>
         </div>
 
-        <?php if($model->canCreate()): ?>
+        <?php if ($model->canCreate()) : ?>
             <?= Html::a("<i class=\"icon-plus\"></i> Добавить", ['create', 'page-alias' => $model->component->alias], ['class' => 'tf-button style-1 w208']) ?>
+        <?php endif; ?>
+
+        <?php if ($model->hasSettings()) : ?>
+            <?= Html::a("<i class=\"icon-settings\"></i>", ['/admin/settings/', 'modelName' => $model->getModelName()], ['class' => 'tf-button']) ?>
         <?php endif; ?>
     </div>
 

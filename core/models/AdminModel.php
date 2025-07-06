@@ -2,6 +2,7 @@
 namespace Mitisk\Yii2Admin\core\models;
 
 use Mitisk\Yii2Admin\fields\Field;
+use Mitisk\Yii2Admin\models\Settings;
 use yii\base\BaseObject;
 use yii\helpers\ArrayHelper;
 use yii\data\ActiveDataProvider;
@@ -76,6 +77,15 @@ class AdminModel extends BaseObject
     }
 
     /**
+     * Return has settings
+     * @return bool
+     */
+    public function hasSettings() : bool
+    {
+        return Settings::find()->where(['model_name' => $this->_modelClassName])->exists();
+    }
+
+    /**
      * Return name
      * @return string
      */
@@ -101,6 +111,15 @@ class AdminModel extends BaseObject
     public function getComponentName()
     {
         return $this->component->name;
+    }
+
+    /**
+     * Return model class name
+     * @return string
+     */
+    public function getModelName() : string
+    {
+        return $this->_modelClassName;
     }
 
     /**
