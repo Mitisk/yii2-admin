@@ -1,5 +1,6 @@
 <?php
 use yii\widgets\ActiveForm;
+use yii\helpers\Html;
 
 /** @var yii\web\View $this */
 /** @var \Mitisk\Yii2Admin\models\Settings[] $settings */
@@ -46,6 +47,15 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
             </div>
 
         <?php endif; ?>
+
+        <fieldset class="mb-10">
+            <div class="body-title mb-10">Название сайта
+                <i class="icon-copy js-copy-settings" title="Получить настройку" data-copy="\Yii::$app->settings->get('GENERAL', 'site_name');"></i>
+            </div>
+            <?php
+            echo Html::textInput("Settings[22]", Yii::$app->settings->get('GENERAL', 'site_name'), ['class' => 'form-control']);
+            ?>
+        </fieldset>
 
         <?php
         $emails = Yii::$app->settings->get('GENERAL', 'admin_email', []);
