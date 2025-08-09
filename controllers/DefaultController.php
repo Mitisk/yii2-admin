@@ -63,7 +63,16 @@ class DefaultController extends Controller
 
         $this->layout = 'login';
 
+        if (Yii::$app->componentHelper->hasComponent('mfa')) {
+            $widgetClass = Yii::$app->componentHelper->getNamespace('mfa') . '\\Component';
+            if (class_exists($widgetClass)) {
+                return $widgetClass::getLoginForm();
+            }
+        }
+
+        /** @var $model LoginForm */
         $model = new LoginForm();
+
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
             Yii::$app->getResponse()->redirect('/admin/')->send();
             Yii::$app->end();

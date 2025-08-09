@@ -3,13 +3,10 @@
 namespace Mitisk\Yii2Admin\models;
 
 use Yii;
-use yii\base\Model;
 use yii\base\NotSupportedException;
 use yii\behaviors\TimestampBehavior;
 use yii\data\ActiveDataProvider;
-use yii\data\ArrayDataProvider;
 use yii\helpers\ArrayHelper;
-use yii\rbac\Item;
 use yii\web\IdentityInterface;
 
 /**
@@ -60,11 +57,10 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
     {
         if ($this->scenario == 'search') {
             return [
-
                 [['username', 'name', 'email', 'status', 'search'], 'safe'],
             ];
         }
-        return [
+        $rules = [
             ['username', 'required'],
             ['username', 'match', 'pattern' => '#^[\w_-]+$#is'],
             ['username', 'unique'],
@@ -80,24 +76,21 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
 
             [['password', 'name', 'password_hash', 'role', 'image', 'search'], 'string', 'skipOnEmpty' => true],
         ];
-    }
 
-    /*public function rules()
-    {
-        return [
-            [['created_at', 'updated_at', 'username', 'password_hash', 'email'], 'required'],
-            [['created_at', 'updated_at', 'status'], 'integer'],
-            [['username', 'password_hash', 'email'], 'string', 'max' => 255],
-            [['auth_key'], 'string', 'max' => 32],
-        ];
-    }*/
+        if (Yii::$app->componentHelper->hasComponent('mfa')) {
+            Yii::$app->componentHelper->getRules('mfa', $rules, $this);
+        }
+
+        return $rules;
+
+    }
 
     /**
      * {@inheritdoc}
      */
     public function attributeLabels()
     {
-        return [
+        $labels = [
             'id' => 'ID',
             'created_at' => 'Создан',
             'updated_at' => 'Обновлён',
@@ -109,6 +102,12 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             'image' => 'Аватар',
             'password' => 'Пароль',
         ];
+
+        if (Yii::$app->componentHelper->hasComponent('mfa')) {
+            Yii::$app->componentHelper->getLabels('mfa', $labels);
+        }
+
+        return $labels;
     }
 
     /**
@@ -219,14 +218,16 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
         // Создаем запрос к базе данных
         $query = AdminUser::find();
 
-        $search = trim(ArrayHelper::getValue($params, $this->formName() . '.search'));
+        if ($params) {
+            $search = trim(ArrayHelper::getValue($params, $this->formName() . '.search'));
 
-        if ($search) {
-            $query = $query->andWhere(['OR',
-                ['like', 'username', '%' . $search . '%', false],
-                ['like', 'name', '%' . $search . '%', false],
-                ['like', 'email', '%' . $search . '%', false]
-            ]);
+            if ($search) {
+                $query = $query->andWhere(['OR',
+                    ['like', 'username', '%' . $search . '%', false],
+                    ['like', 'name', '%' . $search . '%', false],
+                    ['like', 'email', '%' . $search . '%', false]
+                ]);
+            }
         }
 
         // Настройка провайдера данных

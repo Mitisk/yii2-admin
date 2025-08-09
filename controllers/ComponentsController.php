@@ -2,6 +2,7 @@
 
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\models\AdminComponent;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Yii;
 use yii\helpers\ArrayHelper;
@@ -37,7 +38,51 @@ class ComponentsController extends Controller
 
         $models = AdminModel::find()->where(['view' => 1])->all();
 
-        return $this->render('index', compact(['models']));
+        $helper = Yii::$app->componentHelper;
+
+        return $this->render('index', compact(['models', 'helper']));
+    }
+
+    public function actionInstall()
+    {
+        $alias = Yii::$app->request->post('alias');
+        $helper = Yii::$app->componentHelper;
+
+        if (AdminComponent::find()->where(['alias' => $alias])->exists()) {
+            if ($data = $helper->updateComponent($alias)) {
+                AdminComponent::updateAll([
+                    'name' => $data['name'],
+                    'version' => $data['version'],
+                    'datetime' => date('Y-m-d H:i:s')
+                ], [
+                    'alias' => $alias
+                ]);
+
+                return true;
+            }
+            return false;
+        }
+
+        if ($data = $helper->installComponent($alias)) {
+            $model = new AdminComponent();
+            $model->name = $data['name'];
+            $model->alias = $data['alias'];
+            $model->version = $data['version'];
+            return $model->save(false);
+        }
+
+        return false;
+    }
+
+    public function actionUninstall()
+    {
+        $alias = Yii::$app->request->post('alias');
+        $helper = Yii::$app->componentHelper;
+        sleep(1);
+        if ($return = $helper->uninstallComponent($alias)) {
+            AdminComponent::deleteAll(['alias' => $alias]);
+        }
+        return $return;
     }
 
     public function actionUpdate($id)

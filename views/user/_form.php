@@ -65,9 +65,21 @@ $this->registerCss('.alt-fileuploader-input {background-color: white !important;
             <fieldset class="email mb-24">
                 <?= $form->field($model, 'email')->textInput(['maxlength' => 255])->label('Email <span class="tf-color-1">*</span>') ?>
             </fieldset>
-            <fieldset class="password mb-24">
-                <?= $form->field($model, 'password', [
-                    'template' => '
+
+            <?php if (Yii::$app->componentHelper->hasComponent('mfa')) : ?>
+                <?php
+                $widgetClass = Yii::$app->componentHelper->getNamespace('mfa') . '\\AdminUserView';
+                if (class_exists($widgetClass)) {
+                    echo $widgetClass::widget([
+                        'model' => $model,
+                        'form' => $form
+                    ]);
+                }
+                ?>
+            <?php else: ?>
+                <fieldset class="password mb-24">
+                    <?= $form->field($model, 'password', [
+                        'template' => '
                         <div class="input-wrapper">
                         {label}
                             {input}
@@ -80,12 +92,13 @@ $this->registerCss('.alt-fileuploader-input {background-color: white !important;
                             </span>
                         </div>
                         {error}'
-                ])->textInput([
-                    'maxlength' => 255,
-                    'class' => 'password-input',
-                    'type' => 'password'
-                ]) ?>
-            </fieldset>
+                    ])->textInput([
+                        'maxlength' => 255,
+                        'class' => 'password-input',
+                        'type' => 'password'
+                    ]) ?>
+                </fieldset>
+            <?php endif; ?>
         </div>
     </div>
 
