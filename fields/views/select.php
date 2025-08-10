@@ -23,6 +23,7 @@
                         'required' => $field->required,
                         'readonly' => $field->readonly,
                         'multiple' => $field->multiple,
+                        'class' => 'tom-select',
                         'autocomplete' => 'off'
                     ]); ?>
             <?php else : ?>
@@ -31,6 +32,7 @@
                     'required' => $field->required,
                     'readonly' => $field->readonly,
                     'multiple' => $field->multiple,
+                    'class' => 'tom-select',
                     'autocomplete' => 'off'
                 ]); ?>
             <?php endif; ?>

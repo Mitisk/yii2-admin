@@ -98,7 +98,7 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
         <fieldset class="timezone mb-24">
             <div class="body-title mb-10">Временная зона <i class="icon-copy js-copy-settings" title="Получить настройку" data-copy="\Yii::$app->settings->get('GENERAL', 'timezone');"></i></div>
             <div class="select flex-grow">
-                <select id="timezone-select" name="Settings[3]">
+                <select id="timezone-select" name="Settings[3]" class="tom-select">
                     <!-- Опции будут добавлены через JS -->
                 </select>
             </div>

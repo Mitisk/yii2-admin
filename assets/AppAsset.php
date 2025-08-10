@@ -26,6 +26,8 @@ class AppAsset extends AssetBundle
     ];
 
     public $depends = [
-        'yii\web\YiiAsset'
+        'yii\web\YiiAsset',
+        TomSelectAsset::class,
+        LightboxAsset::class,
     ];
 }

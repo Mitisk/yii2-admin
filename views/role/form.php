@@ -29,7 +29,7 @@ use yii\widgets\ActiveForm;
                         </fieldset>
 
                         <fieldset class="ruleName mb-24">
-                            <?= $form->field($model, 'ruleName')->dropDownList(ArrayHelper::map(Yii::$app->authManager->getRules(), 'name', 'name')) ?>
+                            <?= $form->field($model, 'ruleName')->dropDownList(ArrayHelper::map(Yii::$app->authManager->getRules(), 'name', 'name'), ['class' => 'tom-select',]) ?>
 
                         </fieldset>
                         <fieldset class="description mb-24">

@@ -24,7 +24,7 @@ use yii\widgets\ActiveForm;
                             echo Html::dropDownList("Settings[{$setting->id}]", $setting->value, [
                                 '0' => 'Нет',
                                 '1' => 'Да',
-                            ], ['class' => 'select flex-grow']);
+                            ], ['class' => 'select flex-grow tom-select']);
                             break;
                         case 'integer':
                         case 'int':

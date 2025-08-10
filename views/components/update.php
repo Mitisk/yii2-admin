@@ -79,7 +79,7 @@ $this->params['breadcrumbs'][] = $this->title;
             </div>
 
             <fieldset class="select">
-                <?= $form->field($model, 'admin_label')->dropDownList(array_combine($allColumns, $allColumns)) ?>
+                <?= $form->field($model, 'admin_label')->dropDownList(array_combine($allColumns, $allColumns), ['class' => 'tom-select']) ?>
             </fieldset>
         <?php endif; ?>
     </div>

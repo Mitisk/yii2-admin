@@ -24,7 +24,7 @@ class FileField extends Field
     {
         return [
             'attribute' => $column,
-            'format' => 'html',
+            'format' => 'raw',
             'value' => function ($data) use ($column) {
                 /** @var File[] $files */
                 $files = FieldsHelper::getFiles($data, $this->name);
@@ -33,7 +33,10 @@ class FileField extends Field
                     $values[] = Html::a(
                         Html::img($file->path, ['alt' => $file->alt_attribute]),
                         $file->path,
-                        ['target' => '_blank', 'class' => 'gallery-image']
+                        ['data' => [
+                            'lightbox' => $this->name . '-' . $data->id,
+                            'title' => $file->alt_attribute
+                        ], 'class' => 'gallery-image']
                     );
                 }
                 //<div class="gallery-container">

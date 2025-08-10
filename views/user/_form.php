@@ -54,7 +54,7 @@ $this->registerCss('.alt-fileuploader-input {background-color: white !important;
                 <?= $form->field($model, 'status')->dropDownList([
                     \Mitisk\Yii2Admin\models\AdminUser::STATUS_BLOCKED => 'Заблокирован',
                     \Mitisk\Yii2Admin\models\AdminUser::STATUS_ACTIVE => 'Активен'
-                ]) ?>
+                ], ['class' => 'tom-select']) ?>
             </fieldset>
             <fieldset class="name mb-24">
                 <?= $form->field($model, 'username')->textInput(['maxlength' => 255])->label('Логин <span class="tf-color-1">*</span>') ?>

@@ -113,15 +113,15 @@ class ComponentsController extends Controller
             }
         }
 
-        $columns = ArrayHelper::merge(array_keys($columns), self::getPublicProperties($model->model_class));
-        $allColumns = ArrayHelper::merge(array_keys($allColumns), self::getPublicProperties($model->model_class));
-
         $modelInstance = null;
         $requiredColumns = [];
         $addedAttributes = [];
 
 
         if ($model->model_class) {
+            $columns = ArrayHelper::merge(array_keys($columns), self::getPublicProperties($model->model_class));
+            $allColumns = ArrayHelper::merge(array_keys($allColumns), self::getPublicProperties($model->model_class));
+
             if (!class_exists($model->model_class)) {
                 $model->model_class = null;
             } else {
@@ -146,7 +146,7 @@ class ComponentsController extends Controller
             }
         }
 
-        $list = $model->list ? json_decode($model->list, true) : ($allColumns ? array_flip($allColumns) : []);
+        $list = $model->list ? json_decode($model->list, true) : ($allColumns ? array_keys($allColumns) : []);
 
         $this->configureList($list, $allColumns, $modelInstance, $model);
 
