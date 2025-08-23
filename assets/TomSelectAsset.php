@@ -3,9 +3,12 @@ namespace Mitisk\Yii2Admin\assets;
 
 use yii\web\AssetBundle;
 
+/**
+ * Инпуты TomSelect
+ * @see https://tom-select.js.org/
+ */
 class TomSelectAsset extends AssetBundle
 {
-    // Публикуем файлы из node_modules (npm i tom-select)
     public $sourcePath = '@Mitisk/Yii2Admin/assets/node_modules/tom-select/dist';
 
     public $css = [
@@ -13,7 +16,7 @@ class TomSelectAsset extends AssetBundle
     ];
 
     public $js = [
-        'js/tom-select.complete.min.js', // complete — с плагинами
+        'js/tom-select.complete.min.js',
     ];
 
     public $depends = [

@@ -127,11 +127,6 @@ class Field extends Widget
 
     /**
      * Вывод поля в списке
-     * @return string
-     */
-
-    /**
-     * Вывод поля в списке
      * @param string $column Выводимое поле
      * @return array Массив с данным для GridView
      */

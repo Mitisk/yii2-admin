@@ -26,6 +26,7 @@
                         ]); ?>
 
             <?php else : ?>
+
                 <?= \yii\helpers\Html::activeCheckboxList($model->getModel(), $field->name, $values, [
                     'id' => $fieldId,
                     'required' => $field->required,
