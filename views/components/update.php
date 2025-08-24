@@ -18,6 +18,8 @@ $this->title = 'Редактирование компонента';
 
 $this->params['breadcrumbs'][] = ['label' => 'Компоненты', 'url' => ['index'] ];
 $this->params['breadcrumbs'][] = $this->title;
+
+\Mitisk\Yii2Admin\assets\ComponentFormAsset::register($this);
 ?>
 
 <?php $form = ActiveForm::begin([
@@ -152,10 +154,3 @@ $this->params['breadcrumbs'][] = $this->title;
             1: 'Администратор',
         };
     </script>
-<?php
-$this->registerJsFile('https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
-$this->registerJsFile('/web/js/form-builder.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
-$this->registerJsFile('/web/js/form-render.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
-$this->registerJsFile('/web/js/drag-arrange/drag-arrange.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
-$this->registerJsFile('/web/js/component-builder.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
-?>

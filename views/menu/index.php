@@ -6,6 +6,8 @@ use \yii\helpers\Html;
 
 $this->title = 'Меню';
 $this->params['breadcrumbs'][] = $this->title;
+
+\Mitisk\Yii2Admin\assets\MenuFormAsset::register($this);
 ?>
 
 <div class="tf-section-2 form-add-product">
@@ -37,8 +39,6 @@ $this->params['breadcrumbs'][] = $this->title;
                     <?= $this->render('_name', ['model' => new \Mitisk\Yii2Admin\models\Menu()]) ?>
                 </div>
 
-
-
             </div>
             <?= $this->render('_builder')?>
         </div>
@@ -62,48 +62,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 </div>
 
-
-
-
-<style>
-    .widget-content-tab {
-        font-size: 14px;
-    }
-    .list-group {
-        color: #111111;
-        font-size: 16px!important;
-        line-height: 17px;
-        text-transform: capitalize;
-    }
-    .list-group a i {
-        font-size: 14px!important;
-    }
-    .list-group a {
-        padding: 10px;
-    }
-    .table-icons {
-        border: 0;
-        margin: 0;
-        table-layout: auto;
-        font-size: 16px!important;
-    }
-    .table-icons td {
-        border: 0;
-    }
-    .table-icons i, .iconpicker i {
-        font-size: 16px!important;
-    }
-    .popover-arrow {
-        color: unset;
-    }
-</style>
-
-<?php $this->registerJsFile('https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js', ['depends' => [\yii\web\JqueryAsset::class]]) ?>
-<?php $this->registerJsFile('https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js', ['depends' => [\yii\web\JqueryAsset::class]]) ?>
-<?php $this->registerJsFile('/js/menu-editor/jquery-menu-editor.min.js', ['depends' => [\yii\web\JqueryAsset::class]]) ?>
-<?php $this->registerJsFile('/js/bootstrap-iconpicker/js/iconset/fontawesome5-3-1.min.js', ['depends' => [\yii\web\JqueryAsset::class]]) ?>
-<?php $this->registerJsFile('/js/bootstrap-iconpicker/js/bootstrap-iconpicker.min.js', ['depends' => [\yii\web\JqueryAsset::class]]) ?>
-
 <script>
     window.addEventListener('load', function() {
 
@@ -113,12 +71,12 @@ $this->params['breadcrumbs'][] = $this->title;
         <?php $active = 0;?>
         <?php foreach ($models as $model): ?>
 
-            <?php if(!$active): ?>
-                <?php $active = $model->alias; ?>
-                active = "<?= $model->alias ?>";
-            <?php endif;?>
+        <?php if(!$active): ?>
+        <?php $active = $model->alias; ?>
+        active = "<?= $model->alias ?>";
+        <?php endif;?>
 
-            arrayjson["<?= $model->alias ?>"] = <?= $model->data ? $model->data : '[]' ?>;
+        arrayjson["<?= $model->alias ?>"] = <?= $model->data ? $model->data : '[]' ?>;
 
         <?php endforeach; ?>
 
@@ -178,26 +136,5 @@ $this->params['breadcrumbs'][] = $this->title;
 
         });
 
-        $(document).on('change', '.js-change-input', function(){
-            var alias = $(this).data('alias');
-            var value = $(this).val();
-            var name = $(this).attr('name');
-
-            if($('#' + name + '-' + alias).length) {
-                $('#' + name + '-' + alias).val($(this).val());
-            } else {
-                $('#form-main').append('<input type="hidden" id="' + name + '-' + alias + '" name="Menu[' + alias + '][' + name + ']" value="' + value + '" />');
-
-                if(!$('#' + alias).length) {
-                    $('#form-main').append('<input type="hidden" id="' + alias + '" name="Menu[' + alias + '][data]" value="" />');
-                }
-
-            }
-        });
-
-        /* ====================================== */
-
-        /** PAGE ELEMENTS **/
-        $('[data-toggle="tooltip"]').tooltip();
     });
 </script>
