@@ -4,9 +4,6 @@ use yii\helpers\ArrayHelper;
 /* @var $this yii\web\View */
 /* @var $menuArray [] */
 ?>
-<?php $this->registerCssFile('https://use.fontawesome.com/releases/v5.3.1/css/all.css') ?>
-<?php $this->registerCssFile('/js/bootstrap-iconpicker/css/bootstrap-iconpicker.min.css') ?>
-
 
 <div class="section-menu-left">
     <div class="box-logo">
@@ -20,7 +17,6 @@ use yii\helpers\ArrayHelper;
     <div class="center">
 
         <div class="center-item">
-
             <ul class="menu-list">
 
                 <?php foreach ($menuArray as $item): ?>
@@ -73,36 +69,6 @@ use yii\helpers\ArrayHelper;
                     </a>
                 </li>
             </ul>
-        </div>
-
-        <div class="center-item">
-            <div class="center-heading">Connect us</div>
-            <ul class="wg-social">
-                <li>
-                    <a href="#"><i class="icon-facebook"></i></a>
-                </li>
-                <li class="active">
-                    <a href="#"><i class="icon-twitter"></i></a>
-                </li>
-                <li>
-                    <a href="#"><i class="icon-linkedin"></i></a>
-                </li>
-                <li>
-                    <a href="#"><i class="icon-instagram"></i></a>
-                </li>
-            </ul>
-        </div>
-    </div>
-    <div class="bot text-center">
-        <div class="wrap">
-            <div class="mb-20">
-                <img src="/web/images/menu-left/img-bot.png" alt="">
-            </div>
-            <div class="mb-20">
-                <h6>Hi, how can we help?</h6>
-                <div class="text">Contact us if you have any assistance, we will contact you as soon as possible</div>
-            </div>
-            <a href="#" class="tf-button w-full">Contact</a>
         </div>
     </div>
 </div>

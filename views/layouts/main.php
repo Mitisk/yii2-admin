@@ -56,7 +56,9 @@ $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_k
                         <div class="wrap">
                             <div class="header-left">
                                 <a href="/admin/">
-                                    <img class="" id="logo_header_mobile" alt="" src="/web/images/logo/logo.png" data-light="/web/images/logo/logo.png" data-dark="/web/images/logo/logo-dark.png" data-width="154px" data-height="52px" data-retina="/web/images/logo/logo@2x.png">
+                                    <img class="" id="logo_header_mobile" alt="" src="/web/images/logo/logo.png"
+                                         data-light="/web/images/logo/logo.png"
+                                         data-dark="/web/images/logo/logo-dark.png" data-width="154px" data-height="52px" data-retina="/web/images/logo/logo@2x.png">
                                 </a>
                                 <div class="button-show-hide">
                                     <i class="icon-menu-left"></i>
@@ -88,8 +90,6 @@ $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_k
                                         ]) ?>
                                     <?php endif ?>
                                 </div>
-
-
 
                                 <?= Alert::widget() ?>
 

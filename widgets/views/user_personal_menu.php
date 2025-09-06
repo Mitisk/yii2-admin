@@ -3,7 +3,6 @@ use Mitisk\Yii2Admin\components\AdminDashboardHelper;
 use yii\helpers\Html;
 
 /* @var $this yii\web\View */
-
 ?>
 <div class="popup-wrap user type-header">
     <div class="dropdown">
@@ -25,39 +24,6 @@ use yii\helpers\Html;
                         <i class="icon-user"></i>
                     </div>
                     <div class="body-title-2">Профиль</div>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="user-item">
-                    <div class="icon">
-                        <i class="icon-mail"></i>
-                    </div>
-                    <div class="body-title-2">Inbox</div>
-                    <div class="number">27</div>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="user-item">
-                    <div class="icon">
-                        <i class="icon-file-text"></i>
-                    </div>
-                    <div class="body-title-2">Taskboard</div>
-                </a>
-            </li>
-            <li>
-                <a href="setting.html" class="user-item">
-                    <div class="icon">
-                        <i class="icon-settings"></i>
-                    </div>
-                    <div class="body-title-2">Setting</div>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="user-item">
-                    <div class="icon">
-                        <i class="icon-headphones"></i>
-                    </div>
-                    <div class="body-title-2">Support</div>
                 </a>
             </li>
             <li>

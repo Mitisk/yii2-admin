@@ -15,6 +15,8 @@ class AppAsset extends AssetBundle
         'css/bootstrap-select.min.css',
         'css/style.min.css',
         'font/fonts.min.css',
+        'js/bootstrap-iconpicker/css/bootstrap-iconpicker.min.css',
+        'component/fa/css/all.min.css',
         'icon/style.min.css',
         'css/site.min.css',
     ];
@@ -22,6 +24,7 @@ class AppAsset extends AssetBundle
     public $js = [
         'js/bootstrap.min.js',
         'js/bootstrap-select.min.js',
+
         'js/main.min.js'
     ];
 
