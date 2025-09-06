@@ -128,6 +128,50 @@ class FieldsHelper extends BaseObject
         return $values;
     }
 
+    /**
+     * Проверка на картинку
+     * @param string|null $localPath Локальный путь
+     * @param string $publicPath Публичный путь
+     * @return bool true если картинка
+     */
+    public static function isImageFile(?string $localPath, string $publicPath): bool
+    {
+        // Белый список расширений как последний fallback
+        $ext = strtolower(pathinfo(parse_url($publicPath, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION));
+        $extIsImage = in_array($ext, ['jpg','jpeg','png','gif','webp','bmp','svg'], true);
+
+        // 1) exif_imagetype по локальному пути
+        if ($localPath && @is_file($localPath) && function_exists('exif_imagetype')) {
+            $t = @exif_imagetype($localPath);
+            if ($t !== false) {
+                return true;
+            }
+        }
+
+        // 2) finfo_file по локальному пути
+        if ($localPath && @is_file($localPath) && class_exists('finfo')) {
+            $f = new \finfo(FILEINFO_MIME);
+            $mimeFull = @$f->file($localPath); // например "image/jpeg; charset=binary"
+            if ($mimeFull) {
+                $mime = strtok($mimeFull, ';');
+                if (strpos($mime, 'image/') === 0) {
+                    return true;
+                }
+            }
+        }
+
+        // 3) getimagesize по локальному пути
+        if ($localPath && @is_file($localPath) && function_exists('getimagesize')) {
+            $info = @getimagesize($localPath);
+            if (is_array($info) && !empty($info['mime']) && strpos($info['mime'], 'image/') === 0) {
+                return true;
+            }
+        }
+
+        // 4) Fallback: по расширению (чтобы “вернуть” картинки в интерфейсе)
+        return $extIsImage;
+    }
+
     public static function getFiles($model, $field)
     {
         return File::find()->where([

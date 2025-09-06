@@ -29,17 +29,32 @@ class FileField extends Field
                 /** @var File[] $files */
                 $files = FieldsHelper::getFiles($data, $this->name);
                 $values = [];
+
                 foreach ($files as $file) {
-                    $values[] = Html::a(
-                        Html::img($file->path, ['alt' => $file->alt_attribute]),
-                        $file->path,
-                        ['data' => [
-                            'lightbox' => $this->name . '-' . $data->id,
-                            'title' => $file->alt_attribute
-                        ], 'class' => 'gallery-image']
-                    );
+
+                    $isImage = $file->isImage();
+
+                    if ($isImage) {
+                        $values[] = Html::a(
+                            Html::img($file->path, ['alt' => $file->alt_attribute]),
+                            $file->path,
+                            [
+                                'data' => [
+                                    'lightbox' => $this->name . '-' . $data->id,
+                                    'title'    => $file->alt_attribute
+                                ],
+                                'class' => 'gallery-image'
+                            ]
+                        );
+                    } else {
+                        $values[] = Html::a(
+                            Html::encode($file->filename ?: $file->path),
+                            $file->path,
+                            ['target' => '_blank', 'rel' => 'noopener', 'class' => 'file-link']
+                        );
+                    }
                 }
-                //<div class="gallery-container">
+
                 return Html::tag('div', implode(' ', $values), ['class' => 'gallery-container']);
             }
         ];

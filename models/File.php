@@ -2,6 +2,7 @@
 
 namespace Mitisk\Yii2Admin\models;
 
+use Mitisk\Yii2Admin\fields\FieldsHelper;
 use Yii;
 use yii\helpers\FileHelper;
 
@@ -61,6 +62,35 @@ class File extends \yii\db\ActiveRecord
             'mime_type' => 'MIME-тип файла',
             'path' => 'Путь к файлу в системе хранения',
         ];
+    }
+
+    /**
+     * Проверяет, является ли файл изображением
+     * @return bool
+     */
+    public function isImage() : bool
+    {
+        $publicPath = $this->path;                // URL или веб‑путь
+        $alt        = $this->alt_attribute ?? '';
+        $name       = basename(parse_url($publicPath, PHP_URL_PATH) ?? '');
+
+        // Попытка получить локальный путь
+        $localPath = $this->localPath ?? null;
+
+        // Если локального пути нет, но файл хранится в веб‑корне:
+        if (!$localPath) {
+            // Пример: publicPath = /uploads/a.jpg или https://site.tld/uploads/a.jpg
+            $webPath = parse_url($publicPath, PHP_URL_PATH) ?: $publicPath;
+            $webroot = \Yii::getAlias('@webroot'); // /var/www/app/web
+            if ($webPath && str_starts_with($webPath, '/')) {
+                $candidate = $webroot . $webPath;
+                if (@is_file($candidate)) {
+                    $localPath = $candidate;
+                }
+            }
+        }
+
+        return FieldsHelper::isImageFile($localPath, $publicPath);
     }
 
     /**
