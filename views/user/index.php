@@ -23,6 +23,10 @@ $this->title = $this->params['pageHeaderText'] = 'Пользователи';
             </form>
         </div>
         <?= Html::a("<i class=\"icon-plus\"></i> Добавить пользователя", ['create'], ['class' => 'tf-button style-1']) ?>
+
+        <?php if ($model->hasSettings()) : ?>
+            <?= Html::a("<i class=\"icon-settings\"></i>", ['/admin/settings/', 'modelName' => $model::class], ['class' => 'tf-button']) ?>
+        <?php endif; ?>
     </div>
     <?= GridView::widget([
         'dataProvider' => $provider,

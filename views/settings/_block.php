@@ -1,15 +1,28 @@
 <?php
 use yii\helpers\Html;
-use yii\widgets\ActiveForm;
+use yii\helpers\ArrayHelper;
 
 /** @var yii\web\View $this */
 /** @var \Mitisk\Yii2Admin\models\Settings[] $settings */
-/** @var string $modelName */
+/** @var string $modelName Название модели */
 /** @var array $modelsNames */
+/** @var array $settingsBlock Имена и описания блоков настроек */
+
+$title = \yii\helpers\ArrayHelper::getValue($modelsNames, $modelName, $modelName);
+if (ArrayHelper::getValue($settingsBlock, $modelName . '.label')) {
+    $title = ArrayHelper::getValue($settingsBlock, $modelName . '.label');
+}
+$description = ArrayHelper::getValue($settingsBlock, $modelName . '.description');
+if (!$description) {
+    $description = '<i class="icon-edit"></i>';
+}
 ?>
 <div class="wg-box">
-    <div class="left">
-        <h5 class="mb-4"><?= \yii\helpers\ArrayHelper::getValue($modelsNames, $modelName, $modelName)?></h5>
+    <div class="left js-change-header">
+        <h5 class="mb-4"><?= $title ?></h5>
+        <input type="text" name="names[<?= $modelName ?>]" value="<?= $title ?>" tabindex="2" style="display: none">
+        <div class="body-text"><?= $description ?></div>
+        <textarea name="description[<?= $modelName ?>]" style="display: none"><?= $description ?></textarea>
     </div>
 
     <div class="right flex-grow">

@@ -2,6 +2,7 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\models\AdminModel;
+use Mitisk\Yii2Admin\models\SettingsBlock;
 use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 use Yii;
@@ -16,17 +17,21 @@ class SettingsController extends Controller
 
         $settings = Settings::find()
             ->orderBy(['model_name' => SORT_ASC, 'id' => SORT_ASC]);
+
         if ($modelName) {
             $settings->andWhere(['model_name' => $modelName]);
         }
+
         $settings = $settings->all();
 
         $modelsNames = AdminModel::find()->select(['name', 'model_class'])
             ->andWhere(['not', ['name' => null]])
             ->andWhere(['not', ['model_class' => null]]);
+
         if ($modelName) {
             $modelsNames->andWhere(['model_class' => $modelName]);
         }
+
         $modelsNames = $modelsNames->asArray()->all();
 
         $modelsNames = ArrayHelper::map($modelsNames, 'model_class', 'name');
@@ -53,18 +58,62 @@ class SettingsController extends Controller
             return $this->refresh();
         }
 
+        $settingsBlockModel = SettingsBlock::find()
+            ->select(['model_name', 'label', 'description'])
+            ->asArray()
+            ->indexBy('model_name')
+            ->all();
+
+        $settingsBlock = array_map(function($r){
+            return ['label' => $r['label'], 'description' => $r['description']];
+        }, $settingsBlockModel);
+
         return $this->render('index', [
             'settings' => $settings,
             'modelsNames' => $modelsNames,
             'modelName' => $modelName,
+            'settingsBlock' => $settingsBlock,
         ]);
+    }
+
+    /**
+     * Action для сохранения названия раздела
+     * @return array
+     */
+    public function actionUpdateSectionName() : array
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $key = Yii::$app->request->post('key');
+        $value = trim((string)Yii::$app->request->post('value'));
+        $type = Yii::$app->request->post('type');
+
+        if ($key === null || $value === '') {
+            return ['ok' => false, 'error' => 'Invalid data'];
+        }
+
+        /** @var SettingsBlock $model */
+        $model = SettingsBlock::find()->where(['model_name' => $key])->one();
+        if (!$model) {
+            $model = new SettingsBlock();
+            $model->model_name = $key;
+        }
+
+        if ($type === 'title') {
+            $model->label = $value;
+        } else {
+            $model->description = $value;
+        }
+
+        $model->save(false);
+
+        return ['ok' => true, 'value' => $value];
     }
 
     /**
      * Action для сохранения API ключа
      * @return false[]|true[]
      */
-    public function actionSaveApi()
+    public function actionSaveApi() : array
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $data = Yii::$app->request->getBodyParams();

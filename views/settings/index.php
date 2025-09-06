@@ -1,11 +1,13 @@
 <?php
 use yii\widgets\ActiveForm;
 use yii\helpers\Html;
+use yii\helpers\ArrayHelper;
 
 /** @var yii\web\View $this */
 /** @var \Mitisk\Yii2Admin\models\Settings[] $settings */
 /** @var array $modelsNames */
 /** @var string $modelName */
+/** @var array $settingsBlock Имена и описания блоков настроек */
 
 $this->params['breadcrumbs'][] = ['label' => 'Настройки сайта'];
 $this->title = $this->params['pageHeaderText'] = 'Настройки сайта';
@@ -17,8 +19,11 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
 
 <?php if (!$modelName) : ?>
 <div class="wg-box">
-    <div class="left">
-        <h5 class="mb-4">Основные</h5>
+    <div class="left js-change-header">
+        <h5 class="mb-4"><?= ArrayHelper::getValue($settingsBlock, 'GENERAL.label', 'Основные') ?></h5>
+        <input type="text" name="names[GENERAL]" value="<?= ArrayHelper::getValue($settingsBlock, 'GENERAL.label', 'Основные')?>" tabindex="2" style="display: none">
+        <div class="body-text"><?= ArrayHelper::getValue($settingsBlock, 'GENERAL.description', 'Это основные настройки')?></div>
+        <textarea name="description[GENERAL]" style="display: none"><?= ArrayHelper::getValue($settingsBlock, 'GENERAL.description', 'Это основные настройки')?></textarea>
     </div>
 
     <div class="right flex-grow">
@@ -127,7 +132,8 @@ if ($settings) {
         echo  $this->render('_block', [
             'modelsNames' => $modelsNames,
             'modelName' => $modelName,
-            'settings' => $settingsGroup
+            'settings' => $settingsGroup,
+            'settingsBlock' => $settingsBlock,
         ]);
     endforeach;
 }

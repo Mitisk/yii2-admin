@@ -247,6 +247,15 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
     }
 
     /**
+     * Return has settings
+     * @return bool
+     */
+    public function hasSettings() : bool
+    {
+        return Settings::find()->where(['model_name' => self::class])->exists();
+    }
+
+    /**
      * Метод для удаления аватарки пользователя.
      * @return void
      */
