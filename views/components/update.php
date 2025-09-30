@@ -22,7 +22,8 @@ $this->title = 'Редактирование компонента';
 $this->params['breadcrumbs'][] = ['label' => 'Компоненты', 'url' => ['index'] ];
 $this->params['breadcrumbs'][] = $this->title;
 
-\Mitisk\Yii2Admin\assets\ComponentFormAsset::register($this);
+$bundle = \Mitisk\Yii2Admin\assets\ComponentFormAsset::register($this);
+$this->registerJsVar('i18nFormBuilderLocation', $bundle->baseUrl . '/component/form-builder/lang/', View::POS_END);
 $host = Yii::$app->request->hostInfo;
 ?>
 
