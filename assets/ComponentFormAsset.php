@@ -16,16 +16,16 @@ class ComponentFormAsset extends AssetBundle
         'component/form-builder/form-builder.min.js',
         'component/form-builder/form-render.min.js',
         'component/form-builder/component-builder.min.js',
-        'component/drag-arrange/drag-arrange.min.js',
+        'component/drag-arrange/drag-arrange.min.js'
     ];
 
     public $css = [
-
+        'component/form-builder/custom-theme.min.css'
     ];
 
     public $depends = [
         \yii\web\JqueryAsset::class,
         'yii\web\YiiAsset',
-        AppAsset::class,
+        AppAsset::class
     ];
 }

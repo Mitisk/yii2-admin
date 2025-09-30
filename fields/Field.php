@@ -37,6 +37,48 @@ class Field extends Widget
     public $fieldId;
 
     /**
+     * Проверка на доступность поля
+     * для ролей RBAC
+     * @return bool
+     */
+    protected function canRender() : bool
+    {
+        // если флаг RBAC вообще не используется — показываем поле
+        if (!$this->access) {
+            return true;
+        }
+
+        // роли через запятую: 'admin, manager, @'
+        $raw = (string)($this->role ?? '');
+        $roles = array_values(array_filter(array_map('trim', explode(',', $raw))));
+
+        // если роли не заданы — считаем, что поле видно всем
+        if (empty($roles)) {
+            return true;
+        }
+
+        // OR-логика: достаточно одного совпадения
+        foreach ($roles as $role) {
+            if ($role === '@') {
+                if (!Yii::$app->user->isGuest) {
+                    return true;
+                }
+                continue;
+            }
+            if ($role === '?') {
+                if (Yii::$app->user->isGuest) {
+                    return true;
+                }
+                continue;
+            }
+            if (Yii::$app->user->can($role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Значение для листинга
      * @param string $column Выводимое поле
      * @return array|string
@@ -46,7 +88,7 @@ class Field extends Widget
         $fieldClass = $this->buildField();
         $fieldClass->model = $this->model;
 
-        return $fieldClass->renderList($column);
+        return $fieldClass->renderList($column) + ['visible' => $fieldClass->canRender()];
     }
 
     /**
@@ -57,6 +99,10 @@ class Field extends Widget
     {
         $fieldClass = $this->buildField();
         $fieldClass->model = $this->model;
+
+        if (!$fieldClass->canRender()) {
+            return '';
+        }
 
         if ($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
             $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);
@@ -75,6 +121,10 @@ class Field extends Widget
     {
         $fieldClass = $this->buildField();
         $fieldClass->model = $this->model;
+
+        if (!$fieldClass->canRender()) {
+            return '';
+        }
 
         if($fieldClass->name && $this->model->getModel()->hasAttribute($fieldClass->name)) {
             $fieldClass->fieldId = Html::getInputId($this->model->getModel(), $fieldClass->name);

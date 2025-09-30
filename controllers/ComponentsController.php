@@ -6,16 +6,23 @@ use Mitisk\Yii2Admin\models\AdminComponent;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Yii;
 use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\web\Controller;
+use yii\web\NotFoundHttpException;
+use yii\web\Response;
 
+/**
+ * Контроллер управления компонентами в админ-панели.
+ */
 class ComponentsController extends Controller
 {
     /**
-     * {@inheritdoc}
+     * Подключает фильтры доступа и HTTP-методов.
+     * @return array
      */
-    public function behaviors()
+    public function behaviors() : array
     {
         return [
             'access' => [
@@ -23,28 +30,33 @@ class ComponentsController extends Controller
                 'rules' => [
                     [
                         'allow' => true,
-                        'roles' => ['superAdminRole']
+                        'roles' => ['superAdminRole'],
                     ],
+                ],
+            ],
+            'verbs' => [
+                'class' => VerbFilter::class,
+                'actions' => [
+                    'install' => ['POST'],
+                    'uninstall' => ['POST'],
+                    'delete' => ['POST'],
                 ],
             ],
         ];
     }
 
     /**
-     * Renders the index view for the module
+     * Список доступных моделей (компонентов) с автодобавлением таблиц из БД.
      * @return string
      */
-    public function actionIndex()
+    public function actionIndex() : string
     {
-        $db = \Yii::$app->get('db', false);
-
-        /** @var $schema yii\db\mysql\Schema */
-        $schema = $db->getSchema();
+        $db = Yii::$app->get('db', false);
+        $schema = $db ? $db->getSchema() : null;
 
         if ($schema) {
             $tables = $schema->getTableNames();
             $exists = AdminModel::find()->select('table_name')->column();
-
             $tables = array_diff($tables, $exists);
 
             foreach ($tables as $tableName) {
@@ -56,10 +68,9 @@ class ComponentsController extends Controller
         }
 
         $models = AdminModel::find()->where(['view' => 1])->all();
-
         $helper = Yii::$app->componentHelper;
 
-        return $this->render('index', compact(['models', 'helper']));
+        return $this->render('index', compact('models', 'helper'));
     }
 
     public function actionInstall()
@@ -104,30 +115,37 @@ class ComponentsController extends Controller
         return $return;
     }
 
-    public function actionUpdate($id)
+    /**
+     * Редактирование конфигурации модели (компонента) и сборки формы.
+     * @param int $id
+     * @return string|Response
+     * @throws NotFoundHttpException
+     */
+    public function actionUpdate(int $id)
     {
         $model = AdminModel::findOne($id);
-
         if (!$model) {
-            throw new \yii\web\NotFoundHttpException('The requested page does not exist.');
+            throw new NotFoundHttpException('The requested page does not exist.');
         }
 
-        if (Yii::$app->request->isPost) {
-            if ($model->load(\Yii::$app->request->post()) && $model->save()) {
-                Yii::$app->session->setFlash('success', 'Компонент обновлен.');
-            }
+        // PRG: после успешного сохранения делаем redirect
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->session->setFlash('success', 'Компонент обновлен.');
+            return $this->redirect(['update', 'id' => $model->id]);
         }
 
-        $db = \Yii::$app->get('db', false);
+        $db = Yii::$app->get('db', false);
+        $schema = $db ? $db->getSchema() : null;
+        $tableSchema = $schema ? $schema->getTableSchema($model->table_name) : null;
 
-        /** @var $schema yii\db\mysql\Schema */
-        $schema = $db->getSchema();
-        $columns = $allColumns = $schema->getTableSchema($model->table_name)->columns;
+        $columnsNames = [];
+        $allColumnsNames = [];
 
-        if ($columns) {
-            foreach ($columns as $key => $column) {
-                if ($column->isPrimaryKey) {
-                    unset($columns[$key]);
+        if ($tableSchema) {
+            foreach ($tableSchema->columns as $name => $column) {
+                $allColumnsNames[] = $name;
+                if (!$column->isPrimaryKey) {
+                    $columnsNames[] = $name;
                 }
             }
         }
@@ -136,23 +154,23 @@ class ComponentsController extends Controller
         $requiredColumns = [];
         $addedAttributes = [];
 
-
         if ($model->model_class) {
-            $columns = ArrayHelper::merge(array_keys($columns), self::getPublicProperties($model->model_class));
-            $allColumns = ArrayHelper::merge(array_keys($allColumns), self::getPublicProperties($model->model_class));
-
             if (!class_exists($model->model_class)) {
+                Yii::$app->session->setFlash('error', 'Класс модели не найден.');
                 $model->model_class = null;
             } else {
                 $modelInstance = new $model->model_class();
-                $rules = $modelInstance->rules();
 
-                //get all required columns
-                if ($rules) {
-                    foreach ($rules as $rule) {
-                        if (isset($rule[1]) && $rule[1] == 'required') {
-                            $requiredColumns = array_merge($requiredColumns, is_array($rule[0]) ? $rule[0] : [$rule[0]]);
-                        }
+                // Добавляем публичные свойства (виртуальные атрибуты) модели
+                $publicProps = self::getPublicProperties($model->model_class);
+                $columnsNames = ArrayHelper::merge($columnsNames, $publicProps);
+                $allColumnsNames = ArrayHelper::merge($allColumnsNames, $publicProps);
+
+                // Требуемые атрибуты по правилам
+                foreach ((array)$modelInstance->rules() as $rule) {
+                    if (isset($rule[1]) && $rule[1] === 'required') {
+                        $attrs = is_array($rule[0]) ? $rule[0] : [$rule[0]];
+                        $requiredColumns = array_merge($requiredColumns, $attrs);
                     }
                 }
             }
@@ -160,30 +178,32 @@ class ComponentsController extends Controller
 
         if ($model->data) {
             $data = json_decode($model->data, true);
-            if ($data && is_array($data)) {
+            if (is_array($data)) {
                 $addedAttributes = ArrayHelper::map($data, 'name', 'name');
             }
         }
 
-        $list = $model->list ? json_decode($model->list, true) : ($allColumns ? array_keys($allColumns) : []);
-
-        $this->configureList($list, $allColumns, $modelInstance, $model);
-
+        $list = $model->list ? json_decode($model->list, true) : ($allColumnsNames ?: []);
+        $this->configureList($list, $allColumnsNames, $modelInstance, $model);
         $model->list = $list;
 
         $publicStaticMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class) : []);
         $publicSaveMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class, true) : []);
 
-        return $this->render('update', compact([
+        $auth = Yii::$app->authManager;
+        $roles = $auth->getRoles();
+
+        return $this->render('update', compact(
             'model',
-            'columns',
+            'columnsNames',
             'modelInstance',
             'requiredColumns',
             'addedAttributes',
-            'allColumns',
+            'allColumnsNames',
             'publicStaticMethods',
-            'publicSaveMethods'
-        ]));
+            'publicSaveMethods',
+            'roles'
+        ));
     }
 
     public function actionDelete($id)
@@ -193,7 +213,8 @@ class ComponentsController extends Controller
     }
 
     /**
-     * Получаем все свойства класса
+     * Имена публичных свойств класса.
+     * @param string $className
      * @return array
      */
     private static function getPublicProperties(string $className): array
@@ -205,10 +226,10 @@ class ComponentsController extends Controller
     }
 
     /**
-     * Получаем все методы класса
-     * @param string $className Имя класса
-     * @param bool $forSave Классы для сохранения
-     * @return array
+     * Список методов класса для заполнения select-ов статическими массивами или сохранения через ActiveQuery.
+     * @param string $className
+     * @param bool $forSave Поиск методов для сохранения (ActiveQuery)
+     * @return array<string,string>
      */
     private static function getPublicMethods(string $className, bool $forSave = false) : array
     {
@@ -273,13 +294,12 @@ class ComponentsController extends Controller
     }
 
     /**
-     * Настройка списка
+     * Строит структуру списка колонок для таблицы в админке.
      * @param array $list
-     * @param array $allColumns
+     * @param array $allColumns Список имён колонок/атрибутов
      * @param object|null $modelInstance
      * @param AdminModel $model
      * @return void
-     * @throws \Exception
      */
     private function configureList(array &$list, array $allColumns, ?object $modelInstance, AdminModel $model): void
     {
