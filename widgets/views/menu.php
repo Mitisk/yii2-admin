@@ -1,42 +1,57 @@
 <?php
-use yii\helpers\ArrayHelper;
+
+use Mitisk\Yii2Admin\components\MenuHelper;
 
 /* @var $this yii\web\View */
 /* @var $menuArray [] */
 ?>
-
 <div class="section-menu-left">
     <div class="box-logo">
         <a href="/admin/" id="site-logo-inner">
-            <img class="" id="logo_header" alt="" src="/web/images/logo/logo.png" data-light="images/logo/logo.png" data-dark="images/logo/logo-dark.png" >
+            <img id="logo_header" alt="" src="/web/images/logo/logo.png"
+                 data-light="images/logo/logo.png" data-dark="images/logo/logo-dark.png">
         </a>
-        <div class="button-show-hide">
-            <i class="icon-menu-left"></i>
-        </div>
+        <div class="button-show-hide"><i class="icon-menu-left"></i></div>
     </div>
-    <div class="center">
 
+    <div class="center">
         <div class="center-item">
             <ul class="menu-list">
-
                 <?php foreach ($menuArray as $item): ?>
-                    <li class="menu-item <?= ArrayHelper::getValue($item, 'children') ? 'has-children' : '' ?>">
-                        <a href="<?= ArrayHelper::getValue($item, 'href') ? ArrayHelper::getValue($item, 'href') : 'javascript:void(0);' ?>"
-                           title="<?= ArrayHelper::getValue($item, 'title') ? ArrayHelper::getValue($item, 'title') : ArrayHelper::getValue($item, 'text') ?>"
-                           target="<?= ArrayHelper::getValue($item, 'target', '_self') ?>" class="menu-item-button">
-                            <?php if (ArrayHelper::getValue($item, 'icon')): ?>
-                                <div class="icon"><i class="<?= $item['icon'] ?>"></i></div>
+                    <?php
+                    $hasChildren = !empty($item['children']);
+                    $isActive = !empty($item['_active']);
+                    $href = $item['href'] ?? 'javascript:void(0);';
+                    $title = $item['title'] ?? ($item['text'] ?? '');
+                    $target = $item['target'] ?? '_self';
+                    $icon = $item['icon'] ?? null;
+                    ?>
+                    <li class="menu-item <?= $hasChildren ? 'has-children' : '' ?> <?= $isActive ? 'active' : '' ?>">
+                        <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>"
+                           title="<?= htmlspecialchars($title, ENT_QUOTES) ?>"
+                           target="<?= htmlspecialchars($target, ENT_QUOTES) ?>"
+                           class="menu-item-button">
+                            <?php if ($icon): ?>
+                                <div class="icon"><i class="<?= htmlspecialchars($icon, ENT_QUOTES) ?>"></i></div>
                             <?php endif; ?>
-                            <div class="text"><?= ArrayHelper::getValue($item, 'text') ?></div>
+                            <div class="text"><?= htmlspecialchars($item['text'] ?? '', ENT_QUOTES) ?></div>
                         </a>
-                        <?php if (ArrayHelper::getValue($item, 'children')): ?>
+
+                        <?php if ($hasChildren): ?>
                             <ul class="sub-menu">
-                                <?php foreach (ArrayHelper::getValue($item, 'children') as $subItem): ?>
-                                    <li class="sub-menu-item <?= ArrayHelper::getValue($subItem, 'children') ? 'has-children' : '' ?>">
-                                        <a href="<?= ArrayHelper::getValue($subItem, 'href') ? ArrayHelper::getValue($subItem, 'href') : 'javascript:void(0);' ?>"
-                                           title="<?= ArrayHelper::getValue($subItem, 'title') ? ArrayHelper::getValue($subItem, 'title') : ArrayHelper::getValue($subItem, 'text') ?>"
-                                           target="<?= ArrayHelper::getValue($subItem, 'target', '_self') ?>">
-                                            <div class="text"><?= ArrayHelper::getValue($subItem, 'text') ?></div>
+                                <?php foreach ($item['children'] as $sub): ?>
+                                    <?php
+                                    $subActive = !empty($sub['_active']);
+                                    $subHasChildren = !empty($sub['children']);
+                                    $subHref = $sub['href'] ?? 'javascript:void(0);';
+                                    $subTitle = $sub['title'] ?? ($sub['text'] ?? '');
+                                    $subTarget = $sub['target'] ?? '_self';
+                                    ?>
+                                    <li class="sub-menu-item <?= $subHasChildren ? 'has-children' : '' ?> <?= $subActive ? 'active' : '' ?>">
+                                        <a href="<?= htmlspecialchars($subHref, ENT_QUOTES) ?>"
+                                           title="<?= htmlspecialchars($subTitle, ENT_QUOTES) ?>"
+                                           target="<?= htmlspecialchars($subTarget, ENT_QUOTES) ?>">
+                                            <div class="text"><?= htmlspecialchars($sub['text'] ?? '', ENT_QUOTES) ?></div>
                                         </a>
                                     </li>
                                 <?php endforeach; ?>
@@ -44,31 +59,42 @@ use yii\helpers\ArrayHelper;
                         <?php endif; ?>
                     </li>
                 <?php endforeach; ?>
+            </ul>
+        </div>
 
-            </ul>
-        </div>
-        <div class="center-item">
-            <div class="center-heading">Настройки</div>
-            <ul class="menu-list">
-                <li class="menu-item">
-                    <a href="/admin/settings/" class="">
-                        <div class="icon"><i class="icon-settings"></i></div>
-                        <div class="text">Основные</div>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="/admin/components/" class="">
-                        <div class="icon"><i class="icon-database"></i></div>
-                        <div class="text">Компоненты</div>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="/admin/menu/" class="menu-item-button">
-                        <div class="icon"><i class="fas fa-bars"></i></div>
-                        <div class="text">Меню</div>
-                    </a>
-                </li>
-            </ul>
-        </div>
+        <?php if (Yii::$app->user->can('admin')): ?>
+            <div class="center-item">
+                <div class="center-heading">Настройки</div>
+                <ul class="menu-list">
+                    <li class="menu-item <?= MenuHelper::build([
+                        ['href' => '/admin/settings/', 'text'=>'Основные']
+                    ])[0]['_active'] ? 'active' : '' ?>">
+                        <a href="/admin/settings/">
+                            <div class="icon"><i class="icon-settings"></i></div>
+                            <div class="text">Основные</div>
+                        </a>
+                    </li>
+
+                    <?php if (Yii::$app->user->can('superAdmin')): ?>
+                        <li class="menu-item <?= MenuHelper::build([
+                            ['href' => '/admin/components/', 'text'=>'Компоненты']
+                        ])[0]['_active'] ? 'active' : '' ?>">
+                            <a href="/admin/components/">
+                                <div class="icon"><i class="icon-database"></i></div>
+                                <div class="text">Компоненты</div>
+                            </a>
+                        </li>
+                        <li class="menu-item <?= MenuHelper::build([
+                            ['href' => '/admin/menu/', 'text'=>'Меню']
+                        ])[0]['_active'] ? 'active' : '' ?>">
+                            <a href="/admin/menu/" class="menu-item-button">
+                                <div class="icon"><i class="fas fa-bars"></i></div>
+                                <div class="text">Меню</div>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
     </div>
 </div>

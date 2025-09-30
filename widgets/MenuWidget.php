@@ -6,6 +6,7 @@ use Mitisk\Yii2Admin\models\Menu;
 use Yii;
 use yii\base\Widget;
 use yii\base\Event;
+use Mitisk\Yii2Admin\components\MenuHelper;
 
 /**
  * MenuWidget
@@ -51,6 +52,9 @@ class MenuWidget extends Widget
         // Создаем событие перед рендерингом меню
         $event = new MenuEvent(['menuArray' => &$menuArray]);
         $this->trigger(self::EVENT_BEFORE_RENDER, $event);
+
+        // Применяем перед рендером
+        $menuArray = MenuHelper::build($menuArray);
 
         return $this->render('menu', ['menuArray' => $menuArray]);
     }

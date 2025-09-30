@@ -5,12 +5,31 @@ namespace Mitisk\Yii2Admin\controllers;
 use Mitisk\Yii2Admin\models\AdminComponent;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Yii;
+use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\web\Controller;
 
 class ComponentsController extends Controller
 {
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'roles' => ['superAdminRole']
+                    ],
+                ],
+            ],
+        ];
+    }
+
     /**
      * Renders the index view for the module
      * @return string

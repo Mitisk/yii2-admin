@@ -3,6 +3,7 @@
 namespace Mitisk\Yii2Admin\models;
 
 use Yii;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "admin_model".
@@ -22,6 +23,15 @@ use Yii;
  */
 class AdminModel extends \yii\db\ActiveRecord
 {
+    /** @var bool Можно ли просматривать записи */
+    public $can_view = true;
+
+    /** @var bool Можно ли редактировать записи */
+    public $can_update = true;
+
+    /** @var bool Можно ли удалять записи */
+    public $can_delete = true;
+
     /**
      * {@inheritdoc}
      */
@@ -45,6 +55,25 @@ class AdminModel extends \yii\db\ActiveRecord
             [['alias', 'model_class', 'name', 'admin_label'], 'trim'],
             [['table_name', 'model_class', 'name', 'alias', 'admin_label'], 'string', 'max' => 255],
         ];
+    }
+
+    public function afterFind()
+    {
+        parent::afterFind();
+        if ($this->list) {
+            $list = json_decode($this->list, true);
+            if (ArrayHelper::getValue($list, 'admin_actions')) {
+                if (!filter_var(ArrayHelper::getValue($list, 'admin_actions.on'), FILTER_VALIDATE_BOOLEAN)) {
+                    $this->can_update = false;
+                    $this->can_delete = false;
+                    $this->can_view = false;
+                } else {
+                    $this->can_update = filter_var(ArrayHelper::getValue($list, 'admin_actions.data.update'), FILTER_VALIDATE_BOOLEAN);
+                    $this->can_delete = filter_var(ArrayHelper::getValue($list, 'admin_actions.data.delete'), FILTER_VALIDATE_BOOLEAN);
+                    $this->can_view = filter_var(ArrayHelper::getValue($list, 'admin_actions.data.view'), FILTER_VALIDATE_BOOLEAN);
+                }
+            }
+        }
     }
 
     public function checkAlias($attribute, $params) {
@@ -91,8 +120,9 @@ class AdminModel extends \yii\db\ActiveRecord
             Menu::addToMenu('admin', [
                 'text' => $this->name,
                 'href' => '/admin/' . $this->alias . '/',
-                'icon' => 'fa fa-list',
+                'icon' => 'far fa-circle',
                 'target' => '_self',
+                'rule' => $this->model_class . '\view',
                 'title' => $this->name,
             ]);
         } elseif (!$this->in_menu && isset($changedAttributes['in_menu'])) {

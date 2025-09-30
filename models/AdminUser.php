@@ -8,6 +8,7 @@ use yii\behaviors\TimestampBehavior;
 use yii\data\ActiveDataProvider;
 use yii\helpers\ArrayHelper;
 use yii\web\IdentityInterface;
+use Mitisk\Yii2Admin\models\rbac\AdminUserRbacTrait;
 
 /**
  * This is the model class for table "user".
@@ -26,6 +27,8 @@ use yii\web\IdentityInterface;
  */
 class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
 {
+    use AdminUserRbacTrait;
+
     const STATUS_BLOCKED = 0;
     const STATUS_ACTIVE = 1;
 
@@ -211,17 +214,21 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
      * @param array $params Параметры запроса (например, $_GET).
      * @return ActiveDataProvider
      */
-    public function search($params)
+    public function search($params, $ids = [])
     {
         $this->scenario = 'search';
 
         // Создаем запрос к базе данных
         $query = AdminUser::find();
+        if ($ids) {
+            $query->andWhere(['in', 'id', $ids]);
+        }
 
-        if ($params) {
-            $search = trim(ArrayHelper::getValue($params, $this->formName() . '.search'));
+        if ($params && is_array($params)) {
+            $search = ArrayHelper::getValue($params, $this->formName() . '.search');
 
             if ($search) {
+                $search = trim($search);
                 $query = $query->andWhere(['OR',
                     ['like', 'username', '%' . $search . '%', false],
                     ['like', 'name', '%' . $search . '%', false],
@@ -252,7 +259,10 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
      */
     public function hasSettings() : bool
     {
-        return Settings::find()->where(['model_name' => self::class])->exists();
+        if (Yii::$app->user->can('admin')) {
+            return Settings::find()->where(['model_name' => self::class])->exists();
+        }
+        return false;
     }
 
     /**

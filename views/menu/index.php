@@ -3,6 +3,7 @@ use \yii\helpers\Html;
 
 /* @var $this yii\web\View */
 /* @var $models \Mitisk\Yii2Admin\models\Menu[] */
+/* @var $permissions array */
 
 $this->title = 'Меню';
 $this->params['breadcrumbs'][] = $this->title;
@@ -44,7 +45,7 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
     </div>
 
-    <?= $this->render('_builder_form')?>
+    <?= $this->render('_builder_form', ['permissions' => $permissions])?>
 
     <?= Html::beginForm('', 'post', ['id' => 'form-main']) ?>
 

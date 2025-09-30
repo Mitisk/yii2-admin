@@ -113,13 +113,23 @@ class GetGridColumnHelper extends \yii\base\BaseObject
     private function getActionTemplate(array $data): array
     {
         $template = [];
-        if (ArrayHelper::getValue($data, 'data')) {
+        /*if (ArrayHelper::getValue($data, 'data')) {
             foreach (ArrayHelper::getValue($data, 'data') as $name => $on) {
                 if ($on) {
                     $template[] = '{' . $name . '}';
                 }
             }
+        }*/
+        if ($this->model->canView()) {
+            $template[] = '{view}';
         }
+        if ($this->model->canUpdate()) {
+            $template[] = '{update}';
+        }
+        if ($this->model->canDelete()) {
+            $template[] = '{delete}';
+        }
+
         return $template;
     }
 

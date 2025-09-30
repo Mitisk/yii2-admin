@@ -42,11 +42,14 @@ $this->params['breadcrumbs'][] = $this->title;
 
         <div class="bot">
             <div class="list-box-value mb-10">
+                <?php if ($model->canCreate()) : ?>
                 <div>
                     <?= Html::a("Редактировать", $model->getUrls('update'), [
                         'class' => 'tf-button w208'
                     ]) ?>
                 </div>
+                <?php endif; ?>
+                <?php if ($model->canDelete()) : ?>
                 <div>
                     <?= Html::a(Yii::t('rbac', 'Delete'), ['delete', 'id' => $model->getModel()->id], [
                         'class' => 'tf-button tf-button-danger w208',
@@ -54,6 +57,7 @@ $this->params['breadcrumbs'][] = $this->title;
                         'data-method' => 'post',
                     ]) ?>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
 

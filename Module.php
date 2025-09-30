@@ -9,39 +9,6 @@ use yii\base\BootstrapInterface;
 
 class Module extends \yii\base\Module implements BootstrapInterface
 {
-    /*public function behaviors()
-     {
-         return [
-             'access' => [
-                 'class' => AccessControl::class,
-                 'rules' => [
-                     [
-                         'actions' => ['login'],
-                         'allow' => true,
-                         'roles' => ['?']
-                     ],
-                     [
-                         'actions' => ['index', 'create'],
-                         'allow' => true,
-                         'roles' => ['@']
-                     ],
-                     [
-                         'class' => 'kak\rbac\rules\ContextAccessRule',
-                         'modelClass' => 'app\models\Stream',
-                         'actions' => ['update'],
-                         'roles' => [PermissionConst::UpdateOwn]
-                     ],
-                     [
-                         'class' => 'kak\rbac\rules\ContextAccessRule',
-                         'modelClass' => 'app\models\Stream',
-                         'actions' => ['delete'],
-                         'roles' => [PermissionConst::DeleteOwn]
-                     ]
-                 ],
-             ],
-         ];
-     }*/
-
     /**
      * {@inheritdoc}
      */
@@ -85,6 +52,8 @@ class Module extends \yii\base\Module implements BootstrapInterface
     public function init()
     {
         parent::init();
+
+        Yii::$app->errorHandler->errorAction = 'admin/default/error';
 
         \Yii::setAlias('@Mitisk/Yii2Admin', __DIR__);
 

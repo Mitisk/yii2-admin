@@ -3,7 +3,8 @@ namespace Mitisk\Yii2Admin\core\controllers;
 
 use Mitisk\Yii2Admin\core\models\AdminModel;
 use Yii;
-use yii\data\ActiveDataProvider;
+use yii\filters\VerbFilter;
+use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 
@@ -26,6 +27,66 @@ class AdminController extends \yii\web\Controller
 
     /** @var string Шаблон формы */
     public $formTemplate = '_form';
+
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    // Просмотр списка и карточки
+                    [
+                        'actions' => ['index', 'view'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Yii::$app->user->can($this->_modelName . '\view') ||
+                                Yii::$app->user->can('admin');
+                        },
+                    ],
+                    // Создание
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Yii::$app->user->can($this->_modelName . '\create') ||
+                                Yii::$app->user->can('admin');
+                        },
+                    ],
+                    // Обновление
+                    [
+                        'actions' => ['update'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Yii::$app->user->can($this->_modelName . '\update') ||
+                                Yii::$app->user->can('admin');
+                        },
+                    ],
+                    // Удаление
+                    [
+                        'actions' => ['delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Yii::$app->user->can($this->_modelName . '\delete') ||
+                                Yii::$app->user->can('admin');
+                        },
+                    ],
+                ],
+            ],
+            'verbs' => [
+                'class' => VerbFilter::class,
+                'actions' => [
+                    'delete' => ['POST'],
+                ],
+            ],
+        ];
+    }
 
     public function beforeAction($action)
     {

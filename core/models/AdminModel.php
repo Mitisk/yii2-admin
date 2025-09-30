@@ -1,6 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\core\models;
 
+use Yii;
 use Mitisk\Yii2Admin\fields\Field;
 use Mitisk\Yii2Admin\models\Settings;
 use yii\base\BaseObject;
@@ -82,7 +83,10 @@ class AdminModel extends BaseObject
      */
     public function hasSettings() : bool
     {
-        return Settings::find()->where(['model_name' => $this->_modelClassName])->exists();
+        if (Yii::$app->user->can('admin')) {
+            return Settings::find()->where(['model_name' => $this->_modelClassName])->exists();
+        }
+        return false;
     }
 
     /**
@@ -143,12 +147,48 @@ class AdminModel extends BaseObject
     }
 
     /**
+     * Return can view
+     * @return bool
+     */
+    public function canView() : bool
+    {
+        return filter_var($this->component->can_view, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
      * Return can create
      * @return boolean
      */
-    public function canCreate()
+    public function canCreate() : bool
     {
-        return filter_var($this->component->can_create, FILTER_VALIDATE_BOOLEAN);
+        if (Yii::$app->user->can($this->getModelName() . '\create') || Yii::$app->user->can('admin')) {
+            return filter_var($this->component->can_create, FILTER_VALIDATE_BOOLEAN);
+        }
+        return false;
+    }
+
+    /**
+     * Return can update
+     * @return bool
+     */
+    public function canUpdate() : bool
+    {
+        if (Yii::$app->user->can($this->getModelName() . '\update') || Yii::$app->user->can('admin')) {
+            return filter_var($this->component->can_update, FILTER_VALIDATE_BOOLEAN);
+        }
+        return false;
+    }
+
+    /**
+     * Return can delete
+     * @return bool
+     */
+    public function canDelete() : bool
+    {
+        if (Yii::$app->user->can($this->getModelName() . '\delete') || Yii::$app->user->can('admin')) {
+            return filter_var($this->component->can_delete, FILTER_VALIDATE_BOOLEAN);
+        }
+        return false;
     }
 
     /**

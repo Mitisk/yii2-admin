@@ -7,6 +7,7 @@ use Mitisk\Yii2Admin\models\LoginForm;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
+use yii\web\ErrorAction;
 use yii\web\Response;
 
 /**
@@ -36,6 +37,16 @@ class DefaultController extends Controller
                 'actions' => [
                     'logout' => ['post'],
                 ],
+            ],
+        ];
+    }
+
+    public function actions()
+    {
+        return [
+            'error' => [
+                'class' => ErrorAction::class,
+                'view' => 'error'
             ],
         ];
     }

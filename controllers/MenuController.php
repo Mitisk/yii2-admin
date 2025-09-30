@@ -4,6 +4,7 @@ namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\models\Menu;
 use Yii;
+use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 
@@ -13,6 +14,23 @@ use yii\web\Controller;
  */
 class MenuController extends Controller
 {
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'roles' => ['superAdminRole']
+                    ],
+                ],
+            ],
+        ];
+    }
 
     public function actionIndex()
     {
@@ -41,8 +59,27 @@ class MenuController extends Controller
 
         $models = Menu::find()->orderBy(['ordering' => SORT_ASC])->all();
 
+        $auth = Yii::$app->authManager;
+        $permissions = $auth->getPermissions();
+
+        $excluded = ['Удаление', 'Изменение', 'Создание'];
+
+        $filtered = array_filter(
+            $permissions,
+            static function ($perm) use ($excluded): bool {
+                $desc = (string) $perm->description; // description может быть null
+                foreach ($excluded as $needle) {
+                    if ($needle !== '' && mb_stripos($desc, $needle) !== false) {
+                        return false; // исключить
+                    }
+                }
+                return true; // оставить
+            }
+        );
+
         return $this->render('index', [
-            'models' => $models
+            'models' => $models,
+            'permissions' => $filtered,
         ]);
     }
 

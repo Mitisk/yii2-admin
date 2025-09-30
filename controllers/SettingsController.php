@@ -3,6 +3,7 @@ namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\models\AdminModel;
 use Mitisk\Yii2Admin\models\SettingsBlock;
+use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 use Yii;
@@ -10,6 +11,24 @@ use Mitisk\Yii2Admin\models\Settings;
 
 class SettingsController extends Controller
 {
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'roles' => ['superAdminRole', 'admin']
+                    ],
+                ],
+            ],
+        ];
+    }
+
     public function actionIndex()
     {
         /** @var string $modelName Отобразить настройку для конкретной модели */
