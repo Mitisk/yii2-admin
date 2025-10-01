@@ -3,6 +3,7 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\models\AdminComponent;
+use Mitisk\Yii2Admin\models\AdminControllerMap;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Yii;
 use yii\filters\AccessControl;
@@ -39,7 +40,6 @@ class ComponentsController extends Controller
                 'actions' => [
                     'install' => ['POST'],
                     'uninstall' => ['POST'],
-                    'delete' => ['POST'],
                 ],
             ],
         ];
@@ -70,7 +70,36 @@ class ComponentsController extends Controller
         $models = AdminModel::find()->where(['view' => 1])->all();
         $helper = Yii::$app->componentHelper;
 
-        return $this->render('index', compact('models', 'helper'));
+        $modelAdminControllerMap = new AdminControllerMap();
+        $AdminControllerMapProvider = $modelAdminControllerMap->search(Yii::$app->request->queryParams);
+
+        return $this->render('index', compact('models', 'helper', 'AdminControllerMapProvider'));
+    }
+
+    public function actionCreateMap()
+    {
+        $model = new AdminControllerMap();
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->session->setFlash('success', 'Controller map добавлен.');
+            return $this->redirect(['update-map', 'id' => $model->id]);
+        }
+        return $this->render('create-map', compact('model'));
+    }
+
+    public function actionUpdateMap(int $id)
+    {
+        $model = AdminControllerMap::findOne($id);
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->session->setFlash('success', 'Controller map обновлен.');
+        }
+        return $this->render('update-map', compact('model'));
+    }
+
+    public function actionDeleteMap(int $id)
+    {
+        AdminControllerMap::findOne($id)->delete();
+        Yii::$app->session->setFlash('success', 'Controller map удален.');
+        return $this->redirect(['index']);
     }
 
     public function actionInstall()
@@ -183,7 +212,7 @@ class ComponentsController extends Controller
             }
         }
 
-        $list = $model->list ? json_decode($model->list, true) : ($allColumnsNames ?: []);
+        $list = $model->list ? (is_array($model->list) ? $model->list : json_decode($model->list, true)) : ($allColumnsNames ?: []);
         $this->configureList($list, $allColumnsNames, $modelInstance, $model);
         $model->list = $list;
 

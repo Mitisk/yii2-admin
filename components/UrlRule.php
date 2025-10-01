@@ -21,6 +21,12 @@ class UrlRule extends \yii\web\UrlRule
         $parts = explode('/', $pathInfo);
         $alias = ArrayHelper::getValue($parts, 1, end($parts));
 
+        // Резервированные алиасы, отдаём их другим правилам
+        $reserved = ReservedAlias::get();
+        if (in_array($alias, $reserved, true)) {
+            return false;
+        }
+
         $parts = array_filter($parts, fn($part) => $part !== 'admin' && $part !== $alias); // Убираем 'admin' и alias
 
         $page = AdminModel::find()->where(['alias' => $alias, 'view' => 1])->one();

@@ -2,6 +2,7 @@
 use yii\widgets\ActiveForm;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Json;
 
 /** @var yii\web\View $this */
 /** @var \Mitisk\Yii2Admin\models\Settings[] $settings */
@@ -12,10 +13,11 @@ use yii\helpers\ArrayHelper;
 $this->params['breadcrumbs'][] = ['label' => 'Настройки сайта'];
 $this->title = $this->params['pageHeaderText'] = 'Настройки сайта';
 
+\Mitisk\Yii2Admin\assets\FieldFileAsset::register($this);
 \Mitisk\Yii2Admin\assets\SettingsAsset::register($this);
 ?>
 
-<?php $form = ActiveForm::begin(['options' => ['class' => 'form-setting form-style-2']]); ?>
+<?php $form = ActiveForm::begin(['options' => ['class' => 'form-setting form-style-2', 'enctype' => 'multipart/form-data']]); ?>
 
 <?php if (!$modelName) : ?>
 <div class="wg-box">
@@ -118,13 +120,47 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
     </div>
 
 </div>
+    <div class="wg-box">
+        <div class="left js-change-header">
+            <h5 class="mb-4"><?= ArrayHelper::getValue($settingsBlock, 'ADMIN.label', 'Панель администратора') ?></h5>
+            <input type="text" name="names[ADMIN]" value="<?= ArrayHelper::getValue($settingsBlock, 'ADMIN.label', 'Панель администратора')?>" tabindex="2" style="display: none">
+            <div class="body-text"><?= ArrayHelper::getValue($settingsBlock, 'ADMIN.description', 'Это настройки панели администратора')?></div>
+            <textarea name="description[ADMIN]" style="display: none"><?= ArrayHelper::getValue($settingsBlock, 'ADMIN.description', 'Это настройки панели администратора')?></textarea>
+        </div>
+
+        <div class="right flex-grow">
+
+            <fieldset class="mb-10">
+                <div class="body-title mb-10">Логотип (154х52 px)
+                    <i class="icon-copy js-copy-settings" title="Получить настройку" data-copy="\Yii::$app->settings->get('ADMIN', 'logo');"></i>
+                </div>
+
+                <?php
+                /** @var \Mitisk\Yii2Admin\models\Settings $fileSetting */
+                $fileSetting = Yii::$app->settings->get('ADMIN', 'logo', getOnlyValue: false);
+                $data = [];
+                if ($fileSetting?->file) {
+                    $data = [$fileSetting?->file->generateFileUploaderData('26')];
+                }
+
+                $filesJson = Json::encode($data); ?>
+
+                <input type="file" class="fileuploader-single fileuploader-without-alt"
+                       name="Settings[26]"
+                       data-fileuploader-files='<?= $filesJson ?>'>
+
+            </fieldset>
+
+        </div>
+
+    </div>
 <?php endif; ?>
 
 <?php
 if ($settings) {
     $groupedSettings = [];
     foreach ($settings as $setting) {
-        if ($setting->model_name === 'GENERAL') continue;
+        if ($setting->model_name === 'GENERAL' || $setting->model_name === 'ADMIN') continue;
         $groupedSettings[$setting->model_name][] = $setting;
     }
 

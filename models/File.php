@@ -93,6 +93,21 @@ class File extends \yii\db\ActiveRecord
         return FieldsHelper::isImageFile($localPath, $publicPath);
     }
 
+    public function generateFileUploaderData($inputName = null) : array
+    {
+        return [
+            'name' => $this->filename,
+            'file' => $this->path,
+            'type' => $this->mime_type,
+            'size' => (int)$this->file_size,
+            'data' => [
+                'file_id'    => (int)$this->id,
+                'field_name' => $inputName,
+                'alt'        => $this->alt_attribute, // если alt используется
+                ]
+            ];
+    }
+
     /**
      * {@inheritdoc}
      */

@@ -15,6 +15,8 @@ use Yii;
  * @property string|null $label Человекочитаемое название
  * @property string|null $description Описание параметра
  * @property int|null $updated_at Время последнего изменения
+ *
+ * @property File $file Файл
  */
 class Settings extends \yii\db\ActiveRecord
 {
@@ -63,9 +65,10 @@ class Settings extends \yii\db\ActiveRecord
      * @param string|null $modelName
      * @param string $attribute
      * @param mixed|null $default
+     * @param bool $getOnlyValue Получить только значение
      * @return mixed
      */
-    public static function getValue(string|null $modelName = null, string $attribute = '', mixed $default = null) : mixed
+    public static function getValue(string|null $modelName = null, string $attribute = '', mixed $default = null, bool $getOnlyValue = true) : mixed
     {
         if ($modelName) {
             $setting = static::findOne(['model_name' => $modelName, 'attribute' => $attribute]);
@@ -76,7 +79,12 @@ class Settings extends \yii\db\ActiveRecord
         if ($setting === null) {
             return $default;
         }
-        return static::castValue($setting->value, $setting->type);
+
+        if ($getOnlyValue) {
+            return static::castValue($setting);
+        }
+
+        return $setting;
     }
 
     /**
@@ -111,8 +119,11 @@ class Settings extends \yii\db\ActiveRecord
      * @param string $type
      * @return mixed
      */
-    public static function castValue(mixed $value, string $type) : mixed
+    public static function castValue(self $setting) : mixed
     {
+        $type = $setting->type;
+        $value = $setting->value;
+
         switch ($type) {
             case 'integer':
                 return (int)$value;
@@ -120,12 +131,23 @@ class Settings extends \yii\db\ActiveRecord
                 return $value === '1' || $value === 'true' || $value === 'on';
             case 'float':
                 return (float)$value;
+            case 'file':
+                return $setting->file?->path;
             case 'json':
                 return json_decode($value, true);
             case 'string':
             default:
                 return $value;
         }
+    }
+
+    /**
+     * Экземпляр модели файла
+     * @return \yii\db\ActiveQuery
+     */
+    public function getFile()
+    {
+        return $this->hasOne(File::class, ['id' => 'value']);
     }
 
     /**

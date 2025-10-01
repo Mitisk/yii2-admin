@@ -41,16 +41,25 @@ $host = Yii::$app->request->hostInfo;
     <fieldset class="name">
         <?= $form->field($model, 'name')->textInput(['maxlength' => 255])->label('Название <span class="tf-color-1">*</span>') ?>
     </fieldset>
+
     <fieldset class="name">
-        <label class="body-title mb-10" for="adminmodel-alias">Алиас</label>
-        <div class="input-group">
-            <span class="input-group-text" style="font-size: 14px;padding-right: 0;"><?= Html::encode($host) ?>/admin/</span>
-            <?= Html::activeInput('text', $model, 'alias', ['maxlength' => 255, 'class' => 'form-control', 'style' => 'padding-left: 2px'])?>
-            <div class="box-coppy">
-                <div class="coppy-content" style="display: none"><?= Html::encode($host) ?>/admin/<?= Html::encode($model->alias) ?></div>
-                <i class="icon-copy button-coppy"></i>
-            </div>
-        </div>
+        <?= $form->field($model, 'alias', [
+            'template' => '{label}<div class="input-group">{prefix}{input}{copy}</div>{error}',
+            'parts' => [
+                '{prefix}' => '<span class="input-group-text" style="font-size: 14px;padding-right: 0;">'
+                    . Html::encode($host) . '/admin/</span>',
+                '{copy}' => '<div class="box-coppy">'
+                    . '<div class="coppy-content" style="display: none">'
+                    . Html::encode($host) . '/admin/' . Html::encode($model->alias)
+                    . '</div><i class="icon-copy button-coppy"></i></div>',
+            ],
+            'labelOptions' => ['class' => 'body-title mb-10'],
+        ])->textInput([
+            'maxlength' => 255,
+            'class' => 'form-control',
+            'style' => 'padding-left: 2px',
+        ])->label('Алиас');
+        ?>
     </fieldset>
 
     <div class="flex gap10 mb-24">

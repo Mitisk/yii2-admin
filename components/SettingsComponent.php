@@ -12,8 +12,8 @@ class SettingsComponent extends Component
         return Settings::setValue($modelName, $key, $value, $type);
     }
 
-    public function get($modelName, $key, $default = null)
+    public function get($modelName, $key, $default = null, $getOnlyValue = true)
     {
-        return Settings::getValue($modelName, $key, $default);
+        return Settings::getValue($modelName, $key, $default, getOnlyValue: $getOnlyValue);
     }
 }

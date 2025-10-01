@@ -2,8 +2,6 @@
 
 namespace Mitisk\Yii2Admin\models;
 
-use Yii;
-
 /**
  * This is the model class for table "{{%admin_component}}".
  *

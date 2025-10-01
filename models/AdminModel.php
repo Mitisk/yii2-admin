@@ -2,6 +2,7 @@
 
 namespace Mitisk\Yii2Admin\models;
 
+use Mitisk\Yii2Admin\components\ReservedAlias;
 use Yii;
 use yii\helpers\ArrayHelper;
 
@@ -51,7 +52,7 @@ class AdminModel extends \yii\db\ActiveRecord
             [['data', 'in_menu', 'can_create', 'non_encode', 'list'], 'safe'],
             [['alias'], 'Mitisk\Yii2Admin\components\AliasValidator', 'skipOnEmpty' => false],
             [['alias'], 'unique'],
-            [['alias'], 'checkAlias'],
+            ['alias', fn($attribute) => \Mitisk\Yii2Admin\components\ReservedAlias::validateForModel($this, $attribute)],
             [['alias', 'model_class', 'name', 'admin_label'], 'trim'],
             [['table_name', 'model_class', 'name', 'alias', 'admin_label'], 'string', 'max' => 255],
         ];
@@ -73,12 +74,6 @@ class AdminModel extends \yii\db\ActiveRecord
                     $this->can_view = filter_var(ArrayHelper::getValue($list, 'admin_actions.data.view'), FILTER_VALIDATE_BOOLEAN);
                 }
             }
-        }
-    }
-
-    public function checkAlias($attribute, $params) {
-        if (in_array($this->alias, ['components', 'role', 'user', 'menu', 'auth', 'ajax', 'default', 'index', 'settings', 'login', 'logout', 'error', 'captcha', 'sitemap', 'contact'])) {
-            $this->addError($attribute, 'Этот алиас уже используется');
         }
     }
 

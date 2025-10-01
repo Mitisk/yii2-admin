@@ -56,9 +56,7 @@ $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_k
                         <div class="wrap">
                             <div class="header-left">
                                 <a href="/admin/">
-                                    <img class="" id="logo_header_mobile" alt="" src="/web/images/logo/logo.png"
-                                         data-light="/web/images/logo/logo.png"
-                                         data-dark="/web/images/logo/logo-dark.png" data-width="154px" data-height="52px" data-retina="/web/images/logo/logo@2x.png">
+                                    <img id="logo_header_mobile" alt="Logo" src="<?= \Yii::$app->settings->get('ADMIN', 'logo'); ?>">
                                 </a>
                                 <div class="button-show-hide">
                                     <i class="icon-menu-left"></i>
