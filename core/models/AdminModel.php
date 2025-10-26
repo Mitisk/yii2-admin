@@ -146,13 +146,24 @@ class AdminModel extends BaseObject
         return $return;
     }
 
+    public function canList() : bool
+    {
+        if (Yii::$app->user->can($this->getModelName() . '\view') || Yii::$app->user->can('admin')) {
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Return can view
      * @return bool
      */
     public function canView() : bool
     {
-        return filter_var($this->component->can_view, FILTER_VALIDATE_BOOLEAN);
+        if (Yii::$app->user->can($this->getModelName() . '\view') || Yii::$app->user->can('admin')) {
+            return filter_var($this->component->can_view, FILTER_VALIDATE_BOOLEAN);
+        }
+        return false;
     }
 
     /**

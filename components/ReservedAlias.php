@@ -43,6 +43,8 @@ final class ReservedAlias
         'menu',
         'components',
         'ajax',
+        'ajax-widget',
+        'ajax-note',
     ];
 
     /**

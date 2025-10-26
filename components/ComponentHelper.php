@@ -112,7 +112,7 @@ class ComponentHelper extends Component
                 $params['version'] = $version;
             }
 
-            $response = $this->makeApiRequest('components/install', 'POST', $params);
+            $response = $this->makeApiRequest('components/install', 'GET', $params);
 
             // Создаем временный файл
             $tempFile = tempnam(sys_get_temp_dir(), 'component_');
@@ -162,7 +162,7 @@ class ComponentHelper extends Component
                 'component' => $componentInfo['alias']
             ];
 
-            $response = $this->makeApiRequest('components/install', 'POST', $params);
+            $response = $this->makeApiRequest('components/install', 'GET', $params);
 
             // Создаем временный файл
             $tempFile = tempnam(sys_get_temp_dir(), 'component_');
