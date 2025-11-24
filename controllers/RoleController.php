@@ -1,9 +1,9 @@
 <?php
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Mitisk\Yii2Admin\models\AdminUser;
-use yii\web\Controller;
 use yii\web\Response;
 use yii\web\NotFoundHttpException;
 use yii\filters\AccessControl;
@@ -14,7 +14,7 @@ use Yii;
 /**
  * Контроллер для управления RBAC ролями и разрешениями
  */
-class RoleController extends Controller
+class RoleController extends BaseController
 {
     /**
      * {@inheritdoc}

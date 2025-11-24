@@ -2,18 +2,18 @@
 
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Yii;
 use Mitisk\Yii2Admin\models\LoginForm;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
-use yii\web\Controller;
 use yii\web\ErrorAction;
 use yii\web\Response;
 
 /**
  * Default controller for the `admin` module
  */
-class DefaultController extends Controller
+class DefaultController extends BaseController
 {
     /**
      * {@inheritdoc}

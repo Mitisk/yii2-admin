@@ -1,7 +1,6 @@
 <?php
 use yii\widgets\ActiveForm;
 use yii\helpers\Html;
-use yii\helpers\ArrayHelper;
 
 /* @var $this yii\web\View */
 /* @var $model \Mitisk\Yii2Admin\models\AdminUser */
@@ -166,15 +165,15 @@ $selected = array_keys($assignedRoles);
 
             <?php if ($model->created_at): ?>
                 <div class="body-title">Дата регистрации</div>
-                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->created_at, 'long') ?></div>
+                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->created_at, 'd MMMM y HH:mm:ss') ?></div>
             <?php endif ?>
             <?php if ($model->updated_at): ?>
                 <div class="body-title mt-2">Дата изменения</div>
-                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->updated_at, 'long') ?></div>
+                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->updated_at, 'd MMMM y HH:mm:ss') ?></div>
             <?php endif ?>
-            <?php if ($model->last_login_at): ?>
+            <?php if ($model->online_at): ?>
                 <div class="body-title mt-2">Дата активности</div>
-                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->last_login_at, 'long') ?></div>
+                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->online_at, 'd MMMM y HH:mm:ss') ?></div>
             <?php endif ?>
         </div>
 

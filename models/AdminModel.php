@@ -21,6 +21,8 @@ use yii\helpers\ArrayHelper;
  * @property boolean $can_create
  * @property boolean $non_encode
  * @property int|null $view
+ * @property string $default_sort_attribute
+ * @property int $default_sort_direction
  */
 class AdminModel extends \yii\db\ActiveRecord
 {
@@ -48,13 +50,14 @@ class AdminModel extends \yii\db\ActiveRecord
     {
         return [
             //[['table_name'], 'required'],
-            [['view'], 'integer'],
+            [['view', 'default_sort_direction'], 'integer'],
             [['data', 'in_menu', 'can_create', 'non_encode', 'list'], 'safe'],
             [['alias'], 'Mitisk\Yii2Admin\components\AliasValidator', 'skipOnEmpty' => false],
             [['alias'], 'unique'],
             ['alias', fn($attribute) => \Mitisk\Yii2Admin\components\ReservedAlias::validateForModel($this, $attribute)],
             [['alias', 'model_class', 'name', 'admin_label'], 'trim'],
-            [['table_name', 'model_class', 'name', 'alias', 'admin_label'], 'string', 'max' => 255],
+            [['table_name', 'model_class', 'name', 'alias', 'admin_label', 'default_sort_attribute'], 'string', 'max' => 255],
+            [['default_sort_direction'], 'default', 'value' => SORT_ASC],
         ];
     }
 
@@ -95,6 +98,8 @@ class AdminModel extends \yii\db\ActiveRecord
             'data' => 'json настроек форм',
             'view' => 'Показывать в списке',
             'admin_label' => 'Название по установленному полю в панели администратора',
+            'default_sort_attribute' => 'Поле сортировки',
+            'default_sort_direction' => 'Порядок сортировки',
         ];
     }
 

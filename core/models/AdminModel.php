@@ -258,9 +258,20 @@ class AdminModel extends BaseObject
     {
         $query = $this->_model->find();
 
+        $sortConfig = [];
+
+        if (!empty($this->component->default_sort_attribute)) {
+            $sortConfig = [
+                'defaultOrder' => [
+                    $this->component->default_sort_attribute => (int)$this->component->default_sort_direction
+                ]
+            ];
+        }
+
         // Создаем провайдер данных
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => $sortConfig,
         ]);
 
         // Загружаем параметры формы

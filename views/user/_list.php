@@ -19,17 +19,29 @@ echo GridView::widget([
         ],
         [
             'attribute' => 'name',
-            'format' => 'raw',
+            'format' => 'raw', // важно для вывода HTML
             'value' => function ($model) {
-                $html = Html::tag('div', Html::img($model->image), ['class' => 'image']);
-                $html .= Html::tag('div',
-                    Html::tag('div',
-                        ($model->name ? Html::encode($model->name) : Html::encode($model->username)) . '<div class="text-tiny mt-3">' .
-                        \Mitisk\Yii2Admin\components\AdminDashboardHelper::getRolesById($model->id, false) . '</div>',
-                        ['class' => 'name']),
-                    ['class' => 'flex items-center justify-between gap20 flex-grow']);
+                // онлайновость: online_at в пределах последних 5 минут
+                $isOnline = $model->online_at && (time() - $model->online_at < 300);
 
-                return '<div class="user-item gap14">' . $html . '</div>';
+                $avatar = \yii\helpers\Html::img($model->image, ['alt' => '', 'class' => 'avatar-img']);
+                $status = $isOnline
+                    ? \yii\helpers\Html::tag('span', '', ['class' => 'status-circle status-online'])
+                    : '';
+
+                $image = \yii\helpers\Html::tag('div', $avatar . $status, ['class' => 'image avatar-wrap']);
+
+                $nameHtml = ($model->name ? \yii\helpers\Html::encode($model->name) : \yii\helpers\Html::encode($model->username));
+                $rolesHtml = \Mitisk\Yii2Admin\components\AdminDashboardHelper::getRolesById($model->id, false);
+
+                $nameBlock = \yii\helpers\Html::tag('div',
+                    $nameHtml . '<div class="text-tiny mt-3">' . $rolesHtml . '</div>',
+                    ['class' => 'name']
+                );
+
+                $right = \yii\helpers\Html::tag('div', $nameBlock, ['class' => 'flex items-center justify-between gap20 flex-grow']);
+
+                return '<div class="user-item gap14">' . $image . $right . '</div>';
             },
         ],
         'email:email',
@@ -47,7 +59,26 @@ echo GridView::widget([
         [
             'class' => 'Mitisk\Yii2Admin\widgets\ActionColumn',
             'controller' => '/admin/user',
-            'template' => '{update} {delete}',
+            'template' => '{login-as} {update} {delete}',
+            'buttons' => [
+                'login-as' => function ($url, $model, $key) {
+                    if (Yii::$app->user->id == $model->id || !Yii::$app->user->can('admin')) {
+                        return '<div style="width: 20px"></div>';
+                    }
+                    if ($model->status != \Mitisk\Yii2Admin\models\AdminUser::STATUS_ACTIVE) {
+                        return '<div title="Пользователь неактивен"><div class="item eye disabled"><i class="icon-log-in"></i></div></div>';
+                    }
+                    return Html::a(
+                        '<div class="item eye"><i class="icon-log-in"></i></div>',
+                        ['user/login-as', 'id' => $model->id],
+                        [
+                            'title' => 'Войти как этот пользователь',
+                            'data-confirm' => 'Вы уверены, что хотите войти от имени этого пользователя?',
+
+                        ]
+                    );
+                },
+            ],
             'buttonOptions' => ['class' => '']
         ],
     ],

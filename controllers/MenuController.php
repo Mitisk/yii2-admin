@@ -2,17 +2,17 @@
 
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\Menu;
 use Yii;
 use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
-use yii\web\Controller;
 
 /**
  * Class MenuController
  * @package Mitisk\Yii2Admin\controllers
  */
-class MenuController extends Controller
+class MenuController extends BaseController
 {
     /**
      * {@inheritdoc}

@@ -2,6 +2,7 @@
 
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminComponent;
 use Mitisk\Yii2Admin\models\AdminControllerMap;
 use Mitisk\Yii2Admin\models\AdminModel;
@@ -10,14 +11,13 @@ use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 /**
  * Контроллер управления компонентами в админ-панели.
  */
-class ComponentsController extends Controller
+class ComponentsController extends BaseController
 {
     /**
      * Подключает фильтры доступа и HTTP-методов.

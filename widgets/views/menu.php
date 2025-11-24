@@ -73,6 +73,14 @@ use Mitisk\Yii2Admin\components\MenuHelper;
                             <div class="text">Основные</div>
                         </a>
                     </li>
+                    <li class="menu-item <?= MenuHelper::build([
+                        ['href' => '/admin/email-template/', 'text'=>'Основные']
+                    ])[0]['_active'] ? 'active' : '' ?>">
+                        <a href="/admin/email-template/">
+                            <div class="icon"><i class="icon-mail"></i></div>
+                            <div class="text">Шаблоны писем</div>
+                        </a>
+                    </li>
 
                     <?php if (Yii::$app->user->can('superAdmin')): ?>
                         <li class="menu-item <?= MenuHelper::build([

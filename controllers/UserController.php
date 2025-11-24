@@ -1,15 +1,16 @@
 <?php
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminUser;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
-use yii\web\Controller;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use Yii;
+use yii\web\NotFoundHttpException;
 
-class UserController extends Controller
+class UserController extends BaseController
 {
     /**
      * {@inheritdoc}
@@ -41,7 +42,17 @@ class UserController extends Controller
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function ($rule, $action) {
-                            return Yii::$app->user->can('updateUsers');
+                            // 1. Сначала проверяем глобальное разрешение (например, для админа)
+                            if (Yii::$app->user->can('updateUsers')) {
+                                return true;
+                            }
+
+                            // 2. Если глобального права нет, проверяем, "свой" ли это профиль
+                            // Получаем id из URL (например, /user/update?id=5)
+                            $requestedId = Yii::$app->request->get('id');
+
+                            // Сравниваем ID из URL с ID текущего пользователя
+                            return $requestedId == Yii::$app->user->id;
                         }
                     ],
                     [
@@ -59,6 +70,19 @@ class UserController extends Controller
                         'matchCallback' => function ($rule, $action) {
                             return Yii::$app->user->can('manageUserRoles');
                         }
+                    ],
+                    [
+                        'actions' => ['login-as'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Yii::$app->user->can('admin');
+                        }
+                    ],
+                    [
+                        'actions' => ['stop-impersonate'],
+                        'allow' => true,
+                        'roles' => ['@'],
                     ],
                 ],
             ],
@@ -185,6 +209,61 @@ class UserController extends Controller
             'assignedRoles' => $assignedRoles,
             'userPermissions' => $userPermissions,
         ]);
+    }
+
+    /**
+     * Действие для входа под другим пользователем
+     */
+    public function actionLoginAs($id)
+    {
+        // 1. Находим целевого пользователя
+        $targetUser = AdminUser::findOne($id);
+        if (!$targetUser) {
+            throw new NotFoundHttpException('Пользователь не найден');
+        }
+
+        // 2. Проверка безопасности (только супер-админ может это делать)
+        if (!Yii::$app->user->can('admin')) {
+            throw new \yii\web\ForbiddenHttpException('Доступ запрещен');
+        }
+
+        // 3. Запоминаем ID текущего админа в сессию
+        // Важно: используем сессию приложения
+        Yii::$app->session->set('impersonator_id', Yii::$app->user->id);
+
+        // 4. Логиним пользователя
+        // duration = 0 означает, что вход только на время сессии (без "Запомнить меня")
+        Yii::$app->user->switchIdentity($targetUser, 0);
+
+        // 5. Редирект на главную страницу
+        Yii::$app->session->setFlash('warning', 'Вы вошли в режиме просмотра от имени пользователя ' . $targetUser->username);
+
+        return $this->redirect(['/admin/']);
+    }
+
+    /**
+     * Действие для возврата обратно в админку
+     */
+    public function actionStopImpersonate()
+    {
+        // 1. Проверяем, есть ли запись о "настоящем" админе
+        $adminId = Yii::$app->session->get('impersonator_id');
+
+        if ($adminId) {
+            $adminUser = AdminUser::findOne($adminId);
+            if ($adminUser) {
+                // 2. Возвращаем админа
+                Yii::$app->user->switchIdentity($adminUser, 0);
+
+                // 3. Чистим сессию
+                Yii::$app->session->remove('impersonator_id');
+
+                Yii::$app->session->setFlash('success', 'Вы вернулись в аккаунт администратора');
+                return $this->redirect(['/admin/user/index']); // Путь к списку юзеров
+            }
+        }
+
+        return $this->goHome();
     }
 
     /**

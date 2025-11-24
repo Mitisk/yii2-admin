@@ -1,6 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\core\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\core\models\AdminModel;
 use Yii;
 use yii\filters\VerbFilter;
@@ -8,7 +9,7 @@ use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 
-class AdminController extends \yii\web\Controller
+class AdminController extends BaseController
 {
     /** @var string ClassName of model */
     protected $_modelName;

@@ -16,7 +16,7 @@ use Mitisk\Yii2Admin\models\rbac\AdminUserRbacTrait;
  * @property int $id
  * @property int $created_at
  * @property int $updated_at
- * @property int $last_login_at
+ * @property int $online_at
  * @property string $username
  * @property string $name
  * @property string|null $auth_key
@@ -97,7 +97,7 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             'id' => 'ID',
             'created_at' => 'Создан',
             'updated_at' => 'Обновлён',
-            'last_login_at' => 'Заходил',
+            'online_at' => 'Заходил',
             'username' => 'Логин',
             'name' => 'Имя пользователя',
             'email' => 'Email',

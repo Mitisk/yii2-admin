@@ -61,8 +61,25 @@ $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_k
                                 <div class="button-show-hide">
                                     <i class="icon-menu-left"></i>
                                 </div>
+                                <?php if (Yii::$app->session->has('impersonator_id')): ?>
+
+                                    <div class="block-warning type-main">
+                                        <i class="icon-alert-octagon"></i>
+                                        <div class="body-title-2" style="display: flex;justify-content: center;align-items: center;">
+                                            Вы просматриваете сайт от имени пользователя <?= Yii::$app->user->identity->username ?>.
+                                            <?= \yii\helpers\Html::a(
+                                                'Вернуться в админку',
+                                                ['/admin/user/stop-impersonate'],
+                                                ['class' => 'btn btn-sm block-pending', 'style' => 'float: inline-end;margin-left: 10px;']
+                                            ) ?>
+                                        </div>
+                                    </div>
+
+                                <?php endif; ?>
                             </div>
                             <div class="header-grid">
+
+
 
                                 <?= \Mitisk\Yii2Admin\widgets\UserPersonalMenu::widget() ?>
 

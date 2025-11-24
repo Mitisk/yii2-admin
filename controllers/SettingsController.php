@@ -1,11 +1,11 @@
 <?php
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Mitisk\Yii2Admin\models\SettingsBlock;
 use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
-use yii\web\Controller;
 use Yii;
 use yii\web\UploadedFile;
 use yii\helpers\FileHelper;
@@ -13,7 +13,7 @@ use yii\db\Exception;
 use Mitisk\Yii2Admin\models\File;
 use Mitisk\Yii2Admin\models\Settings;
 
-class SettingsController extends Controller
+class SettingsController extends BaseController
 {
     /**
      * {@inheritdoc}

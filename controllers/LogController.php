@@ -2,15 +2,15 @@
 
 namespace Mitisk\Yii2Admin\controllers;
 
+use Mitisk\Yii2Admin\components\BaseController;
 use Yii;
 use yii\filters\AccessControl;
-use yii\web\Controller;
 
 /**
  * Class LogController
  * @package Mitisk\Yii2Admin\controllers
  */
-class LogController extends Controller
+class LogController extends BaseController
 {
     private string $logFile = '@runtime/logs/app.log';
 

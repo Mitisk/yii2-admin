@@ -8,8 +8,9 @@ use yii\helpers\Html;
     <div class="dropdown">
         <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton3" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="header-user wg-user">
-                <span class="image">
+                <span class="image avatar-wrap">
                     <img src="<?= Yii::$app->user->identity->image ?>" alt="">
+                    <span class="status-circle status-online"></span>
                 </span>
                 <span class="flex flex-column">
                     <span class="body-title mb-2"><?= Html::encode(Yii::$app->user->identity->name) ?></span>
@@ -17,7 +18,7 @@ use yii\helpers\Html;
                 </span>
             </span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end has-content" aria-labelledby="dropdownMenuButton3" >
+        <ul class="dropdown-menu dropdown-menu-end has-content" aria-labelledby="dropdownMenuButton3">
             <li>
                 <a href="/admin/user/update/?id=<?= Yii::$app->user->id ?>" class="user-item">
                     <div class="icon">
