@@ -74,24 +74,37 @@ class DefaultController extends BaseController
 
         $this->layout = 'login';
 
-        if (Yii::$app->componentHelper->hasComponent('mfa')) {
-            $widgetClass = Yii::$app->componentHelper->getNamespace('mfa') . '\\Component';
-            if (class_exists($widgetClass)) {
-                return $widgetClass::getLoginForm();
+        /** @var $loginForm LoginForm */
+        $loginForm = new LoginForm();
+
+        if ($loginForm->load(Yii::$app->request->post())) {
+            $loginForm->getAuthTypeByUsername();
+
+            if ($loginForm->password || $loginForm->mfaCode) {
+                if ($loginForm->authType == LoginForm::PASSWORD ||
+                    $loginForm->authType == LoginForm::MFA) {
+                    if ($loginForm->login()) {
+                        Yii::$app->getResponse()->redirect('/admin/')->send();
+                        Yii::$app->end();
+                    }
+                }
+                if ($loginForm->authType == LoginForm::MFA_PASSWORD) {
+                    if ($loginForm->password && $loginForm->mfaCode) {
+                        if ($loginForm->login()) {
+                            Yii::$app->getResponse()->redirect('/admin/')->send();
+                            Yii::$app->end();
+                        }
+                    }
+                    if ($loginForm->password) {
+                        $loginForm->validatePassword('password', []);
+                    }
+                }
             }
         }
 
-        /** @var $model LoginForm */
-        $model = new LoginForm();
-
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            Yii::$app->getResponse()->redirect('/admin/')->send();
-            Yii::$app->end();
-        }
-
-        $model->password = '';
+        $loginForm->password = '';
         return $this->render('login', [
-            'model' => $model,
+            'model' => $loginForm,
         ]);
     }
 

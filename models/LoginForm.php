@@ -2,6 +2,7 @@
 
 namespace Mitisk\Yii2Admin\models;
 
+use Mitisk\Yii2Admin\components\MfaHelper;
 use Yii;
 use yii\base\Model;
 
@@ -13,11 +14,26 @@ use yii\base\Model;
  */
 class LoginForm extends Model
 {
+    /** @var string Логин */
     public $username;
+    /** @var string Пароль */
     public $password;
-    public $rememberMe = true;
+    /** @var int Код двухфакторной аутентификации */
+    public $mfaCode;
+    /** @var int Тип аутентификации */
+    public int $authType = self::PASSWORD;
+    /** @var bool Запомнить меня */
+    public bool $rememberMe = true;
+    /** @var AdminUser|null Экземпляр пользователя */
+    private AdminUser|null $_user = null;
 
-    private $_user = false;
+    //Только пароль
+    const PASSWORD = 0;
+    //Пароль и временный код
+    const MFA_PASSWORD = 1;
+    // Только временный код
+    const MFA = 2;
+
 
 
     /**
@@ -26,12 +42,10 @@ class LoginForm extends Model
     public function rules()
     {
         return [
-            // username and password are both required
-            [['username', 'password'], 'required'],
-            // rememberMe must be a boolean value
+            [['username'], 'required'],
             ['rememberMe', 'boolean'],
-            // password is validated by validatePassword()
             ['password', 'validatePassword'],
+            ['mfaCode', 'validateMfaCode'],
         ];
     }
 
@@ -47,10 +61,33 @@ class LoginForm extends Model
         if (!$this->hasErrors()) {
             $user = $this->getUser();
 
-            if (!$user || !$user->validatePassword($this->password)) {
-                $this->addError('password', 'Неверное имя пользователя или пароль.');
-            } elseif ($user && $user->status == AdminUser::STATUS_BLOCKED) {
-                $this->addError('username', 'Ваш аккаунт заблокирован.');
+            if ($this->authType != self::MFA) {
+                if (!$user || !$user->validatePassword($this->password)) {
+                    $this->addError('password', 'Неверное имя пользователя или пароль.');
+                } elseif ($user && $user->status == AdminUser::STATUS_BLOCKED) {
+                    $this->addError('username', 'Ваш аккаунт заблокирован.');
+                }
+            }
+        }
+    }
+
+    /**
+     * Validates the mfaCode.
+     *
+     * @param string $attribute the attribute currently being validated
+     * @param array $params the additional name-value pairs given in the rule
+     */
+    public function validateMfaCode($attribute, $params)
+    {
+        if (!$this->hasErrors()) {
+            $user = $this->getUser();
+            if (!$user) {
+                $this->addError('mfaCode', 'Неверное имя пользователя или пароль.');
+            }
+            if ($this->authType != self::PASSWORD) {
+                if (!$user || !MfaHelper::verifyTotpCode($user->mfa_secret, $this->mfaCode)) {
+                    $this->addError('mfaCode', 'Неверный временный код.');
+                }
             }
         }
     }
@@ -74,13 +111,37 @@ class LoginForm extends Model
      */
     public function getUser()
     {
-        if ($this->_user === false) {
+        if (!$this->_user) {
             $this->_user = AdminUser::findByUsername($this->username);
+        }
+
+        if (!$this->authType && $this->_user) {
+            $this->authType = $this->_user?->auth_type;
         }
 
         return $this->_user;
     }
 
+    /**
+     * Получить тип аутентификации
+     *
+     * @return int
+     */
+    public function getAuthTypeByUsername()
+    {
+        if ($this->username) {
+            $userType = AdminUser::find()
+                ->select('auth_type')
+                ->where(['username' => $this->username])
+                ->scalar();
+
+            if ($userType) {
+                $this->authType = $userType;
+                return $userType;
+            }
+        }
+        return self::PASSWORD;
+    }
 
     /**
      * {@inheritdoc}
@@ -90,6 +151,7 @@ class LoginForm extends Model
         return [
             'username' => 'Логин',
             'password' => 'Пароль',
+            'mfaCode' => 'Одноразовый код',
             'rememberMe' => 'Запомнить меня',
         ];
     }

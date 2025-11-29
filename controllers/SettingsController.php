@@ -3,6 +3,7 @@ namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminModel;
+use Mitisk\Yii2Admin\models\EmailTemplate;
 use Mitisk\Yii2Admin\models\SettingsBlock;
 use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
@@ -189,11 +190,17 @@ class SettingsController extends BaseController
             return ['label' => $r['label'], 'description' => $r['description']];
         }, $settingsBlockModel);
 
+        $emailTemplates = [null => '---'] + ArrayHelper::map(EmailTemplate::find()
+            ->select(['slug', 'name'])
+            ->asArray()
+            ->all(), 'slug', 'name');
+
         return $this->render('index', [
             'settings'      => $settings,
             'modelsNames'   => $modelsNames,
             'modelName'     => $modelName,
             'settingsBlock' => $settingsBlock,
+            'emailTemplates' => $emailTemplates,
         ]);
     }
 

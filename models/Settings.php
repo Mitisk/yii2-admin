@@ -76,7 +76,7 @@ class Settings extends \yii\db\ActiveRecord
             $setting = static::findOne(['attribute' => $attribute]);
         }
 
-        if ($setting === null) {
+        if (!$setting || $setting->value === null) {
             return $default;
         }
 

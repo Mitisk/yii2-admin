@@ -5,6 +5,7 @@ use yii\helpers\ArrayHelper;
 /** @var yii\web\View $this */
 /** @var \Mitisk\Yii2Admin\models\Settings[] $settings */
 /** @var string $modelName Название модели */
+/** @var array $emailTemplates Массив шаблонов писем */
 /** @var array $modelsNames */
 /** @var array $settingsBlock Имена и описания блоков настроек */
 
@@ -43,6 +44,9 @@ if (!$description) {
                         case 'int':
                         case 'float':
                             echo Html::input('number', "Settings[{$setting->id}]", $setting->value, ['class' => 'form-control']);
+                            break;
+                        case 'mail_template':
+                            echo Html::dropDownList("Settings[{$setting->id}]", $setting->value, $emailTemplates, ['class' => 'select flex-grow tom-select']);
                             break;
                         case 'json':
                         case 'textarea':

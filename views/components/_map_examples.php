@@ -1,4 +1,4 @@
-<div class="block-warning w-full" style="min-width: 195px;">
+<div class="block-warning w-full mb-20" style="min-width: 195px;">
     <i class="fas fa-shield-alt"></i>
     <div class="body-title-2">Controller должен наследовать Mitisk\Yii2Admin\components\ExtAdminController</div>
 </div>

@@ -80,9 +80,11 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             [['password', 'name', 'password_hash', 'role', 'image', 'search'], 'string', 'skipOnEmpty' => true],
         ];
 
-        if (Yii::$app->componentHelper->hasComponent('mfa')) {
-            Yii::$app->componentHelper->getRules('mfa', $rules, $this);
-        }
+        // Разрешаем auth_type только значения 0, 1 или 2
+        $rules[] = ['auth_type', 'in', 'range' => [0, 1, 2]];
+
+        // mfa_secret — строка с макс длиной 255
+        $rules[] = ['mfa_secret', 'string', 'max' => 255];
 
         return $rules;
 
@@ -106,9 +108,8 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             'password' => 'Пароль',
         ];
 
-        if (Yii::$app->componentHelper->hasComponent('mfa')) {
-            Yii::$app->componentHelper->getLabels('mfa', $labels);
-        }
+        $labels['mfa_secret'] = 'Секрет';
+        $labels['auth_type'] = 'Тип аутентификации';
 
         return $labels;
     }

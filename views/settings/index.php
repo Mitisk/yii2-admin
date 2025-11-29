@@ -7,6 +7,7 @@ use yii\helpers\Json;
 /** @var yii\web\View $this */
 /** @var \Mitisk\Yii2Admin\models\Settings[] $settings */
 /** @var array $modelsNames */
+/** @var array $emailTemplates Массив шаблонов писем */
 /** @var string $modelName */
 /** @var array $settingsBlock Имена и описания блоков настроек */
 
@@ -103,10 +104,12 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
         $utc = Yii::$app->settings->get('GENERAL', 'timezone');
         ?>
         <fieldset class="timezone mb-24">
-            <div class="body-title mb-10">Временная зона <i class="icon-copy js-copy-settings" title="Получить настройку" data-copy="\Yii::$app->settings->get('GENERAL', 'timezone');"></i></div>
+            <div class="body-title mb-10">
+                Временная зона
+                <i class="icon-copy js-copy-settings" title="Получить настройку" data-copy="\Yii::$app->settings->get('GENERAL', 'timezone');"></i>
+            </div>
             <div class="select flex-grow">
-                <select id="timezone-select" name="Settings[3]" class="tom-select">
-                    <!-- Опции будут добавлены через JS -->
+                <select id="timezone-select" name="Settings[3]" placeholder="Выберите зону...">
                 </select>
             </div>
             <div class="body-text mb-24">
@@ -114,8 +117,10 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
                 Время UTC: <b><?= (new DateTime('now', new DateTimeZone('UTC')))->format('H:i') ?></b>
             </div>
         </fieldset>
+
         <script>
-            var selectedTimezone = <?= $utc ? json_encode($utc) : 'null' ?>;
+            // Проверка на существование переменной, чтобы не сломать JS
+            var selectedTimezone = <?= isset($utc) && $utc ? json_encode($utc) : 'null' ?>;
         </script>
     </div>
 
@@ -160,7 +165,7 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
 if ($settings) {
     $groupedSettings = [];
     foreach ($settings as $setting) {
-        if ($setting->model_name === 'GENERAL' || $setting->model_name === 'ADMIN') continue;
+        if (in_array($setting->model_name, ['GENERAL', 'ADMIN', 'HIDDEN'])) continue;
         $groupedSettings[$setting->model_name][] = $setting;
     }
 
@@ -170,6 +175,7 @@ if ($settings) {
             'modelName' => $modelName,
             'settings' => $settingsGroup,
             'settingsBlock' => $settingsBlock,
+            'emailTemplates' => $emailTemplates,
         ]);
     endforeach;
 }

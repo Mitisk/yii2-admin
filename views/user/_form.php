@@ -197,20 +197,30 @@ $selected = array_keys($assignedRoles);
                 <?= $form->field($model, 'email')->textInput(['maxlength' => 255])->label('Email <span class="tf-color-1">*</span>') ?>
             </fieldset>
 
-            <?php if ($model->email && Yii::$app->componentHelper->hasComponent('mfa')) : ?>
+            <fieldset class="name mb-24">
+                <?= $form->field($model, 'auth_type')->dropDownList([
+                    0 => 'Только пароль',
+                    1 => 'Пароль и временный код',
+                    2 => 'Только временный код'
+                ]) ?>
+            </fieldset>
+
+            <fieldset class="name mb-24" id="field-mfa-secret">
                 <?php
-                $widgetClass = Yii::$app->componentHelper->getNamespace('mfa') . '\AdminUserView';
-                if (class_exists($widgetClass)) {
-                    echo $widgetClass::widget([
-                        'model' => $model,
-                        'form' => $form
-                    ]);
+                if (!$model->mfa_secret) {
+                    $model->mfa_secret = \Mitisk\Yii2Admin\components\MfaHelper::generateSecret();
                 }
+                $otpUrl = \Mitisk\Yii2Admin\components\MfaHelper::getOtpAuthUrl($model->email, Yii::$app->settings->get('GENERAL', 'site_name', Yii::$app->request->getPathInfo()), $model->mfa_secret);
+                $qrCodeUrl = 'https://quickchart.io/qr?text=' . urlencode($otpUrl) . '&size=100';
+                echo Html::img($qrCodeUrl);
                 ?>
-            <?php else: ?>
-                <fieldset class="password mb-24">
-                    <?= $form->field($model, 'password', [
-                        'template' => '
+                <p class="right">Откройте на телефоне приложение для сохранения паролей, отсканируйте QR-код в открытом приложении.</p>
+                <?= $form->field($model, 'mfa_secret')->hiddenInput()->label(false) ?>
+            </fieldset>
+
+            <fieldset class="password mb-24" id="field-password">
+                <?= $form->field($model, 'password', [
+                    'template' => '
                         <div class="input-wrapper">
                         {label}
                             {input}
@@ -223,13 +233,14 @@ $selected = array_keys($assignedRoles);
                             </span>
                         </div>
                         {error}'
-                    ])->textInput([
-                        'maxlength' => 255,
-                        'class' => 'password-input',
-                        'type' => 'password'
-                    ]) ?>
-                </fieldset>
-            <?php endif; ?>
+                ])->textInput([
+                    'id' => 'password-field',
+                    'maxlength' => 255,
+                    'class' => 'password-input',
+                    'type' => 'password'
+                ]) ?>
+            </fieldset>
+
         </div>
     </div>
 
@@ -257,5 +268,29 @@ $(document).ready(function() {
         }
     );
 });
+function toggleFields() {
+    var val = $('#" . \yii\helpers\Html::getInputId($model, 'auth_type') . "').val();
+
+    if (val === '0') {
+        // Только пароль
+        $('#field-password').show();
+        $('#field-mfa-secret').hide();
+    } else if (val === '1') {
+        // Пароль и временный код
+        $('#field-password').show();
+        $('#field-mfa-secret').show();
+    } else if (val === '2') {
+        // Только временный код
+        $('#field-password').hide();
+        $('#field-mfa-secret').show();
+    }
+}
+
+// При загрузке страницы
+toggleFields();
+
+// При изменении выбора
+$('#" . \yii\helpers\Html::getInputId($model, 'auth_type') . "').on('change', function() {
+    toggleFields();
+});
 ");
-?>
