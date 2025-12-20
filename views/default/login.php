@@ -96,8 +96,66 @@ $this->title = 'Вход в систему';
 
 <?php
 $this->registerJs("
-    $('#otp_target').otpdesigner({});
-    $('#otp_target').find('input[type=\"hidden\"]').attr('name', '" . Html::getInputName($model, "mfaCode") . "');
+var otpContainer = $('#otp_target');
+    var form = $('#login-form');
+
+    // Инициализация
+    otpContainer.otpdesigner({
+        onlyNumbers: true // Обычно полезная настройка для OTP
+    });
+
+    // Привязка имени для Yii2
+    var hiddenInput = otpContainer.find('input[type=\"hidden\"]');
+    hiddenInput.attr('name', '" . Html::getInputName($model, "mfaCode") . "');
+
+    // Автофокус (клик по фейковому инпуту)
+    otpContainer.find('.otp-fake-input').first().trigger('click');
+
+    // ЛОГИКА АВТОСАБМИТА
+    // Слушаем ввод в реальное (скрытое) поле textarea, которое создает плагин
+    otpContainer.find('.realInput').on('input keyup', function() {
+        // Берем значение из скрытого input-а, куда плагин дублирует итоговый код
+        var code = hiddenInput.val();
+        
+        // Если длина равна 6
+        if (code.length === 6) {
+            // Убираем фокус, чтобы не сработало дважды (опционально)
+            $(this).blur();
+            
+            // Отправляем форму
+            form.trigger('submit'); 
+        }
+    });
 ");
 
-?>
+$this->registerCss("
+    /* Анимация мигания */
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+    }
+
+    /* Курсор */
+    .otpdesigner__focus__ {
+        position: relative;
+    }
+    
+    .otpdesigner__focus__::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 1px; /* Толщина курсора */
+        height: 60%; /* Высота курсора относительно поля */
+        background-color: #333; /* Цвет курсора */
+        animation: blink 1s step-end infinite;
+        pointer-events: none; /* Чтобы клик проходил сквозь курсор */
+    }
+    
+    /* Скрываем курсор, если в поле уже есть цифра (опционально, но выглядит аккуратнее) */
+    .otpdesigner__focus__ .otp-content:not(:empty) + ::after,
+    .otpdesigner__focus__:has(.otp-content:not(:empty))::after {
+        display: none;
+    }
+");
