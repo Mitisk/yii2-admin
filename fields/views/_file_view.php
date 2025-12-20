@@ -7,13 +7,13 @@ use yii\helpers\Html;
         <?php foreach ($files as $file): ?>
             <div class="item">
                 <?php if ($file->isImage()) : ?>
-                    <img src="<?= $file->path ?>" alt="<?= $file->alt_attribute ?>">
+                    <img src="<?= $file->getUrl() ?: $file->path ?>" alt="<?= $file->alt_attribute ?>">
                 <?php else: ?>
 
                     <?=
                             Html::a(
                                 Html::encode($file->filename ?: $file->path),
-                                $file->path,
+                                $file->getUrl() ?: $file->path,
                                 ['target' => '_blank', 'rel' => 'noopener', 'class' => 'file-link']
                             );
                     ?>

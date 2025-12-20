@@ -71,9 +71,9 @@ class Settings extends \yii\db\ActiveRecord
     public static function getValue(string|null $modelName = null, string $attribute = '', mixed $default = null, bool $getOnlyValue = true) : mixed
     {
         if ($modelName) {
-            $setting = static::findOne(['model_name' => $modelName, 'attribute' => $attribute]);
+            $setting = static::find()->where(['model_name' => $modelName, 'attribute' => $attribute])->orderBy(['id' => SORT_DESC])->one();
         } else {
-            $setting = static::findOne(['attribute' => $attribute]);
+            $setting = static::find()->where(['attribute' => $attribute])->orderBy(['id' => SORT_DESC])->one();
         }
 
         if (!$setting || $setting->value === null) {
@@ -132,7 +132,7 @@ class Settings extends \yii\db\ActiveRecord
             case 'float':
                 return (float)$value;
             case 'file':
-                return $setting->file?->path;
+                return $setting->file?->getUrl() ?: $setting->file->path;
             case 'json':
                 return json_decode($value, true);
             case 'string':

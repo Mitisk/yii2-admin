@@ -163,9 +163,21 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
 
 <?php
 if ($settings) {
+    // Extract file settings
+    $fileSettings = [];
+    foreach ($settings as $setting) {
+        if ($setting->model_name === 'Mitisk\Yii2Admin\models\File') {
+            $fileSettings[] = $setting;
+        }
+    }
+
+    if (!empty($fileSettings)) {
+         echo $this->render('_file_settings', ['settings' => $fileSettings]);
+    }
+
     $groupedSettings = [];
     foreach ($settings as $setting) {
-        if (in_array($setting->model_name, ['GENERAL', 'ADMIN', 'HIDDEN'])) continue;
+        if (in_array($setting->model_name, ['GENERAL', 'ADMIN', 'HIDDEN', 'Mitisk\Yii2Admin\models\File'])) continue;
         $groupedSettings[$setting->model_name][] = $setting;
     }
 

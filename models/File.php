@@ -16,9 +16,10 @@ use yii\helpers\FileHelper;
  * @property string|null $field_name
  * @property string|null $uploaded_at
  * @property string|null $alt_attribute
- * @property int $file_size
  * @property string $mime_type
  * @property string $path
+ * @property string $external_link
+ * @property string $storage_type
  */
 class File extends \yii\db\ActiveRecord
 {
@@ -41,7 +42,9 @@ class File extends \yii\db\ActiveRecord
             [['file_size', 'mime_type', 'path'], 'required'],
             [['filename', 'class_name', 'field_name', 'alt_attribute'], 'string', 'max' => 255],
             [['mime_type'], 'string', 'max' => 100],
-            [['path'], 'string', 'max' => 1000],
+            [['path', 'external_link'], 'string', 'max' => 1000],
+            [['storage_type'], 'string', 'max' => 20],
+            [['storage_type'], 'default', 'value' => 'local'],
         ];
     }
 
@@ -61,7 +64,15 @@ class File extends \yii\db\ActiveRecord
             'file_size' => 'Размер файла в байтах',
             'mime_type' => 'MIME-тип файла',
             'path' => 'Путь к файлу в системе хранения',
+            'external_link' => 'Внешняя ссылка',
+            'storage_type' => 'Тип хранилища',
         ];
+    }
+
+    public function getUrl()
+    {
+        $storage = \Yii::createObject(\Mitisk\Yii2Admin\components\FileStorage::class);
+        return $storage->getUrl($this->path, $this->storage_type);
     }
 
     /**
@@ -70,40 +81,44 @@ class File extends \yii\db\ActiveRecord
      */
     public function isImage() : bool
     {
-        $publicPath = $this->path;                // URL или веб‑путь
-        $alt        = $this->alt_attribute ?? '';
-        $name       = basename(parse_url($publicPath, PHP_URL_PATH) ?? '');
-
-        // Попытка получить локальный путь
-        $localPath = $this->localPath ?? null;
-
-        // Если локального пути нет, но файл хранится в веб‑корне:
-        if (!$localPath) {
-            // Пример: publicPath = /uploads/a.jpg или https://site.tld/uploads/a.jpg
-            $webPath = parse_url($publicPath, PHP_URL_PATH) ?: $publicPath;
-            $webroot = \Yii::getAlias('@webroot'); // /var/www/app/web
-            if ($webPath && str_starts_with($webPath, '/')) {
-                $candidate = $webroot . $webPath;
-                if (@is_file($candidate)) {
-                    $localPath = $candidate;
-                }
-            }
+        $publicPath = $this->getUrl();
+        
+        // Fallback for local files if no URL or relative path
+        if (!$publicPath) {
+             $publicPath = $this->path;
         }
 
+        // Попытка получить локальный путь (только для local)
+        $localPath = null;
+        if ($this->storage_type === 'local') {
+             $localPath = $this->localPath ?? null;
+             if (!$localPath) {
+                $webroot = \Yii::getAlias('@webroot');
+                // If path is relative like 'uploads/img.jpg'
+                $candidate = $webroot . '/' . ltrim($this->path, '/');
+                if (is_file($candidate)) {
+                    $localPath = $candidate;
+                }
+             }
+        }
+        
         return FieldsHelper::isImageFile($localPath, $publicPath);
     }
 
     public function generateFileUploaderData($inputName = null) : array
     {
+        $storage = \Yii::createObject(\Mitisk\Yii2Admin\components\FileStorage::class);
+        $url = $storage->getUrl($this->path, $this->storage_type);
+        
         return [
             'name' => $this->filename,
-            'file' => $this->path,
+            'file' => $url ?: $this->path, // Provide full URL if possible
             'type' => $this->mime_type,
             'size' => (int)$this->file_size,
             'data' => [
                 'file_id'    => (int)$this->id,
                 'field_name' => $inputName,
-                'alt'        => $this->alt_attribute, // если alt используется
+                'alt'        => $this->alt_attribute,
                 ]
             ];
     }
@@ -113,15 +128,11 @@ class File extends \yii\db\ActiveRecord
      */
     public function beforeDelete() : bool
     {
-        $file = \Yii::getAlias('@webroot') . str_replace('/web', '',$this->path); // Абсолютный путь к файлу
-
-        if (file_exists($file)) {
-            if (FileHelper::unlink($file)) {
-                return true;
-            } else {
-                return false;
-            }
-        }
+        $storage = \Yii::createObject(\Mitisk\Yii2Admin\components\FileStorage::class);
+        
+        // Try to delete file from storage
+        // We ignore failure here to allow DB record deletion even if file is missing
+        $storage->delete($this->path, $this->storage_type);
 
         return parent::beforeDelete();
     }

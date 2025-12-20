@@ -226,8 +226,11 @@ class FileUploader extends Component
                 return $this->codeToMessage('required_and_no_file');
             if (($this->options['limit'] && $this->field['count'] + count($this->options['files']) > $this->options['limit']) || ($ini[3] != 0 && ($this->field['count']) > $ini[3]))
                 return $this->codeToMessage('max_number_of_files');
-            if (!file_exists($this->options['uploadDir']) || !is_writable($this->options['uploadDir']))
-                return $this->codeToMessage('invalid_folder_path');
+            $storageType = \Yii::$app->settings->get('Mitisk\Yii2Admin\models\File', 'storage_type', 'local');
+            if ($storageType === 'local') {
+                if (!file_exists($this->options['uploadDir']) || !is_writable($this->options['uploadDir']))
+                    return $this->codeToMessage('invalid_folder_path');
+            }
 
             $total_size = 0; foreach($this->field['input']['size'] as $key=>$value){ $total_size += $value; } $total_size = $total_size/1000000;
             if ($ini[2] != 0 && $total_size > $ini[2])
@@ -307,8 +310,11 @@ class FileUploader extends Component
         if (!$this->options['replace'] && !$skipReplaceCheck) {
             $title = $item['title'];
             $i = 1;
+            
+            $storageType = \Yii::$app->settings->get('Mitisk\Yii2Admin\models\File', 'storage_type', 'local');
+            $storage = $storageType !== 'local' ? new FileStorage() : null;
 
-            while (file_exists($this->options['uploadDir'] . $string)) {
+            while (($storageType === 'local' && file_exists($this->options['uploadDir'] . $string)) || ($storage && $storage->fileExists($string))) {
                 $item['title'] = $title . " ({$i})";
                 $conf[0] = $type == "auto" || $type == "name" || strpos($string, "{random}") !== false ? $type : $type  . " ({$i})";
                 $string = $this->generateFileName($conf, $item, true);
@@ -745,7 +751,26 @@ class FileUploader extends Component
                 // upload the files
                 if (!$data['hasWarnings']) {
                     foreach($data['files'] as $key => $file) {
-                        if ($file['chunked'] ? rename($file['tmp_name'], $file['file']) : $this->options['move_uploaded_file']($file['tmp_name'], $file['file'], $file)) {
+                        $isFileSaved = false;
+                        $storageType = \Yii::$app->settings->get('Mitisk\Yii2Admin\models\File', 'storage_type', 'local');
+                        
+                        // Use FileStorage for non-local or if configured
+                        if ($storageType !== 'local') {
+                            $storage = new FileStorage();
+                            // Use the generated name (not tmp_name)
+                            // $file['name'] contains the generated/safe filename
+                            $savedPath = $storage->save($file['tmp_name'], $file['name']);
+                            if ($savedPath !== false) {
+                                $data['files'][$key]['file'] = $savedPath;
+                                $isFileSaved = true;
+                                @unlink($file['tmp_name']);
+                            }
+                        } else {
+                             // Existing local logic
+                             $isFileSaved = $file['chunked'] ? rename($file['tmp_name'], $file['file']) : $this->options['move_uploaded_file']($file['tmp_name'], $file['file'], $file);
+                        }
+
+                        if ($isFileSaved) {
                             unset($data['files'][$key]['i']);
                             unset($data['files'][$key]['chunked']);
                             unset($data['files'][$key]['error']);

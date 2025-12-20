@@ -36,8 +36,8 @@ class FileField extends Field
 
                     if ($isImage) {
                         $values[] = Html::a(
-                            Html::img($file->path, ['alt' => $file->alt_attribute]),
-                            $file->path,
+                            Html::img($file->getUrl() ?: $file->path, ['alt' => $file->alt_attribute]),
+                            $file->getUrl() ?: $file->path,
                             [
                                 'data' => [
                                     'lightbox' => $this->name . '-' . $data->id,
@@ -49,7 +49,7 @@ class FileField extends Field
                     } else {
                         $values[] = Html::a(
                             Html::encode($file->filename ?: $file->path),
-                            $file->path,
+                            $file->getUrl() ?: $file->path,
                             ['target' => '_blank', 'rel' => 'noopener', 'class' => 'file-link']
                         );
                     }
@@ -74,7 +74,7 @@ class FileField extends Field
             $preloadedFiles[] = [
                 "type" => $file->mime_type,
                 "size" => $file->file_size,
-                "file" => $file->path,
+                "file" => $file->getUrl() ?: $file->path,
                 "name" => $file->filename,
                 "data" => [
                     'alt' => $file->alt_attribute,
@@ -176,26 +176,60 @@ class FileField extends Field
 
         //Добавляем новые файлы
         if($files) {
+            $storage = \Yii::createObject(\Mitisk\Yii2Admin\components\FileStorage::class);
+            $storageType = $storage->getStorageType();
+
             $i = 0;
             foreach ($files as $file) {
+                // Debug logging
+                try {
+                    $logPath = \Yii::getAlias('@webroot/file_field_debug.log');
+                    $msg = date('Y-m-d H:i:s') . " - FileField save. Detected Storage Type: '$storageType'. File: '{$file->name}'. Temp: '{$file->tempName}'\n";
+                    @file_put_contents($logPath, $msg, FILE_APPEND);
+                } catch (\Exception $e) {}
+
                 $i++;
-                $filePath = '/uploads/' . uniqid() . '.' . $file->extension;
-                $fileModel = new File();
-                $fileModel->class_name = get_class($this->model->getModel());
-                $fileModel->item_id = $this->model->getModel()->id;
-                $fileModel->field_name = $this->name;
-                $fileModel->filename = $file->name;
-                $fileModel->file_size = $file->size;
-                $fileModel->mime_type = $file->type;
-                $fileModel->path = '/web' . $filePath;
-                $fileModel->alt_attribute = ArrayHelper::getValue($tempFiles, $i . '.alt');
+                // Generate unique filename
+                $filename = uniqid() . '.' . $file->extension;
+                
+                // Use FileStorage to save
+                // For local storage, we want to maintain the 'uploads/' directory convention if not handled by FileStorage settings?
+                // FileStorage::saveLocal uses 'local_upload_dir' setting, defaulting to 'uploads/'. 
+                // That seems compatible with current '/uploads/'.
+                
+                $savedPath = $storage->save($file->tempName, $filename);
 
-                $uploadsDir = \Yii::getAlias('@webroot');
+                if ($savedPath !== false) {
+                     $fileModel = new File();
+                     $fileModel->class_name = get_class($this->model->getModel());
+                     $fileModel->item_id = $this->model->getModel()->id;
+                     $fileModel->field_name = $this->name;
+                     $fileModel->filename = $file->name;
+                     $fileModel->file_size = $file->size;
+                     $fileModel->mime_type = $file->type;
+                     $fileModel->storage_type = $storageType;
+                     $fileModel->alt_attribute = ArrayHelper::getValue($tempFiles, $i . '.alt');
 
-                if ($file->saveAs($uploadsDir . $filePath)) {
-                    $fileModel->save();
+                     // Handle path differences for legacy local support vs new storage
+                     if ($storageType === 'local') {
+                         // Previous logic stored '/web/uploads/filename'
+                         // FileStorage::saveLocal returns 'uploads/filename' (relative to webroot usually)
+                         // We might need to prepend '/web' if the application relies on it?
+                         // Looking at line 190: $fileModel->path = '/web' . $filePath; where $filePath was '/uploads/...'
+                         // So it was storing '/web/uploads/...'
+                         // Let's replicate this prefix if it's really needed, OR rely on File::getUrl/isImage handling it.
+                         // But to be safe and consistent with previous "FileField" behavior:
+                         $fileModel->path = '/web/' . ltrim($savedPath, '/'); 
+                     } else {
+                         // For S3/FTP, store the key/path as is
+                         $fileModel->path = $savedPath;
+                     }
+
+                     if (!$fileModel->save()) {
+                         $this->model->getModel()->addError($this->name, 'Ошибка при сохранении записи файла в БД');
+                     }
                 } else {
-                    $this->model->getModel()->addError($this->name, 'Невозможно сохранить файл "' . $uploadsDir . $fileModel->path . '"');
+                    $this->model->getModel()->addError($this->name, 'Невозможно сохранить файл "' . $file->name . '"');
                     return false;
                 }
             }
