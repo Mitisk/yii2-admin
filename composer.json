@@ -1,26 +1,40 @@
 {
-    "name": "mitisk/yii2-admin",
-    "description": "Админка для проектов Yii2",
-    "type": "library",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Mitisk\\Yii2Admin\\": ""
-        }
-    },
-    "authors": [
-        {
-            "name": "Mitisk",
-            "email": "masterhof@mail.ru",
-            "homepage": "https://keypage.ru/"
-        }
-    ],
-	"require": {
-        "php": ">=8.1",
-        "yiisoft/yii2": "~2.0.45",
-        "yiisoft/yii2-bootstrap5": "~2.0.2",
-        "yiisoft/yii2-symfonymailer": "~2.0.3",
-        "kak/rbac": ">=1.0"
-    },
-    "minimum-stability": "stable"
+  "name": "mitisk/yii2-admin",
+  "description": "Админка для проектов Yii2",
+  "type": "yii2-extension",
+  "keywords": ["yii2", "admin", "panel", "cms"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Mitisk",
+      "email": "masterhof@mail.ru",
+      "homepage": "https://keypage.ru/"
+    }
+  ],
+  "require": {
+    "php": ">=8.1",
+    "ext-json": "*",
+    "yiisoft/yii2": "~2.0.45",
+    "yiisoft/yii2-bootstrap5": "~2.0.2",
+    "yiisoft/yii2-symfonymailer": "~2.0.3",
+    "kak/rbac": ">=1.0"
+  },
+  "suggest": {
+    "aws/aws-sdk-php": "Требуется, если вы планируете хранить файлы в Amazon S3",
+    "yiisoft/yii2-imagine": "Требуется для манипуляций с изображениями (кроп, ресайз)"
+  },
+  "autoload": {
+    "psr-4": {
+      "Mitisk\\Yii2Admin\\": ""
+    }
+  },
+  "scripts": {
+    "migrate": "php ../../yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations --interactive=0"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-master": "1.0.x-dev"
+    }
+  },
+  "minimum-stability": "stable"
 }

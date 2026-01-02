@@ -16,6 +16,20 @@
 
 ## ⚙️ Установка и Настройка
 
+Предпочтительный способ установки — через [composer](http://getcomposer.org/download/).
+
+Запустите:
+
+```bash
+composer require mitisk/yii2-admin
+```
+
+Для создания таблиц в БД выполните команду:
+
+```bash
+php yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations
+```
+
 ### 1. Подключение модуля
 
 Добавьте модуль в конфигурацию вашего приложения (`config/web.php` или `common/config/main.php`):
