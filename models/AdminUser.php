@@ -38,6 +38,8 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
 
     public $search;
 
+    public $send_new_password;
+
     public function behaviors()
     {
         return [
@@ -77,7 +79,7 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             ['status', 'integer'],
             ['status', 'default', 'value' => self::STATUS_ACTIVE],
 
-            [['password', 'name', 'password_hash', 'role', 'image', 'search'], 'string', 'skipOnEmpty' => true],
+            [['password', 'name', 'password_hash', 'role', 'image', 'search', 'send_new_password'], 'string', 'skipOnEmpty' => true],
         ];
 
         // Разрешаем auth_type только значения 0, 1 или 2
@@ -105,7 +107,9 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             'email' => 'Email',
             'status' => 'Статус',
             'image' => 'Аватар',
+
             'password' => 'Пароль',
+            'send_new_password' => 'Отправить новый пароль пользователю',
         ];
 
         $labels['mfa_secret'] = 'Секрет';
@@ -204,7 +208,19 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
                 $this->password_hash = Yii::$app->security->generatePasswordHash($this->password);
             }
 
-            return $this->save();
+            if ($this->save()) {
+                if ($this->send_new_password && $this->password && $this->email) {
+                    $tplId = Yii::$app->settings->get(self::class, 'mail_template_new_password');
+
+                    if ($tplId) {
+                        $mailService = new \Mitisk\Yii2Admin\components\MailService();
+                        $mailService->send($tplId, $this->email, [
+                            'PASSWORD' => $this->password
+                        ]);
+                    }
+                }
+                return true;
+            }
         }
         return false;
     }

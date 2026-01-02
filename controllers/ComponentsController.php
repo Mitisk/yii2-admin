@@ -5,6 +5,7 @@ namespace Mitisk\Yii2Admin\controllers;
 use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminControllerMap;
 use Mitisk\Yii2Admin\models\AdminModel;
+use Mitisk\Yii2Admin\models\AdminUserMap;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -113,6 +114,10 @@ class ComponentsController extends BaseController
             throw new NotFoundHttpException('The requested page does not exist.');
         }
 
+        if ($model->table_name == 'user') {
+            return $this->updateUserComponent();
+        }
+
         // PRG: после успешного сохранения делаем redirect
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             Yii::$app->session->setFlash('success', 'Компонент обновлен.');
@@ -189,6 +194,32 @@ class ComponentsController extends BaseController
             'publicSaveMethods',
             'roles'
         ));
+    }
+
+    public function updateUserComponent()
+    {
+        $maps = AdminUserMap::find()->all();
+        return $this->render('update-user', compact('maps'));
+    }
+
+    public function actionAddUserMap()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = new AdminUserMap();
+        if ($model->load(Yii::$app->request->post(), '') && $model->save()) {
+            return ['success' => true, 'id' => $model->id, 'data' => $model->attributes];
+        }
+        return ['success' => false, 'errors' => $model->errors];
+    }
+
+    public function actionDeleteUserMap($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = AdminUserMap::findOne($id);
+        if ($model && $model->delete()) {
+            return ['success' => true];
+        }
+        return ['success' => false];
     }
 
     public function actionDelete($id)

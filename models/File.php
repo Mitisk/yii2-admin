@@ -18,7 +18,6 @@ use yii\helpers\FileHelper;
  * @property string|null $alt_attribute
  * @property string $mime_type
  * @property string $path
- * @property string $external_link
  * @property string $storage_type
  */
 class File extends \yii\db\ActiveRecord
@@ -42,7 +41,7 @@ class File extends \yii\db\ActiveRecord
             [['file_size', 'mime_type', 'path'], 'required'],
             [['filename', 'class_name', 'field_name', 'alt_attribute'], 'string', 'max' => 255],
             [['mime_type'], 'string', 'max' => 100],
-            [['path', 'external_link'], 'string', 'max' => 1000],
+            [['path'], 'string', 'max' => 1000],
             [['storage_type'], 'string', 'max' => 20],
             [['storage_type'], 'default', 'value' => 'local'],
         ];
@@ -64,7 +63,6 @@ class File extends \yii\db\ActiveRecord
             'file_size' => 'Размер файла в байтах',
             'mime_type' => 'MIME-тип файла',
             'path' => 'Путь к файлу в системе хранения',
-            'external_link' => 'Внешняя ссылка',
             'storage_type' => 'Тип хранилища',
         ];
     }

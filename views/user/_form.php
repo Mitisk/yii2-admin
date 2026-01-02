@@ -6,8 +6,11 @@ use yii\helpers\Html;
 /* @var $model \Mitisk\Yii2Admin\models\AdminUser */
 /* @var $availableRoles array */
 /* @var $assignedRoles array */
+/* @var $maps \Mitisk\Yii2Admin\models\AdminUserMap[] */
+/* @var $extraModels array */
 
 \Mitisk\Yii2Admin\assets\UserFormAsset::register($this);
+
 $this->registerCss("
 .rbac-section {
     background: #f8f9fa;
@@ -85,6 +88,22 @@ $this->registerCss("
 
 $selected = array_keys($assignedRoles);
 ?>
+
+<?php if (isset($maps) && !empty($maps)): ?>
+    <div class="widget-tabs">
+        <ul class="widget-menu-tab style-1">
+            <li class="item-title active">
+                <span class="inner"><span class="h6">Основное</span></span>
+            </li>
+            <?php foreach ($maps as $map): ?>
+                <li class="item-title">
+                    <span class="inner"><span class="h6"><?= Html::encode($map->title) ?></span></span>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
+
 <?php $form = ActiveForm::begin([
     'fieldConfig' => [
         'template' => "{label}\n{input}\n{error}",
@@ -97,14 +116,13 @@ $selected = array_keys($assignedRoles);
         'enctype' => 'multipart/form-data'
     ]
 ]) ?>
-    <div class="wg-box">
+    <?php ob_start(); ?>
+    <div class="wg-box widget-content-inner active">
         <div class="left">
-            <?php if (!$model->isNewRecord): ?>
-                <fieldset class="title mb-24">
-                    <div class="body-title mb-10">Аватар</div>
-                    <input type="file" name="files" data-fileuploader-default="<?php echo $model->image; ?>" data-fileuploader-files='<?php echo isset($avatar) ? json_encode(array($avatar)) : '';?>'>
-                </fieldset>
-            <?php endif; ?>
+            <fieldset class="title mb-24">
+                <div class="body-title mb-10">Аватар</div>
+                <input type="file" name="files" data-fileuploader-default="<?php echo $model->image; ?>" data-fileuploader-files='<?php echo isset($avatar) ? json_encode(array($avatar)) : '';?>'>
+            </fieldset>
 
             <!-- RBAC Роли и разрешения -->
             <div class="rbac-section">
@@ -210,9 +228,10 @@ $selected = array_keys($assignedRoles);
                 if (!$model->mfa_secret) {
                     $model->mfa_secret = \Mitisk\Yii2Admin\components\MfaHelper::generateSecret();
                 }
-                $otpUrl = \Mitisk\Yii2Admin\components\MfaHelper::getOtpAuthUrl($model->email, Yii::$app->settings->get('GENERAL', 'site_name', Yii::$app->request->getPathInfo()), $model->mfa_secret);
+                $siteName = Yii::$app->settings->get('GENERAL', 'site_name', Yii::$app->request->getPathInfo());
+                $otpUrl = \Mitisk\Yii2Admin\components\MfaHelper::getOtpAuthUrl($model->email ?? 'newUser', $siteName, $model->mfa_secret);
                 $qrCodeUrl = 'https://quickchart.io/qr?text=' . urlencode($otpUrl) . '&size=100';
-                echo Html::img($qrCodeUrl);
+                echo Html::img($qrCodeUrl, ['id' => 'mfa-qr-code', 'data-secret' => $model->mfa_secret, 'data-issuer' => $siteName]);
                 ?>
                 <p class="right">Откройте на телефоне приложение для сохранения паролей, отсканируйте QR-код в открытом приложении.</p>
                 <?= $form->field($model, 'mfa_secret')->hiddenInput()->label(false) ?>
@@ -239,10 +258,42 @@ $selected = array_keys($assignedRoles);
                     'class' => 'password-input',
                     'type' => 'password'
                 ]) ?>
+                <div style="margin-top: 10px;">
+                <?php
+                $tplId = Yii::$app->settings->get('Mitisk\Yii2Admin\models\AdminUser', 'mail_template_new_password');
+                if ($tplId) {
+                    echo $form->field($model, 'send_new_password')->checkbox();
+                }
+                ?>
+                </div>
             </fieldset>
 
         </div>
     </div>
+    <?php $mainContent = ob_get_clean(); ?>
+
+    <?php if (isset($maps) && !empty($maps)): ?>
+
+        <?= $mainContent ?>
+
+        <?php foreach ($maps as $map): ?>
+            <div class="widget-content-inner" style="display: none;">
+                <?php
+                if (isset($extraModels[$map->id])) {
+                    echo $this->render($map->view, [
+                        'form' => $form,
+                        'model' => $extraModels[$map->id],
+                    ]);
+                }
+                ?>
+            </div>
+        <?php endforeach; ?>
+
+    <?php else: ?>
+
+        <?= $mainContent ?>
+
+    <?php endif; ?>
 
     <div class="bot">
         <button class="tf-button w180" type="submit">Сохранить</button>
@@ -252,6 +303,15 @@ $selected = array_keys($assignedRoles);
 <?php
 $this->registerJs("
 $(document).ready(function() {
+    // ТАБЫ
+    $('.widget-menu-tab .item-title').on('click', function() {
+        var index = $(this).index();
+        $(this).addClass('active').siblings().removeClass('active');
+        // Because content is now inside the form (detached from tabs container), we select by class within the form
+        $('.form-add-new-user .widget-content-inner').removeClass('active').hide();
+        $('.form-add-new-user .widget-content-inner').eq(index).addClass('active').show();
+    });
+
     // Обновление списка ролей при изменении
     $('#user-roles-select').on('change', function() {
         var selectedRoles = $(this).val() || [];
@@ -267,6 +327,21 @@ $(document).ready(function() {
             $(this).css('background-color', 'white');
         }
     );
+
+    // Dynamic QR Code Update
+    $('#" . Html::getInputId($model, 'email') . "').on('input change', function() {
+        var email = $(this).val();
+        var qrImg = $('#mfa-qr-code');
+        var secret = qrImg.data('secret');
+        var issuer = qrImg.data('issuer');
+
+        if (email && secret && issuer) {
+            var label = encodeURIComponent(issuer + ':' + email);
+            var otpAuthUrl = 'otpauth://totp/' + label + '?secret=' + secret + '&issuer=' + encodeURIComponent(issuer);
+            var qrUrl = 'https://quickchart.io/qr?text=' + encodeURIComponent(otpAuthUrl) + '&size=100';
+            qrImg.attr('src', qrUrl);
+        }
+    });
 });
 function toggleFields() {
     var val = $('#" . \yii\helpers\Html::getInputId($model, 'auth_type') . "').val();

@@ -3,6 +3,7 @@ namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminUser;
+use Mitisk\Yii2Admin\models\AdminUserMap;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\filters\AccessControl;
@@ -110,8 +111,53 @@ class UserController extends BaseController
         $model = new AdminUser();
         $assignedRoles = [];
 
+        // Load extra models based on AdminUserMap
+        $maps = AdminUserMap::find()->all();
+        $extraModels = [];
+        foreach ($maps as $map) {
+            if (class_exists($map->form)) {
+                $extra = new $map->form();
+                $extraModels[$map->id] = $extra;
+            }
+        }
+
         if ($model->load(Yii::$app->request->post())) {
-            $model->image = '/web/users/noPhoto.png';
+            
+            // Handle uploaded avatar
+            // 1. Check specific 'files' input (custom hidden input or fileuploader default for some configs)
+            $files = Yii::$app->request->post('files');
+            // 2. Check 'fileuploader-list-files' which is the default list input from the plugin for input name="files"
+            $fileList = Yii::$app->request->post('fileuploader-list-files');
+
+            $avatarFound = false;
+
+            if ($files) {
+                 $filesData = json_decode($files, true);
+                 if (json_last_error() === JSON_ERROR_NONE) {
+                     if (!empty($filesData['files'][0]['name'])) {
+                         $model->image = '/web/users/avatar/' . $filesData['files'][0]['name'];
+                         $avatarFound = true;
+                     } elseif (isset($filesData[0]['name'])) {
+                         $model->image = '/web/users/avatar/' . $filesData[0]['name'];
+                         $avatarFound = true;
+                     }
+                 } elseif (is_string($files) && !empty($files)) {
+                      $model->image = '/web/users/avatar/' . $files;
+                      $avatarFound = true;
+                 }
+            } 
+            
+            if (!$avatarFound && $fileList) {
+                $filesData = json_decode($fileList, true);
+                if (json_last_error() === JSON_ERROR_NONE && !empty($filesData[0]['file'])) {
+                    $model->image = '/web/users/avatar/' . $filesData[0]['file'];
+                    $avatarFound = true;
+                }
+            }
+
+            if (!$avatarFound) {
+                 $model->image = '/web/users/noPhoto.png';
+            }
 
             // Получаем роли из POST данных
             $postRoles = Yii::$app->request->post('user_roles', []);
@@ -123,6 +169,17 @@ class UserController extends BaseController
                 if (!$model->name) {
                     $model->name = $model->username;
                 }
+
+                // Save extra models
+                foreach ($extraModels as $extra) {
+                    if ($extra instanceof \yii\db\ActiveRecord && $extra->hasAttribute('user_id')) {
+                        $extra->user_id = $model->id;
+                    }
+                    if ($extra && $extra->load(Yii::$app->request->post()) && $extra->validate()) {
+                        $extra->save();
+                    }
+                }
+
                 Yii::$app->session->setFlash('success', 'Добавлен пользователь: "' . Html::encode($model->name) . '"');
                 return $this->redirect(['index']);
             }
@@ -132,6 +189,8 @@ class UserController extends BaseController
             'model' => $model,
             'availableRoles' => $this->getAvailableRoles(),
             'assignedRoles' => $assignedRoles,
+            'maps' => $maps,
+            'extraModels' => $extraModels
         ]);
     }
 
@@ -146,6 +205,31 @@ class UserController extends BaseController
         // Получаем текущие роли пользователя
         $assignedRoles = $this->getUserRoles($id);
 
+        // Load extra models based on AdminUserMap
+        $maps = AdminUserMap::find()->all();
+        $extraModels = [];
+        foreach ($maps as $map) {
+            if (class_exists($map->form)) {
+                $extra = null;
+                try {
+                     // Check if method findOne exists which is standard for AR
+                     if (method_exists($map->form, 'findOne')) {
+                         $extra = $map->form::findOne(['user_id' => $id]);
+                     }
+                } catch (\Exception $e) {
+                    $extra = null;
+                }
+                
+                if (!$extra) {
+                    $extra = new $map->form();
+                    if ($extra instanceof \yii\db\ActiveRecord && $extra->hasAttribute('user_id')) {
+                        $extra->user_id = $id;
+                    }
+                }
+                $extraModels[$map->id] = $extra;
+            }
+        }
+
         if ($model->load(Yii::$app->request->post())) {
             // Получаем роли из POST данных
             $postRoles = Yii::$app->request->post('user_roles', []);
@@ -157,6 +241,14 @@ class UserController extends BaseController
                 if (!$model->name) {
                     $model->name = $model->username;
                 }
+                
+                // Save extra models
+                foreach ($extraModels as $extra) {
+                    if ($extra && $extra->load(Yii::$app->request->post()) && $extra->validate()) {
+                        $extra->save();
+                    }
+                }
+
                 Yii::$app->session->setFlash('success', 'Обновлен пользователь: "' . Html::encode($model->name) . '"');
                 return $this->redirect(['index']);
             }
@@ -166,6 +258,8 @@ class UserController extends BaseController
             'model' => $model,
             'availableRoles' => $this->getAvailableRoles(),
             'assignedRoles' => $assignedRoles,
+            'maps' => $maps,
+            'extraModels' => $extraModels
         ]);
     }
 

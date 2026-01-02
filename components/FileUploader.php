@@ -24,7 +24,9 @@ class FileUploader extends Component
         'files' => [],
         'move_uploaded_file' => null,
         'validate_file' => null,
+        'storageType' => null, // allow overriding storage type
     ];
+
 
     private $field = null;
     protected ?array $options = null;
@@ -226,7 +228,7 @@ class FileUploader extends Component
                 return $this->codeToMessage('required_and_no_file');
             if (($this->options['limit'] && $this->field['count'] + count($this->options['files']) > $this->options['limit']) || ($ini[3] != 0 && ($this->field['count']) > $ini[3]))
                 return $this->codeToMessage('max_number_of_files');
-            $storageType = \Yii::$app->settings->get('Mitisk\Yii2Admin\models\File', 'storage_type', 'local');
+            $storageType = $this->options['storageType'] ?? \Yii::$app->settings->get('Mitisk\Yii2Admin\models\File', 'storage_type', 'local');
             if ($storageType === 'local') {
                 if (!file_exists($this->options['uploadDir']) || !is_writable($this->options['uploadDir']))
                     return $this->codeToMessage('invalid_folder_path');
@@ -752,7 +754,7 @@ class FileUploader extends Component
                 if (!$data['hasWarnings']) {
                     foreach($data['files'] as $key => $file) {
                         $isFileSaved = false;
-                        $storageType = \Yii::$app->settings->get('Mitisk\Yii2Admin\models\File', 'storage_type', 'local');
+                        $storageType = $this->options['storageType'] ?? \Yii::$app->settings->get('Mitisk\Yii2Admin\models\File', 'storage_type', 'local');
                         
                         // Use FileStorage for non-local or if configured
                         if ($storageType !== 'local') {

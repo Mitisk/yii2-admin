@@ -24,11 +24,10 @@ class AjaxController extends Controller
         }
 
         $userId = Yii::$app->request->get('id');
-
         /** @var AdminUser $user */
-        $user = AdminUser::findOne($userId);
+        $user = $userId ? AdminUser::findOne($userId) : null;
 
-        if (!$user) {
+        if ($userId && !$user) {
             return 'Ошибка!';
         }
 
@@ -44,8 +43,10 @@ class AjaxController extends Controller
                 'maxHeight' => 512,
                 'crop' => false,
                 'quality' => 95
-            ]
+            ],
+            'storageType' => 'local', // Force local storage for avatars
         ];
+
 
         if (isset($_POST['fileuploader']) && isset($_POST['name'])) {
             $name = str_replace(array('/', '\\'), '', $_POST['name']);
@@ -66,11 +67,13 @@ class AjaxController extends Controller
         // change file's public data
         if (!empty($data['files'])) {
 
-            if ($user->image) {
+            if ($user && $user->image) {
                 $user->deleteImage();
             }
 
-            $user->updateAttributes(['image' => '/web/users/avatar/' . $data['files'][0]['name']]);
+            if ($user) {
+                $user->updateAttributes(['image' => '/web/users/avatar/' . $data['files'][0]['name']]);
+            }
 
             $item = $data['files'][0];
 
