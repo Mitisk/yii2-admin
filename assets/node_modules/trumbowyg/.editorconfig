@@ -1,0 +1,25 @@
+# EditorConfig: https://EditorConfig.org
+# Notepad++ Plugin: https://github.com/editorconfig/editorconfig-notepad-plus-plus
+# Visual Studio Code Plugin: https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig
+
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[{*.json,*.yml,*.yaml,*.md}]
+indent_size = 2
+
+# Ignore paths
+[{docs/css/**,docs/scss/_normalize.scss,**/vendor/**,dist/**}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
