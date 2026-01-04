@@ -1,5 +1,8 @@
 # Yii2 Admin Module
 
+[![Latest Stable Version](https://poser.pugx.org/mitisk/yii2-admin/v/stable)](https://packagist.org/packages/mitisk/yii2-admin)
+[![Total Downloads](https://poser.pugx.org/mitisk/yii2-admin/downloads)](https://packagist.org/packages/mitisk/yii2-admin)
+
 Модуль административной панели для Yii2 приложений. Предоставляет готовый интерфейс для управления пользователями, настройками, меню и другими аспектами системы.
 
 ## 📋 Основные возможности
@@ -21,10 +24,10 @@
 Запустите:
 
 ```bash
+composer create-project --prefer-dist yiisoft/yii2-app-basic .
 composer require mitisk/yii2-admin
 ```
-
-Для создания таблиц в БД выполните команду:
+Отредактируйте db.php. Для создания таблиц в БД выполните команду:
 
 ```bash
 php yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations
@@ -91,6 +94,73 @@ $apiKey = Yii::$app->settings->get('Mitisk\Yii2Admin\models\Settings', 'api_key'
     ],
     // ...
 ],
+```
+
+#### Красивые URL
+Пример конфигурации `urlManager`:
+
+```php
+'components' => [
+    'urlManager' => [
+        'enablePrettyUrl' => true,
+        'showScriptName' => false,
+        'suffix' => '/',
+        'normalizer' => [
+            'class' => 'yii\web\UrlNormalizer',
+            'normalizeTrailingSlash' => true,
+            'collapseSlashes' => true,
+        ],
+        'rules' => [
+            '/' => 'site/index',
+            '<module:(admin|rbac)>' => '<module>/default/index',
+        ]
+        //'rules' => require_once(__DIR__ . '\url_rules.php'),
+    ],
+    // ...
+],
+```
+
+#### Парсеры и корень сайта
+Пример конфигурации `request`:
+
+```php
+'components' => [
+    'request' => [
+        'baseUrl'=> '',
+        'parsers' => [
+            'application/json' => 'yii\web\JsonParser',
+        ],
+    ],
+    // ...
+],
+```
+
+#### Форматирование
+Пример конфигурации `formatter`:
+
+```php
+'components' => [
+    'formatter' => [
+        'class' => yii\i18n\Formatter::class,
+        'locale' => 'ru-RU',
+        'timeZone' => 'Europe/Moscow',
+        'defaultTimeZone' => 'UTC',
+        'dateFormat' => 'php:d MMMM Y',
+        'timeFormat' => 'php:H:i:s',
+        'datetimeFormat' => 'php:d MMMM Y H:i:s',
+        'decimalSeparator' => ',',
+        'thousandSeparator' => ' ',
+        'currencyCode' => 'RUR',
+    ],
+    // ...
+],
+```
+
+#### bootstrap
+Пример конфигурации `bootstrap`:
+
+```php
+'bootstrap' => ['log', 'admin'],
 ```
 
 ---
