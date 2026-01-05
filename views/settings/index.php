@@ -61,7 +61,7 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
                 <i class="icon-copy js-copy-settings" title="Получить настройку" data-copy="\Yii::$app->settings->get('GENERAL', 'site_name');"></i>
             </div>
             <?php
-            echo Html::textInput("Settings[22]", Yii::$app->settings->get('GENERAL', 'site_name'), ['class' => 'form-control']);
+            echo Html::textInput("Settings[4]", Yii::$app->settings->get('GENERAL', 'site_name'), ['class' => 'form-control']);
             ?>
         </fieldset>
 
@@ -145,13 +145,15 @@ $this->title = $this->params['pageHeaderText'] = 'Настройки сайта'
                 $fileSetting = Yii::$app->settings->get('ADMIN', 'logo', getOnlyValue: false);
                 $data = [];
                 if ($fileSetting?->file) {
-                    $data = [$fileSetting?->file->generateFileUploaderData('26')];
+                    $data = [$fileSetting?->file->generateFileUploaderData('5')];
                 }
 
                 $filesJson = Json::encode($data); ?>
 
                 <input type="file" class="fileuploader-single fileuploader-without-alt"
-                       name="Settings[26]"
+                       name="Settings[5]"
+                       data-crop-width="154"
+                       data-crop-height="52"
                        data-fileuploader-files='<?= $filesJson ?>'>
 
             </fieldset>

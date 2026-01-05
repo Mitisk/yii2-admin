@@ -132,7 +132,7 @@ class Settings extends \yii\db\ActiveRecord
             case 'float':
                 return (float)$value;
             case 'file':
-                return $setting->file?->getUrl() ?: $setting->file->path;
+                return ($setting->file?->getUrl() ?: $setting->file?->path) ?: null;
             case 'json':
                 return json_decode($value, true);
             case 'string':
