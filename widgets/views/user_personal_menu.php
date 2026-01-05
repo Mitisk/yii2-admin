@@ -1,19 +1,43 @@
 <?php
 use Mitisk\Yii2Admin\components\AdminDashboardHelper;
 use yii\helpers\Html;
+use Mitisk\Yii2Admin\assets\AppAsset;
 
 /* @var $this yii\web\View */
+
+$identity = Yii::$app->user->identity;
+$avatar = '';
+$name = '';
+if ($identity) {
+    if (method_exists($identity, 'getAvatar')) {
+        $avatar = $identity->getAvatar();
+    } elseif (!empty($identity->image)) {
+        $avatar = $identity->image;
+    }
+    
+    if (isset($identity->name)) {
+        $name = $identity->name;
+    } elseif (isset($identity->username)) {
+        $name = $identity->username;
+    } else {
+        $name = 'User';
+    }
+}
+
+if (empty($avatar)) {
+    $avatar = Yii::$app->assetManager->getBundle(AppAsset::class)->baseUrl . '/img/no_avatar.png';
+}
 ?>
 <div class="popup-wrap user type-header">
     <div class="dropdown">
         <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton3" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="header-user wg-user">
                 <span class="image avatar-wrap">
-                    <img src="<?= Yii::$app->user->identity->image ?>" alt="">
+                    <img src="<?= $avatar ?>" alt="">
                     <span class="status-circle status-online"></span>
                 </span>
                 <span class="flex flex-column">
-                    <span class="body-title mb-2"><?= Html::encode(Yii::$app->user->identity->name) ?></span>
+                    <span class="body-title mb-2"><?= Html::encode($name) ?></span>
                     <span class="text-tiny"><?= AdminDashboardHelper::getCurrentUserRoleName() ?></span>
                 </span>
             </span>

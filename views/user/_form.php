@@ -121,7 +121,7 @@ $selected = array_keys($assignedRoles);
         <div class="left">
             <fieldset class="title mb-24">
                 <div class="body-title mb-10">Аватар</div>
-                <input type="file" name="files" data-fileuploader-default="<?php echo $model->image; ?>" data-fileuploader-files='<?php echo isset($avatar) ? json_encode(array($avatar)) : '';?>'>
+                <input type="file" name="files" data-fileuploader-default="<?php echo $model->getAvatar(); ?>" data-fileuploader-files='<?php echo isset($avatar) ? json_encode(array($avatar)) : '';?>'>
             </fieldset>
 
             <!-- RBAC Роли и разрешения -->

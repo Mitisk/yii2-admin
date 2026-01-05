@@ -24,7 +24,7 @@ echo GridView::widget([
                 // онлайновость: online_at в пределах последних 5 минут
                 $isOnline = $model->online_at && (time() - $model->online_at < 300);
 
-                $avatar = \yii\helpers\Html::img($model->image, ['alt' => '', 'class' => 'avatar-img']);
+                $avatar = \yii\helpers\Html::img($model->getAvatar(), ['alt' => '', 'class' => 'avatar-img']);
                 $status = $isOnline
                     ? \yii\helpers\Html::tag('span', '', ['class' => 'status-circle status-online'])
                     : '';

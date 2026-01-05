@@ -142,8 +142,11 @@ class UserController extends BaseController
                          $avatarFound = true;
                      }
                  } elseif (is_string($files) && !empty($files)) {
-                      $model->image = '/web/users/avatar/' . $files;
-                      $avatarFound = true;
+                      // Проверяем, что это не дефолтная заглушка
+                      if (!str_contains($files, '/img/no_avatar.png')) {
+                          $model->image = '/web/users/avatar/' . $files;
+                          $avatarFound = true;
+                      }
                  }
             } 
             
@@ -155,9 +158,7 @@ class UserController extends BaseController
                 }
             }
 
-            if (!$avatarFound) {
-                 $model->image = '/web/users/noPhoto.png';
-            }
+
 
             // Получаем роли из POST данных
             $postRoles = Yii::$app->request->post('user_roles', []);

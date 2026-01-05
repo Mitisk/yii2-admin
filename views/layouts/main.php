@@ -56,7 +56,13 @@ $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_k
                         <div class="wrap">
                             <div class="header-left">
                                 <a href="/admin/">
-                                    <img id="logo_header_mobile" alt="Logo" src="<?= \Yii::$app->settings->get('ADMIN', 'logo'); ?>">
+                                    <?php
+                                    $logo = \Yii::$app->settings->get('ADMIN', 'logo');
+                                    if (empty($logo)) {
+                                        $logo = \Mitisk\Yii2Admin\assets\AppAsset::register($this)->baseUrl . '/img/logo.png';
+                                    }
+                                    ?>
+                                    <img id="logo_header_mobile" alt="Logo" src="<?= $logo ?>">
                                 </a>
                                 <div class="button-show-hide">
                                     <i class="icon-menu-left"></i>

@@ -8,7 +8,13 @@ use Mitisk\Yii2Admin\components\MenuHelper;
 <div class="section-menu-left">
     <div class="box-logo">
         <a href="/admin/" id="site-logo-inner">
-            <img id="logo_header" alt="" src="<?= \Yii::$app->settings->get('ADMIN', 'logo'); ?>">
+            <?php
+            $logo = \Yii::$app->settings->get('ADMIN', 'logo');
+            if (empty($logo)) {
+                $logo = \Mitisk\Yii2Admin\assets\AppAsset::register($this)->baseUrl . '/img/logo.png';
+            }
+            ?>
+            <img id="logo_header" alt="" src="<?= $logo ?>">
         </a>
         <div class="button-show-hide"><i class="icon-menu-left"></i></div>
     </div>

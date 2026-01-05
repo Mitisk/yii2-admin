@@ -9,6 +9,7 @@ use yii\data\ActiveDataProvider;
 use yii\helpers\ArrayHelper;
 use yii\web\IdentityInterface;
 use Mitisk\Yii2Admin\models\rbac\AdminUserRbacTrait;
+use Mitisk\Yii2Admin\assets\AppAsset;
 
 /**
  * This is the model class for table "user".
@@ -280,6 +281,20 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             return Settings::find()->where(['model_name' => self::class])->exists();
         }
         return false;
+    }
+
+    /**
+     * Возвращает ссылку на аватар или заглушку.
+     * @return string
+     */
+    public function getAvatar()
+    {
+        $image = $this->getAttribute('image');
+        if ($image) {
+            return $image;
+        }
+
+        return Yii::$app->assetManager->getBundle(AppAsset::class)->baseUrl . '/img/no_avatar.png';
     }
 
     /**
