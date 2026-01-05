@@ -46,7 +46,7 @@ php yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations
 'modules' => [
     'admin' => [
         'class' => 'Mitisk\Yii2Admin\Module',
-        'layout' => 'admin', // Используемый лейаут
+        //'layout' => 'admin', // Используемый лейаут
     ],
     // ...
 ],

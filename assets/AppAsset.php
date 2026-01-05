@@ -24,8 +24,8 @@ class AppAsset extends AssetBundle
     public $js = [
         'js/bootstrap.min.js',
         'js/bootstrap-select.min.js',
-
-        'js/main.min.js'
+        'js/main.min.js',
+        'js/grid-selection.min.js'
     ];
 
     public $depends = [

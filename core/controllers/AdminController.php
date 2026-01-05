@@ -68,9 +68,10 @@ class AdminController extends BaseController
                                 Yii::$app->user->can('admin');
                         },
                     ],
+
                     // Удаление
                     [
-                        'actions' => ['delete'],
+                        'actions' => ['delete', 'batch-delete'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -84,6 +85,7 @@ class AdminController extends BaseController
                 'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
+                    'batch-delete' => ['POST'],
                 ],
             ],
         ];
@@ -183,6 +185,31 @@ class AdminController extends BaseController
         }
 
         return $this->redirect(Url::to(['index']));
+    }
+
+    public function actionBatchDelete()
+    {
+        $ids = Yii::$app->request->post('ids');
+        $modelName = $this->_modelName;
+
+        if (empty($ids) || !is_array($ids)) {
+            Yii::$app->session->setFlash('error', 'Элементы не выбраны');
+            return $this->redirect(['index', 'model_class' => $modelName]);
+        }
+
+        $count = 0;
+        foreach ($ids as $id) {
+            $record = $modelName::findOne($id);
+            if ($record) {
+                $adminModel = new AdminModel($record);
+                if ($adminModel->beforeDelete() && $adminModel->getModel()->delete()) {
+                    $count++;
+                }
+            }
+        }
+
+        Yii::$app->session->setFlash('success', "Удалено записей: $count");
+        return $this->redirect(Url::to(['index', 'model_class' => $modelName]));
     }
 
 
