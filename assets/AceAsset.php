@@ -16,7 +16,7 @@ class AceAsset extends AssetBundle
     ];
 
     public $js = [
-        'node_modules/ace-builds/src-noconflict/ace.js',
+        'node_modules/ace-builds/src-noconflict/ace.min.js',
         'js/custom.ace.min.js',
     ];
 

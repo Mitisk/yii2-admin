@@ -70,6 +70,18 @@ Yii::$app->settings->set('Mitisk\Yii2Admin\models\Settings', 'api_key', 'your-ke
 $apiKey = Yii::$app->settings->get('Mitisk\Yii2Admin\models\Settings', 'api_key');
 ```
 
+#### Пользователи
+Напишите свой `identityClass` или воспользуйтесь примером конфигурации `user`:
+
+```php
+'components' => [
+    'user' => [
+        'identityClass' => 'Mitisk\Yii2Admin\models\AdminUser',
+        'enableAutoLogin' => true,
+    ],
+],
+```
+
 #### RBAC Configuration
 Пример конфигурации `authManager` и модуля `rbac`:
 

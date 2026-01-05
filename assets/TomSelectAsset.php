@@ -12,7 +12,7 @@ class TomSelectAsset extends AssetBundle
     public $sourcePath = '@Mitisk/Yii2Admin/assets/node_modules/tom-select/dist';
 
     public $css = [
-        'css/tom-select.css'
+        'css/tom-select.min.css'
     ];
 
     public $js = [

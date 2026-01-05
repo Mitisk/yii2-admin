@@ -253,11 +253,15 @@ class m251129_184900_init_full_admin_panel extends Migration
         // 3. Заполнение данных (Data Dump)
         // ============================================================
 
+        $time = time();
+        $passwordHash = Yii::$app->security->generatePasswordHash('123456');
+        $authKey = Yii::$app->security->generateRandomString();
+
         // Users
         $this->batchInsert('{{%user}}',
             ['id', 'created_at', 'updated_at', 'online_at', 'username', 'auth_key', 'password_hash', 'email', 'name', 'image', 'status', 'auth_type', 'mfa_secret'],
             [
-                [1, 1694964503, 1764430391, 1764430344, 'admin', null, '$2y$13$lEbIH94C8DZ76HEP2/X/Jefp/IwAWmw4kSeDs7L7lm7YkdaZrUubm', 'admin@keypage.ru', 'Администратор', null, 1, 0, null],
+                [1, $time, $time, $time, 'admin', $authKey, $passwordHash, 'admin@keypage.ru', 'Администратор', null, 1, 0, null],
             ]
         );
 
