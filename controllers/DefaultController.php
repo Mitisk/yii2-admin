@@ -52,6 +52,19 @@ class DefaultController extends BaseController
     }
 
     /**
+     * Clears the application cache
+     * @return Response
+     */
+    public function actionClearCache()
+    {
+        if (Yii::$app->request->isPost) {
+            Yii::$app->cache->flush();
+            return $this->asJson(['success' => true]);
+        }
+        return $this->asJson(['success' => false]);
+    }
+
+    /**
      * Renders the index view for the module
      * @return string
      */
