@@ -60,7 +60,7 @@ class AdminController extends BaseController
                     ],
                     // Обновление
                     [
-                        'actions' => ['update'],
+                        'actions' => ['update', 'update-attribute'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -236,5 +236,54 @@ class AdminController extends BaseController
         Yii::$app->session->setFlash('error', 'Такая страница не найдена');
 
         return $this->redirect(['index']);
+    }
+
+    /**
+     * Пакетное обновление атрибутов (AJAX)
+     * @return array
+     */
+    public function actionUpdateAttribute()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        $items = Yii::$app->request->post('items');
+
+        if (empty($items) || !is_array($items)) {
+             return ['success' => false, 'message' => 'Нет данных для обновления'];
+        }
+
+        $successCount = 0;
+        $errors = [];
+
+        foreach ($items as $item) {
+            $id = ArrayHelper::getValue($item, 'id');
+            $modelClass = str_replace('\\\\', '\\', ArrayHelper::getValue($item, 'model'));
+            $attribute = ArrayHelper::getValue($item, 'attribute');
+            $value = ArrayHelper::getValue($item, 'value');
+
+            if (!$id || !$modelClass || !$attribute) {
+                continue;
+            }
+
+            // Optional: Check permissions per model if needed
+            // if (!Yii::$app->user->can(...)) ...
+
+            /** @var \yii\db\ActiveRecord $record */
+            $record = $modelClass::findOne($id);
+            if ($record) {
+                $record->{$attribute} = $value;
+                 if ($record->save(false)) {
+                     $successCount++;
+                 } else {
+                     $errors[] = "Ошибка сохранения ID {$id}: " . print_r($record->errors, true);
+                 }
+            }
+        }
+
+        return [
+            'success' => true, 
+            'count' => $successCount, 
+            'errors' => $errors
+        ];
     }
 }

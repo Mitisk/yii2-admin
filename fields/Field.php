@@ -117,6 +117,13 @@ class Field extends Widget
      * Рендер поля
      * @return string
      */
+    /** @var string Wrapper Class */
+    public $wrapperClass = '';
+
+    /**
+     * Рендер поля
+     * @return string
+     */
     public function getFormInput(): string
     {
         $fieldClass = $this->buildField();
@@ -132,7 +139,7 @@ class Field extends Widget
             $fieldClass->fieldId = Yii::$app->security->generateRandomString();
         }
 
-        return '<fieldset class="' . FieldsHelper::getColumns($fieldClass->className) .'">' . $fieldClass->renderField() . '</fieldset>';
+        return '<fieldset class="' . FieldsHelper::getColumns($fieldClass->className) .' ' . $fieldClass->wrapperClass . '">' . $fieldClass->renderField() . '</fieldset>';
     }
 
     /**

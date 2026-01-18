@@ -39,7 +39,7 @@ class FieldsHelper extends BaseObject
                 break;
             case 'published':
             case 'active':
-                return 'checkbox-group';
+                return 'posted';
                 break;
             default:
                 return 'text';
