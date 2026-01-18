@@ -16,7 +16,7 @@
 - **Имперсонация**: Возможность входа под другим пользователем ("Login As") для отладки.
 - **Управление настройками**: Глобальное хранилище настроек (key-value) с удобным интерфейсом.
 - **Email шаблоны**: Управление шаблонами писем с поддержкой плейсхолдеров.
-- **RBAC**: Интеграция с `kak-rbac` для управления ролями и разрешениями.
+- **RBAC**: Для управления ролями и разрешениями.
 - **Меню**: Динамическое управление пунктами меню.
 
 ---
@@ -97,23 +97,11 @@ $apiKey = Yii::$app->settings->get('Mitisk\Yii2Admin\models\Settings', 'api_key'
 ```php
 'components' => [
     'authManager' => [
-        'class' => 'kak\rbac\components\DbManager',
+        'class' => 'yii\rbac\DbManager',
         'defaultRoles' => ['guest', 'user'],
         'cache' => 'cache',
         'cacheKey' => 'rbac',
     ],
-],
-'modules' => [
-    'rbac' => [
-        'class' => 'kak\rbac\Module',
-        'mainLayout' => '@app/modules/admin/views/layouts/main.php',
-        'userAttributes' => ['username', 'email', 'name'],
-        'params' => [
-            'protectedRoles' => ['admin', 'superAdminRole'],
-            'protectedPermissions' => ['superAdmin', 'manageUserRoles'],
-        ]
-    ],
-    // ...
 ],
 ```
 
