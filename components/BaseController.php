@@ -1,6 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\components;
 
+use Mitisk\Yii2Admin\models\AdminUser;
 use Yii;
 use yii\web\Controller;
 
@@ -20,7 +21,7 @@ class BaseController extends Controller
             // обновляем не чаще, чем раз в 2 минуты
             if (empty($user->online_at) || ($now - (int)$user->online_at) >= 120) {
                 // Быстрый апдейт без валидаций
-                \app\models\User::updateAll(['online_at' => $now], ['id' => $user->id]);
+                AdminUser::updateAll(['online_at' => $now], ['id' => $user->id]);
             }
         }
 

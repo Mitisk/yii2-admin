@@ -24,6 +24,14 @@ final class Module extends \yii\base\Module implements BootstrapInterface
     {
         parent::init();
 
+        \Yii::$app->set('user', [
+            'class' => 'yii\web\User',
+            'identityClass' => 'Mitisk\Yii2Admin\models\AdminUser',
+            'enableAutoLogin' => true,
+            'idParam' => '__admin_id',
+            'identityCookie' => ['name' => '_admin_identity', 'httpOnly' => true],
+        ]);
+
         // Без редиректов и завершения выполнения здесь
         Yii::$app->errorHandler->errorAction = 'admin/default/error';
         \Yii::setAlias('@Mitisk/Yii2Admin', __DIR__);
