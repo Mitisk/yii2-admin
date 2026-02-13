@@ -5,6 +5,7 @@ use Mitisk\Yii2Admin\models\File;
 use yii\db\Expression;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
+use yii\helpers\StringHelper;
 use yii\web\UploadedFile;
 
 class FileField extends Field
@@ -191,6 +192,12 @@ class FileField extends Field
                 $i++;
                 // Generate unique filename
                 $filename = uniqid() . '.' . $file->extension;
+
+                // Если S3, добавляем папку с именем модели
+                if ($storageType === 's3') {
+                    $modelName = strtolower(StringHelper::basename(get_class($this->model->getModel())));
+                    $filename = $modelName . '/' . $filename;
+                }
                 
                 // Use FileStorage to save
                 // For local storage, we want to maintain the 'uploads/' directory convention if not handled by FileStorage settings?
@@ -225,7 +232,16 @@ class FileField extends Field
                          $fileModel->path = $savedPath;
                      }
 
-                     if (!$fileModel->save()) {
+                     if ($fileModel->save()) {
+                         // Если у модели есть поле (например file_id), записываем туда ID файла
+                         // Делаем это только если это не мультизагрузка, или берем последний
+                         // Обычно привязка ID идет для одиночных полей.
+                         $relatedModel = $this->model->getModel();
+                         if ($relatedModel->hasAttribute($this->name)) {
+                             $relatedModel->setAttribute($this->name, $fileModel->id);
+                             $relatedModel->save(false, [$this->name]);
+                         }
+                     } else {
                          $this->model->getModel()->addError($this->name, 'Ошибка при сохранении записи файла в БД');
                      }
                 } else {
