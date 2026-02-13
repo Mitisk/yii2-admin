@@ -24,16 +24,36 @@ final class Module extends \yii\base\Module implements BootstrapInterface
     {
         parent::init();
 
-        \Yii::$app->set('user', [
+        // Регистрируем компонент как 'adminUser', чтобы не конфликтовать с основным 'user'
+        \Yii::$app->set('adminUser', [
             'class' => 'yii\web\User',
             'identityClass' => 'Mitisk\Yii2Admin\models\AdminUser',
             'enableAutoLogin' => true,
             'idParam' => '__admin_id',
             'identityCookie' => ['name' => '_admin_identity', 'httpOnly' => true],
+            'loginUrl' => ['/admin/default/login'],
         ]);
 
-        // Без редиректов и завершения выполнения здесь
-        Yii::$app->errorHandler->errorAction = 'admin/default/error';
+        // Настройка authManager (RBAC)
+        if (!\Yii::$app->has('authManager')) {
+            \Yii::$app->set('authManager', [
+                'class' => 'yii\rbac\DbManager',
+                'defaultRoles' => ['guest', 'user'],
+                'cache' => 'cache',
+                'cacheKey' => 'rbac',
+            ]);
+        }
+
+        // Добавляем парсер JSON
+        $request = \Yii::$app->request;
+        if ($request instanceof \yii\web\Request) {
+            $parsers = $request->parsers;
+            if (!isset($parsers['application/json'])) {
+                $parsers['application/json'] = 'yii\web\JsonParser';
+                $request->parsers = $parsers;
+            }
+        }
+
         \Yii::setAlias('@Mitisk/Yii2Admin', __DIR__);
     }
 
@@ -45,6 +65,7 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             // Явные маршруты логина/логаута
             'admin/login'  => 'admin/default/login',
             'admin/logout' => 'admin/default/logout',
+            'admin' => 'admin/default/index',
 
             [
                 'class' => \Mitisk\Yii2Admin\components\UrlRule::class,
@@ -69,10 +90,16 @@ final class Module extends \yii\base\Module implements BootstrapInterface
 
     public function beforeAction($action)
     {
+        // Подключаем пользователя админки и errorAction только в контексте модуля
+        if (Yii::$app->has('adminUser')) {
+            Yii::$app->set('user', Yii::$app->get('adminUser'));
+        }
+        Yii::$app->errorHandler->errorAction = 'admin/default/error';
+
         // Редирект гостя — здесь
         // Исключаем экшен логина, чтобы не зациклиться
         if (Yii::$app->request->isConsoleRequest === false) {
-            $route = $action->uniqueId; // например, 'admin/default/login'
+            $route = $action->uniqueId;
             $isLogin = ($route === 'admin/default/login');
             if (Yii::$app->user->isGuest && !$isLogin) {
                 Yii::$app->response->redirect(['/admin/default/login'])->send();

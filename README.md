@@ -30,6 +30,7 @@
 ```bash
 composer create-project --prefer-dist yiisoft/yii2-app-basic .
 composer require mitisk/yii2-admin
+composer require aws/aws-sdk-php //Если планируется использовать S3
 ```
 
 Отредактируйте db.php. Для создания таблиц в БД выполните команду:
@@ -37,6 +38,11 @@ composer require mitisk/yii2-admin
 ```bash
 php yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations
 ```
+
+> После применения миграций будет создан администратор по умолчанию:
+>
+> - **Login**: `admin`
+> - **Password**: `123456`
 
 ### 1. Подключение модуля
 
@@ -77,34 +83,6 @@ Yii::$app->settings->set('Mitisk\Yii2Admin\models\Settings', 'api_key', 'your-ke
 $apiKey = Yii::$app->settings->get('Mitisk\Yii2Admin\models\Settings', 'api_key');
 ```
 
-#### Пользователи
-
-Напишите свой `identityClass` или воспользуйтесь примером конфигурации `user`:
-
-```php
-'components' => [
-    'user' => [
-        'identityClass' => 'Mitisk\Yii2Admin\models\AdminUser',
-        'enableAutoLogin' => true,
-    ],
-],
-```
-
-#### RBAC Configuration
-
-Пример конфигурации `authManager` и модуля `rbac`:
-
-```php
-'components' => [
-    'authManager' => [
-        'class' => 'yii\rbac\DbManager',
-        'defaultRoles' => ['guest', 'user'],
-        'cache' => 'cache',
-        'cacheKey' => 'rbac',
-    ],
-],
-```
-
 #### Красивые URL
 
 Пример конфигурации `urlManager`:
@@ -122,25 +100,8 @@ $apiKey = Yii::$app->settings->get('Mitisk\Yii2Admin\models\Settings', 'api_key'
         ],
         'rules' => [
             '/' => 'site/index',
-            '<module:(admin|rbac)>' => '<module>/default/index',
         ]
         //'rules' => require_once(__DIR__ . '\url_rules.php'),
-    ],
-    // ...
-],
-```
-
-#### Парсеры и корень сайта
-
-Пример конфигурации `request`:
-
-```php
-'components' => [
-    'request' => [
-        'baseUrl'=> '',
-        'parsers' => [
-            'application/json' => 'yii\web\JsonParser',
-        ],
     ],
     // ...
 ],

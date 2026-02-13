@@ -18,6 +18,12 @@ class UrlRule extends \yii\web\UrlRule
     public function parseRequest($manager, $request): array|false
     {
         $pathInfo = trim($request->pathInfo, '/');
+
+        // Ограничиваем правило только URL-адресами, начинающимися с 'admin/'
+        if (strpos($pathInfo, 'admin') !== 0) {
+            return false;
+        }
+
         $parts = explode('/', $pathInfo);
         $alias = ArrayHelper::getValue($parts, 1, end($parts));
 
