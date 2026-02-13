@@ -51,7 +51,7 @@ class AdminModel extends \yii\db\ActiveRecord
         return [
             //[['table_name'], 'required'],
             [['view', 'default_sort_direction'], 'integer'],
-            [['data', 'in_menu', 'can_create', 'non_encode', 'list'], 'safe'],
+            [['data', 'in_menu', 'can_create', 'non_encode', 'list', 'attribute_labels'], 'safe'],
             [['alias'], 'Mitisk\Yii2Admin\components\AliasValidator', 'skipOnEmpty' => false],
             [['alias'], 'unique'],
             ['alias', fn($attribute) => \Mitisk\Yii2Admin\components\ReservedAlias::validateForModel($this, $attribute)],
@@ -78,6 +78,9 @@ class AdminModel extends \yii\db\ActiveRecord
                 }
             }
         }
+        if ($this->attribute_labels) {
+            $this->attribute_labels = json_decode($this->attribute_labels, true);
+        }
     }
 
     /**
@@ -100,6 +103,7 @@ class AdminModel extends \yii\db\ActiveRecord
             'admin_label' => 'Название по установленному полю в панели администратора',
             'default_sort_attribute' => 'Поле сортировки',
             'default_sort_direction' => 'Порядок сортировки',
+            'attribute_labels' => 'Названия полей',
         ];
     }
 
@@ -109,8 +113,13 @@ class AdminModel extends \yii\db\ActiveRecord
         }
 
         if($this->list && is_array($this->list)) {
-            $this->list = json_encode($this->list);
+            $this->list = json_encode($this->list, JSON_UNESCAPED_UNICODE);
         }
+
+        if ($this->attribute_labels && is_array($this->attribute_labels)) {
+            $this->attribute_labels = json_encode($this->attribute_labels, JSON_UNESCAPED_UNICODE);
+        }
+
         return parent::beforeSave($insert);
     }
 

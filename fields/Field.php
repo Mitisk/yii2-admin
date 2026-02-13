@@ -88,7 +88,11 @@ class Field extends Widget
         $fieldClass = $this->buildField();
         $fieldClass->model = $this->model;
 
-        return $fieldClass->renderList($column) + ['visible' => $fieldClass->canRender()];
+        $config = $fieldClass->renderList($column) + ['visible' => $fieldClass->canRender()];
+        if (!isset($config['label']) && $fieldClass->label) {
+            $config['label'] = $fieldClass->label;
+        }
+        return $config;
     }
 
     /**
@@ -151,7 +155,15 @@ class Field extends Widget
 
         $fieldName = static::resolveFieldClass(str_replace(' ', '', ucfirst($name)).'Field');
 
-        return Yii::createObject(['class' => $fieldName], [$this->input]);
+        /** @var Field $field */
+        $field = Yii::createObject(['class' => $fieldName], [$this->input]);
+        $field->model = $this->model;
+
+        if (empty($field->label)) {
+            $field->label = $this->getLabel();
+        }
+
+        return $field;
     }
 
     /**
@@ -162,6 +174,10 @@ class Field extends Widget
     {
         $fieldName = ArrayHelper::getValue($this->input, 'name');
         if($fieldName) {
+            $customLabels = $this->model->component->attribute_labels;
+            if (isset($customLabels[$fieldName]) && $customLabels[$fieldName] !== '') {
+                return $customLabels[$fieldName];
+            }
             return $this->model->getModel()->getAttributeLabel($fieldName);
         }
         return ArrayHelper::getValue($this->input, 'label');

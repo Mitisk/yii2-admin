@@ -24,6 +24,18 @@ $this->params['breadcrumbs'][] = $this->title;
 $bundle = \Mitisk\Yii2Admin\assets\ComponentFormAsset::register($this);
 $this->registerJsVar('i18nFormBuilderLocation', $bundle->baseUrl . '/component/form-builder/lang/', View::POS_END);
 $host = Yii::$app->request->hostInfo;
+
+$effectiveLabels = [];
+$dropdownItems = [];
+if ($allColumnsNames && $modelInstance) {
+    foreach ($allColumnsNames as $name) {
+        $label = isset($model->attribute_labels[$name]) && $model->attribute_labels[$name] !== ''
+            ? $model->attribute_labels[$name]
+            : $modelInstance->getAttributeLabel($name);
+        $effectiveLabels[$name] = $label;
+        $dropdownItems[$name] = $label . ' (' . $name . ')';
+    }
+}
 ?>
 
 <?php $form = ActiveForm::begin([
@@ -98,7 +110,7 @@ $host = Yii::$app->request->hostInfo;
 
             <fieldset class="select">
                 <?= $form->field($model, 'admin_label')
-                    ->dropDownList(array_combine($allColumnsNames, $allColumnsNames), ['class' => 'tom-select'])
+                    ->dropDownList($dropdownItems, ['class' => 'tom-select'])
                     ->label('Основной заголовок записи')
                 ?>
             </fieldset>
@@ -107,6 +119,27 @@ $host = Yii::$app->request->hostInfo;
                 <div class="body-title-2">Это поле, которое будет ссылкой на редактирование или отображаться в Select2 при связях.</div>
             </div>
 
+        <?php endif; ?>
+    </div>
+
+    <div class="wg-box mb-20">
+        <?php if ($allColumnsNames): ?>
+            <h4>Названия полей (Attribute Labels)</h4>
+            <div class="row" style="flex-wrap: wrap;">
+                <?php foreach ($allColumnsNames as $column): ?>
+                    <fieldset class="name col-md-6 mb-10">
+                        <label class="body-title mb-10"><?= Html::encode($column) ?></label>
+                        <?= Html::textInput("AdminModel[attribute_labels][{$column}]", 
+                            ($model->attribute_labels[$column] ?? $modelInstance->getAttributeLabel($column)), 
+                            ['class' => 'form-control']
+                        ) ?>
+                    </fieldset>
+                <?php endforeach; ?>
+            </div>
+            <div class="block-warning type-main w-full mt-10">
+                <i class="icon-alert-octagon"></i>
+                <div class="body-title-2">Здесь можно переопределить названия полей. Если поле в базе есть, оно выводится. При добавлении новых полей в таблицу БД, они появятся здесь автоматически.</div>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -122,7 +155,7 @@ $host = Yii::$app->request->hostInfo;
                         <div>
                         <?= $form->field($model, 'default_sort_attribute', ['template' => '{input}{error}'])
                             ->dropDownList(
-                                \yii\helpers\ArrayHelper::merge([null => '--- По умолчанию (PK) ---'], array_combine($allColumnsNames, $allColumnsNames)),
+                                \yii\helpers\ArrayHelper::merge([null => '--- По умолчанию (PK) ---'], $dropdownItems),
                                 ['class' => 'tom-select']
                             )
                         ?>
@@ -152,7 +185,7 @@ $host = Yii::$app->request->hostInfo;
                             'model' => $model,
                             'column' => $key,
                             'requiredColumns' => $requiredColumns,
-                            'name' => \yii\helpers\ArrayHelper::getValue($column, 'name'),
+                            'name' => $effectiveLabels[$key] ?? \yii\helpers\ArrayHelper::getValue($column, 'name'),
                             'description' => \yii\helpers\ArrayHelper::getValue($column, 'description'),
                         ]) ?>
                     <?php endif;?>
@@ -170,11 +203,11 @@ $host = Yii::$app->request->hostInfo;
                         <input class="total-checkbox js-click-to-attr" type="checkbox"
                                data-type="<?= \Mitisk\Yii2Admin\fields\FieldsHelper::getFieldsTypeByName($column) ?>"
                                data-name="<?= Html::encode($column) ?>"
-                               data-label="<?= Html::encode($modelInstance->getAttributeLabel($column)) ?>"
+                               data-label="<?= Html::encode(($effectiveLabels[$column] ?? $modelInstance->getAttributeLabel($column))) ?>"
                                data-required="<?= in_array($column, $requiredColumns, true) ? 'true' : 'false' ?>"
                             <?= in_array($column, $addedAttributes, true) ? 'checked disabled' : ''?>>
                         <div class="body-text">
-                            <?= Html::encode($modelInstance->getAttributeLabel($column)) ?><?= in_array($column, $requiredColumns, true) ? ' <span class="tf-color-1">*</span>' : '' ?>
+                            <?= Html::encode(($effectiveLabels[$column] ?? $modelInstance->getAttributeLabel($column))) ?><?= in_array($column, $requiredColumns, true) ? ' <span class="tf-color-1">*</span>' : '' ?>
                             <span class="block-pending"><?= Html::encode($column) ?></span>
                         </div>
                     </div>
