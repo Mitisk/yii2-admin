@@ -100,7 +100,7 @@ final class Module extends \yii\base\Module implements BootstrapInterface
         // Исключаем экшен логина, чтобы не зациклиться
         if (Yii::$app->request->isConsoleRequest === false) {
             $route = $action->uniqueId;
-            $isLogin = ($route === 'admin/default/login');
+            $isLogin = ($route === 'admin/default/login' || $route === 'admin/default/check-user');
             if (Yii::$app->user->isGuest && !$isLogin) {
                 Yii::$app->response->redirect(['/admin/default/login'])->send();
                 return false;

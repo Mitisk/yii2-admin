@@ -74,6 +74,46 @@ class DefaultController extends BaseController
     }
 
     /**
+     * Checks if user exists and returns auth type
+     * @return Response|array
+     */
+    public function actionCheckUser()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $username = Yii::$app->request->post('username');
+
+        if (!$username) {
+            return ['success' => false, 'message' => 'Login is required'];
+        }
+
+        $user = \Mitisk\Yii2Admin\models\AdminUser::findByUsername($username);
+
+        if (!$user) {
+            return [
+                'success' => true,
+                'type' => 'password',
+                'username' => $username
+            ];
+        }
+
+        if ($user->status == \Mitisk\Yii2Admin\models\AdminUser::STATUS_BLOCKED) {
+            return ['success' => false, 'message' => 'Ваш аккаунт заблокирован'];
+        }
+
+        $types = [
+            \Mitisk\Yii2Admin\models\LoginForm::PASSWORD => 'password',
+            \Mitisk\Yii2Admin\models\LoginForm::MFA_PASSWORD => 'mixed',
+            \Mitisk\Yii2Admin\models\LoginForm::MFA => 'otp',
+        ];
+
+        return [
+            'success' => true,
+            'type' => $types[$user->auth_type] ?? 'password',
+            'username' => $user->username
+        ];
+    }
+
+    /**
      * Login action.
      *
      * @return Response|string
@@ -85,7 +125,7 @@ class DefaultController extends BaseController
             Yii::$app->end();
         }
 
-        $this->layout = 'login';
+        $this->layout = false;
 
         /** @var $loginForm LoginForm */
         $loginForm = new LoginForm();

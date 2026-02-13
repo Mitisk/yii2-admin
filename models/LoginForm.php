@@ -46,7 +46,23 @@ class LoginForm extends Model
             ['rememberMe', 'boolean'],
             ['password', 'validatePassword'],
             ['mfaCode', 'validateMfaCode'],
+            [['password', 'mfaCode'], 'validateRateLimit'], // Проверка блокировки перед основной валидацией
         ];
+    }
+
+    /**
+     * Проверка на наличие блокировки (Rate Limit)
+     */
+    public function validateRateLimit($attribute, $params)
+    {
+        if ($this->hasErrors()) {
+            return;
+        }
+
+        if ($this->isBlocked()) {
+            $timeLeft = ceil((($this->getLastAttemptTime() + self::BLOCK_DURATION) - time()) / 60);
+            $this->addError($attribute, "Вы исчерпали лимит попыток. Попробуйте через {$timeLeft} мин.");
+        }
     }
 
     /**
@@ -64,8 +80,11 @@ class LoginForm extends Model
             if ($this->authType != self::MFA) {
                 if (!$user || !$user->validatePassword($this->password)) {
                     $this->addError('password', 'Неверное имя пользователя или пароль.');
+                    $this->registerAttempt();
                 } elseif ($user && $user->status == AdminUser::STATUS_BLOCKED) {
                     $this->addError('username', 'Ваш аккаунт заблокирован.');
+                } else {
+                    $this->resetAttempts();
                 }
             }
         }
@@ -83,10 +102,14 @@ class LoginForm extends Model
             $user = $this->getUser();
             if (!$user) {
                 $this->addError('mfaCode', 'Неверное имя пользователя или пароль.');
+                return;
             }
             if ($this->authType != self::PASSWORD) {
                 if (!$user || !MfaHelper::verifyTotpCode($user->mfa_secret, $this->mfaCode)) {
                     $this->addError('mfaCode', 'Неверный временный код.');
+                    $this->registerAttempt();
+                } else {
+                    $this->resetAttempts();
                 }
             }
         }
@@ -102,6 +125,56 @@ class LoginForm extends Model
             return Yii::$app->user->login($this->getUser(), $this->rememberMe ? 3600*24*30*12 : 0);
         }
         return false;
+    }
+
+    // --- Rate Limit Logic ---
+
+    const MAX_ATTEMPTS = 5;
+    const BLOCK_DURATION = 1800; // 30 minutes
+
+    protected function getRateLimitKey()
+    {
+        return 'login_attempts:' . Yii::$app->request->userIP;
+    }
+
+    protected function getAttempts()
+    {
+        return Yii::$app->cache->get($this->getRateLimitKey()) ?: 0;
+    }
+
+    protected function getLastAttemptTime()
+    {
+        return Yii::$app->cache->get($this->getRateLimitKey() . ':time') ?: 0;
+    }
+
+    protected function isBlocked()
+    {
+        $attempts = $this->getAttempts();
+        $lastTime = $this->getLastAttemptTime();
+        
+        if ($attempts >= self::MAX_ATTEMPTS) {
+            if (time() - $lastTime < self::BLOCK_DURATION) {
+                return true;
+            } else {
+                // Time expired, reset
+                $this->resetAttempts();
+            }
+        }
+        return false;
+    }
+
+    protected function registerAttempt()
+    {
+        $key = $this->getRateLimitKey();
+        $attempts = $this->getAttempts() + 1;
+        Yii::$app->cache->set($key, $attempts, self::BLOCK_DURATION);
+        Yii::$app->cache->set($key . ':time', time(), self::BLOCK_DURATION);
+    }
+
+    protected function resetAttempts()
+    {
+        Yii::$app->cache->delete($this->getRateLimitKey());
+        Yii::$app->cache->delete($this->getRateLimitKey() . ':time');
     }
 
     /**
