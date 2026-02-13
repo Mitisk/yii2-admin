@@ -63,7 +63,7 @@ $host = Yii::$app->request->hostInfo;
 
     <div class="flex gap10 mb-24">
         <?= Html::activeCheckbox($model, 'in_menu', ['class' => 'total-checkbox']) ?>
-        <label for="adminmodel-in_menu" class="body-text">Добавить в меню слева. <a href="/admin/menu" target="_blank" class="tf-color">Редактировать в меню</a></label>
+        <label for="adminmodel-in_menu" class="body-text">Добавить в меню слева. <a href="<?= \yii\helpers\Url::to(['/admin/menu/index']) ?>" target="_blank" class="tf-color">Редактировать в меню</a></label>
     </div>
     <fieldset class="name">
         <?= $form->field($model, 'model_class')->textInput([

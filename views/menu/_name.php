@@ -21,7 +21,7 @@
 
             <?php if($model->id): ?>
             <div class="button-submit">
-                <a href="/admin/menu/delete/?id=<?= $model->id ?>"><i class="icon-trash"></i></a>
+                <a href="<?= \yii\helpers\Url::to(['/admin/menu/delete', 'id' => $model->id]) ?>"><i class="icon-trash"></i></a>
             </div>
             <?php endif; ?>
 

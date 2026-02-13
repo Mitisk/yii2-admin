@@ -32,7 +32,7 @@
                 <i class="icon-trash"></i>
             </div>
             <div>
-                <a class="tf-button style-1" href="/admin/default/clear-cache/" id="btn-clear-cache">
+                <a class="tf-button style-1" href="<?= \yii\helpers\Url::to(['/admin/default/clear-cache']) ?>" id="btn-clear-cache">
                     Очистить кэш сайта
                 </a>
             </div>
@@ -41,6 +41,7 @@
 </div>
 
 <?php
+$url = \yii\helpers\Url::to(['/admin/default/clear-cache']);
 $js = <<<JS
 $('#btn-clear-cache').on('click', function(e) {
     e.preventDefault();
@@ -49,7 +50,7 @@ $('#btn-clear-cache').on('click', function(e) {
     
     btn.addClass('loading');
     $.ajax({
-        url: '/admin/default/clear-cache/',
+        url: '$url',
         type: 'POST',
         success: function(res) {
             btn.removeClass('loading');

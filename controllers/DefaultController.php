@@ -81,7 +81,7 @@ class DefaultController extends BaseController
     public function actionLogin()
     {
         if (!Yii::$app->user->isGuest) {
-            Yii::$app->getResponse()->redirect('/admin/')->send();
+            Yii::$app->getResponse()->redirect(['/admin/default/index'])->send();
             Yii::$app->end();
         }
 
@@ -97,14 +97,15 @@ class DefaultController extends BaseController
                 if ($loginForm->authType == LoginForm::PASSWORD ||
                     $loginForm->authType == LoginForm::MFA) {
                     if ($loginForm->login()) {
-                        Yii::$app->getResponse()->redirect('/admin/')->send();
+                        Yii::$app->getResponse()->redirect(['/admin/default/index'])->send();
                         Yii::$app->end();
                     }
+                    $loginForm->password = '';
                 }
                 if ($loginForm->authType == LoginForm::MFA_PASSWORD) {
                     if ($loginForm->password && $loginForm->mfaCode) {
                         if ($loginForm->login()) {
-                            Yii::$app->getResponse()->redirect('/admin/')->send();
+                            Yii::$app->getResponse()->redirect(['/admin/default/index'])->send();
                             Yii::$app->end();
                         }
                     }
@@ -115,7 +116,6 @@ class DefaultController extends BaseController
             }
         }
 
-        $loginForm->password = '';
         return $this->render('login', [
             'model' => $loginForm,
         ]);

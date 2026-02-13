@@ -44,7 +44,7 @@ if (empty($avatar)) {
         </button>
         <ul class="dropdown-menu dropdown-menu-end has-content" aria-labelledby="dropdownMenuButton3">
             <li>
-                <a href="/admin/user/update/?id=<?= Yii::$app->user->id ?>" class="user-item">
+                <a href="<?= \yii\helpers\Url::to(['/admin/user/update', 'id' => Yii::$app->user->id]) ?>" class="user-item">
                     <div class="icon">
                         <i class="icon-user"></i>
                     </div>
@@ -54,7 +54,7 @@ if (empty($avatar)) {
             <li>
                 <?= Html::a(
                     '<div class="icon"><i class="icon-log-out"></i></div><div class="body-title-2">Выйти</div>',
-                    '/admin/logout/',
+                    ['/admin/default/logout'],
                     [
                         'class' => 'user-item',
                         'onclick' => "sendPostRequest(event); return false;",

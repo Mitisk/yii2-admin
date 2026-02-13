@@ -15,6 +15,26 @@ $this->registerMetaTag(['charset' => Yii::$app->charset], 'charset');
 $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, initial-scale=1, shrink-to-fit=no']);
 $this->registerMetaTag(['name' => 'description', 'content' => $this->params['meta_description'] ?? '']);
 $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_keywords'] ?? '']);
+
+$this->registerJs("
+    window.adminConfig = {
+        urls: {
+            addWidget: '" . \yii\helpers\Url::to(['/admin/ajax-widget/add']) . "',
+            updateWidgetOrder: '" . \yii\helpers\Url::to(['/admin/ajax-widget/update-order']) . "',
+            hideWidget: '" . \yii\helpers\Url::to(['/admin/ajax-widget/hide']) . "',
+            componentPopup: '" . \yii\helpers\Url::to(['/admin/ajax-widget/component-popup']) . "',
+            saveComponent: '" . \yii\helpers\Url::to(['/admin/ajax-widget/save-component']) . "',
+            getNote: '" . \yii\helpers\Url::to(['/admin/ajax-note/get']) . "',
+            saveNote: '" . \yii\helpers\Url::to(['/admin/ajax-note/save']) . "',
+            saveApi: '" . \yii\helpers\Url::to(['/admin/settings/save-api']) . "',
+            updateSectionName: '" . \yii\helpers\Url::to(['/admin/settings/update-section-name']) . "',
+            uploadAvatar: '" . \yii\helpers\Url::to(['/admin/ajax/upload-avatar']) . "',
+            deleteAvatar: '" . \yii\helpers\Url::to(['/admin/ajax/delete-avatar']) . "',
+            updateAttribute: '" . \yii\helpers\Url::to(['update-attribute']) . "'
+        }
+    };
+", \yii\web\View::POS_HEAD);
+
 ?>
 <?php $this->beginPage() ?>
     <!DOCTYPE html>
@@ -55,7 +75,7 @@ $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_k
                     <div class="header-dashboard">
                         <div class="wrap">
                             <div class="header-left">
-                                <a href="/admin/">
+                                <a href="<?= \yii\helpers\Url::to(['/admin/default/index']) ?>">
                                     <?php
                                     $logo = \Yii::$app->settings->get('ADMIN', 'logo');
                                     if (empty($logo)) {
@@ -106,7 +126,7 @@ $this->registerMetaTag(['name' => 'keywords', 'content' => $this->params['meta_k
 
                                     <?php if (!empty($this->params['breadcrumbs'])): ?>
                                         <?= Breadcrumbs::widget([
-                                            'homeLink' => ['label' => 'Главная', 'url' => '/admin/'],
+                                            'homeLink' => ['label' => 'Главная', 'url' => ['/admin/default/index']],
                                             'links' => $this->params['breadcrumbs']
                                         ]) ?>
                                     <?php endif ?>

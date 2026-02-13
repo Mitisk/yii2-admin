@@ -24,7 +24,7 @@ class TextField extends Field
         return [
             'attribute' => $column,
             'value' => function ($data) use ($column) {
-                return strip_tags($data->{$column});
+                return strip_tags((string)$data->{$column});
             }
         ];
     }

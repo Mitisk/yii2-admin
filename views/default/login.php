@@ -82,7 +82,7 @@ $this->title = 'Вход в систему';
 
                     <?= Html::submitButton('Войти', ['class' => 'tf-button w-full', 'name' => 'login-button']) ?>
 
-                    <a href="/admin/login/" class="tf-button style-2 w-full">Войти под другим пользователем</a>
+                    <a href="<?= \yii\helpers\Url::to(['/admin/default/login']) ?>" class="tf-button style-2 w-full">Войти под другим пользователем</a>
                 <?php else: ?>
                     <?= Html::submitButton('Продолжить', ['class' => 'tf-button w-full', 'name' => 'login-button']) ?>
                 <?php endif; ?>

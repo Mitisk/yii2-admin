@@ -42,9 +42,9 @@ foreach ($model->getFormFields() as $value) {
             ]) ?>
         </div>
         <div>
-            <?= !$formModel->isNewRecord ? Html::a(Yii::t('rbac', 'Delete'), ['delete', 'id' => $formModel->id], [
+            <?= !$formModel->isNewRecord ? Html::a('Удалить', ['delete', 'id' => $formModel->id], [
                 'class' => 'tf-button tf-button-danger w208',
-                'data-confirm' => Yii::t('rbac', 'Are you sure to delete this item?'),
+                'data-confirm' => 'Вы уверены, что хотите удалить этот элемент?',
                 'data-method' => 'post',
             ]) : '' ?>
         </div>

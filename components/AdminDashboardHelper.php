@@ -13,6 +13,8 @@ class AdminDashboardHelper extends BaseObject
     public static function getCurrentUserRoleName()
     {
         $array = self::getRolesById(\Yii::$app->user->getId());
+        // Удаляем пустые элементы (null, '', false)
+        $array = array_filter($array);
         return implode('<br>', $array);
     }
 

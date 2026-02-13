@@ -38,11 +38,11 @@ $this->params['breadcrumbs'][] = $this->title;
                     </div>
                     <div class="body-text"><?= $model->table_name ?></div>
                     <div class="list-icon-function">
-                        <a href="/admin/components/update?id=<?= $model->id ?>" class="item edit">
+                        <a href="<?= \yii\helpers\Url::to(['/admin/components/update', 'id' => $model->id]) ?>" class="item edit">
                             <i class="icon-edit-3"></i>
                         </a>
                         <?php if ($model->table_name != 'user') : ?>
-                        <a href="/admin/components/delete?id=<?= $model->id ?>" class="item trash">
+                        <a href="<?= \yii\helpers\Url::to(['/admin/components/delete', 'id' => $model->id]) ?>" class="item trash">
                             <i class="icon-trash-2"></i>
                         </a>
                         <?php endif; ?>

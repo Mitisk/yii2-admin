@@ -7,7 +7,7 @@ use Mitisk\Yii2Admin\components\MenuHelper;
 ?>
 <div class="section-menu-left">
     <div class="box-logo">
-        <a href="/admin/" id="site-logo-inner">
+        <a href="<?= \yii\helpers\Url::to(['/admin/default/index']) ?>" id="site-logo-inner">
             <?php
             $logo = \Yii::$app->settings->get('ADMIN', 'logo');
             if (empty($logo)) {
@@ -72,17 +72,17 @@ use Mitisk\Yii2Admin\components\MenuHelper;
                 <div class="center-heading">Настройки</div>
                 <ul class="menu-list">
                     <li class="menu-item <?= MenuHelper::build([
-                        ['href' => '/admin/settings/', 'text'=>'Основные']
+                        ['href' => \yii\helpers\Url::to(['/admin/settings/index']), 'text'=>'Основные']
                     ])[0]['_active'] ? 'active' : '' ?>">
-                        <a href="/admin/settings/">
+                        <a href="<?= \yii\helpers\Url::to(['/admin/settings/index']) ?>">
                             <div class="icon"><i class="icon-settings"></i></div>
                             <div class="text">Основные</div>
                         </a>
                     </li>
                     <li class="menu-item <?= MenuHelper::build([
-                        ['href' => '/admin/email-template/', 'text'=>'Основные']
+                        ['href' => \yii\helpers\Url::to(['/admin/email-template/index']), 'text'=>'Основные']
                     ])[0]['_active'] ? 'active' : '' ?>">
-                        <a href="/admin/email-template/">
+                        <a href="<?= \yii\helpers\Url::to(['/admin/email-template/index']) ?>">
                             <div class="icon"><i class="icon-mail"></i></div>
                             <div class="text">Шаблоны писем</div>
                         </a>
@@ -90,17 +90,17 @@ use Mitisk\Yii2Admin\components\MenuHelper;
 
                     <?php if (Yii::$app->user->can('superAdmin')): ?>
                         <li class="menu-item <?= MenuHelper::build([
-                            ['href' => '/admin/components/', 'text'=>'Компоненты']
+                            ['href' => \yii\helpers\Url::to(['/admin/components/index']), 'text'=>'Компоненты']
                         ])[0]['_active'] ? 'active' : '' ?>">
-                            <a href="/admin/components/">
+                            <a href="<?= \yii\helpers\Url::to(['/admin/components/index']) ?>">
                                 <div class="icon"><i class="icon-database"></i></div>
                                 <div class="text">Компоненты</div>
                             </a>
                         </li>
                         <li class="menu-item <?= MenuHelper::build([
-                            ['href' => '/admin/menu/', 'text'=>'Меню']
+                            ['href' => \yii\helpers\Url::to(['/admin/menu/index']), 'text'=>'Меню']
                         ])[0]['_active'] ? 'active' : '' ?>">
-                            <a href="/admin/menu/" class="menu-item-button">
+                            <a href="<?= \yii\helpers\Url::to(['/admin/menu/index']) ?>" class="menu-item-button">
                                 <div class="icon"><i class="fas fa-bars"></i></div>
                                 <div class="text">Меню</div>
                             </a>
