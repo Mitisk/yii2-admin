@@ -79,6 +79,12 @@ class AdminController extends BaseController
                                 Yii::$app->user->can('admin');
                         },
                     ],
+                    // Инструкция
+                    [
+                        'actions' => ['instruction'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
                 ],
             ],
             'verbs' => [
@@ -280,10 +286,68 @@ class AdminController extends BaseController
             }
         }
 
+
         return [
             'success' => true, 
             'count' => $successCount, 
             'errors' => $errors
         ];
+    }
+
+    /**
+     * Показывает инструкцию или форму редактирования
+     */
+    public function actionInstruction()
+    {
+        $modelClass = $this->_modelName;
+        $info = \Mitisk\Yii2Admin\models\AdminModelInfo::findOne(['model_class' => $modelClass]);
+
+        // Если это запрос на редактирование (или сохранение)
+        if (Yii::$app->request->get('edit') || Yii::$app->request->isPost) {
+            // Проверка прав на редактирование
+            if (!Yii::$app->user->can('superAdminRole')) {
+                throw new \yii\web\ForbiddenHttpException('У вас нет прав на редактирование инструкции.');
+            }
+
+            if (!$info) {
+                $info = new \Mitisk\Yii2Admin\models\AdminModelInfo();
+                $info->model_class = $modelClass;
+            }
+
+            if ($info->load(Yii::$app->request->post()) && $info->save()) {
+                Yii::$app->session->setFlash('success', 'Инструкция сохранена');
+                return $this->redirect(['instruction']);
+            }
+
+            return $this->render('instruction_edit', [
+                'model' => $info,
+            ]);
+        }
+
+        // Просмотр
+        if (!$info) {
+            // Если инструкции нет
+            if (Yii::$app->user->can('superAdminRole')) {
+                // Супер-админа редиректим на создание
+                return $this->redirect(['instruction', 'edit' => 1]);
+            } else {
+                // Обычному пользователю показываем 404 или ничего (хотя по ТЗ кнопка должна быть скрыта)
+                throw new \yii\web\NotFoundHttpException("Инструкция не найдена");
+            }
+        }
+
+        // Если AJAX запрос (как в модалке)
+        if (Yii::$app->request->isAjax) {
+            return $this->renderAjax('instruction', [
+                'model' => $info,
+                'canEdit' => Yii::$app->user->can('superAdminRole'),
+            ]);
+        }
+
+        // Если обычный запрос (прямая ссылка)
+        return $this->render('instruction', [
+            'model' => $info,
+            'canEdit' => Yii::$app->user->can('superAdminRole'),
+        ]);
     }
 }

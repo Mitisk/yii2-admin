@@ -2,6 +2,8 @@
 use yii\helpers\Html;
 use Mitisk\Yii2Admin\widgets\GridView;
 
+use Mitisk\Yii2Admin\models\AdminModelInfo;
+
 /* @var $this yii\web\View */
 /* @var $model \Mitisk\Yii2Admin\core\models\AdminModel */
 /* @var $dataProvider \yii\data\ActiveDataProvider */
@@ -30,6 +32,28 @@ $this->params['breadcrumbs'][] = $this->title;
         <?php if ($model->hasSettings()) : ?>
             <?= Html::a("<i class=\"icon-settings\"></i>", ['/admin/settings/', 'modelName' => $model->getModelName()], ['class' => 'tf-button']) ?>
         <?php endif; ?>
+
+
+        <?php
+        $modelName = $model->getModelName();
+        $infoExists = AdminModelInfo::find()->where(['model_class' => $modelName])->exists();
+        $isSuperAdmin = Yii::$app->user->can('superAdminRole');
+
+        if ($isSuperAdmin || $infoExists) {
+            $infoUrl = ['instruction']; // Relative to current controller, i.e., admin/alias/instruction
+
+            $infoClass = $infoExists
+                ? 'tf-button js-show-info-modal'
+                : 'tf-button'; // Opens in new page/full page mode if not exists (edit mode)
+
+            if (!$infoExists && $isSuperAdmin) {
+                 // Force edit mode for initial creation
+                 $infoUrl = ['instruction', 'edit' => 1];
+            }
+
+            echo Html::a("<i class=\"icon-info\"></i>", $infoUrl, ['class' => $infoClass, 'style' => 'margin-left: 10px;', 'title' => 'Информация']);
+        }
+        ?>
 
         <button type="button" class="tf-button style-2 tf-danger js-batch-delete-btn d-none" style="margin-left: 10px;">
             <i class="icon-trash-2"></i>
@@ -63,3 +87,34 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="infoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Информация</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="infoModalBody">
+                <div class="d-flex justify-content-center p-20">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
+$this->registerJs(<<<JS
+    $(document).on('click', '.js-show-info-modal', function(e) {
+        e.preventDefault();
+        var url = $(this).attr('href');
+        var modal = new bootstrap.Modal(document.getElementById('infoModal'));
+        modal.show();
+        $('#infoModalBody').load(url);
+    });
+JS
+);
+?>
