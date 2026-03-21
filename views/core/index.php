@@ -10,8 +10,9 @@ use Mitisk\Yii2Admin\models\AdminModelInfo;
 
 $this->title = $model->getComponentName();
 $this->params['breadcrumbs'][] = $this->title;
+$this->params['recordCount'] = $dataProvider->getTotalCount();
 ?>
-<div class="wg-box" data-model-class="<?= htmlspecialchars($model->getModelName()) ?>">
+<div class="wg-box mb-20" data-model-class="<?= htmlspecialchars($model->getModelName()) ?>">
     <div class="flex items-center justify-between gap10 flex-wrap">
         <div class="wg-filter flex-grow">
             <form class="form-search">
@@ -23,6 +24,9 @@ $this->params['breadcrumbs'][] = $this->title;
                     <button class="" type="submit"><i class="icon-search"></i></button>
                 </div>
             </form>
+            <button type="button" class="tf-button js-toggle-filters" title="Фильтры по колонкам">
+                <i class="icon-sliders"></i>
+            </button>
         </div>
 
         <?php if ($model->canCreate()) : ?>
@@ -60,15 +64,14 @@ $this->params['breadcrumbs'][] = $this->title;
         </button>
     </div>
 
-    <?= GridView::widget([
-        'dataProvider' => $dataProvider,
-        'filterModel' => $model->getModel(),
-        'tableOptions' => ['class' => 'wg-table table-all-roles'],
-        'rowOptions' => ['class' => "roles-item"],
-        'contentOptions' => ['class' => "body-text"],
-        'columns' => $model->getGridColumns(),
-    ]) ?>
+
 </div>
+
+<?= GridView::widget([
+    'dataProvider' => $dataProvider,
+    'filterModel' => $model->getModel(),
+    'columns' => $model->getGridColumns(),
+]) ?>
 
 <div class="modal fade" id="batchDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

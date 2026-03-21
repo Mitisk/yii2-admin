@@ -14,12 +14,6 @@ class NumberField extends Field
     /** @var int Шаг */
     public $step;
 
-    /** @var string Подтип поля */
-    public $subtype;
-
-    /** @var boolean Только для чтения */
-    public $readonly;
-
     /**
      * @inheritdoc
      * @return string

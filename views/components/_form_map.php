@@ -40,9 +40,9 @@ use yii\widgets\ActiveForm;
                 ]) ?>
             </div>
             <div>
-                <?= !$model->isNewRecord ? Html::a(Yii::t('rbac', 'Delete'), ['delete-map', 'id' => $model->id], [
+                <?= !$model->isNewRecord ? Html::a('Удалить', ['delete-map', 'id' => $model->id], [
                     'class' => 'tf-button tf-button-danger w208',
-                    'data-confirm' => Yii::t('rbac', 'Are you sure to delete this item?'),
+                    'data-confirm' => 'Вы уверены, что хотите удалить этот элемент?',
                     'data-method' => 'post',
                 ]) : '' ?>
             </div>

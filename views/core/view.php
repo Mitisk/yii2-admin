@@ -51,9 +51,9 @@ $this->params['breadcrumbs'][] = $this->title;
                 <?php endif; ?>
                 <?php if ($model->canDelete()) : ?>
                 <div>
-                    <?= Html::a(Yii::t('rbac', 'Delete'), ['delete', 'id' => $model->getModel()->id], [
+                    <?= Html::a('Удалить', ['delete', 'id' => $model->getModel()->id], [
                         'class' => 'tf-button tf-button-danger w208',
-                        'data-confirm' => Yii::t('rbac', 'Are you sure to delete this item?'),
+                        'data-confirm' => 'Вы уверены, что хотите удалить этот элемент?',
                         'data-method' => 'post',
                     ]) ?>
                 </div>

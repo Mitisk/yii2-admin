@@ -7,25 +7,43 @@ use yii\helpers\Html;
 
 class GridView extends \yii\grid\GridView
 {
-    public $tableOptions = ['class' => 'wg-table table-all-roles'];
+    public $tableOptions = ['class' => 'modern-table'];
 
-    public $rowOptions = ['class' => "roles-item"];
+    public $headerRowOptions = [];
 
-    public $contentOptions = ['class' => "body-text"];
+    public $rowOptions = [];
 
-    public $layout = "{items}\n<div class=\"divider\"></div><div class='flex items-center justify-between flex-wrap gap10'>{summary}\n{pager}</div>";
+    /** @var bool Скрывать строку фильтров, если нет активной фильтрации */
+    public $collapsibleFilters = true;
 
-    public $summaryOptions = ['class' => 'text-tiny'];
+    public $layout = "{items}\n"
+        . '<div class="pagination-wrapper">'
+        . "{summary}\n{pager}</div>";
+
+    public $summaryOptions = ['class' => 'text-muted'];
+
+    /**
+     * @inheritdoc
+     */
+    public function run(): void
+    {
+        if ($this->collapsibleFilters && $this->filterModel !== null) {
+            $this->registerFilterToggleJs();
+        }
+        parent::run();
+    }
 
     /**
      * Renders the data models for the grid view.
      * @return string the HTML code of table
      */
-    public function renderItems()
+    public function renderItems(): string
     {
         $caption = $this->renderCaption();
         $columnGroup = $this->renderColumnGroup();
-        $tableHeader = $this->showHeader ? $this->renderTableHeader() : false;
+        $tableHeader = $this->showHeader
+            ? $this->renderTableHeader()
+            : false;
         $tableBody = $this->renderTableBody();
 
         $tableFooter = false;
@@ -48,47 +66,75 @@ class GridView extends \yii\grid\GridView
             $tableFooterAfterBody,
         ]);
 
-        return Html::tag('div', implode("\n", $content), $this->tableOptions);
+        $table = Html::tag(
+            'table',
+            implode("\n", $content),
+            $this->tableOptions
+        );
+
+        return '<div class="table-card">'
+            . '<div class="table-responsive">'
+            . $table
+            . '</div></div>';
     }
 
     /**
      * Renders the table header.
      * @return string the rendering result.
      */
-    public function renderTableHeader()
+    public function renderTableHeader(): string
     {
         $cells = [];
-        $content =  '';
         foreach ($this->columns as $column) {
             /* @var $column Column */
             $cells[] = $column->renderHeaderCell();
         }
-        if($cells) {
-            foreach ($cells as $cell) {
-                if($cell == "#") {
-                    $cell = 'No';
-                }
-                $content .= Html::tag('li', Html::tag('div', $cell, ['class' => 'body-title']), $this->headerRowOptions);
-            }
-        }
 
-        /**
-         * @todo render filters
-         */
-        /*if ($this->filterPosition === self::FILTER_POS_HEADER) {
+        $content = Html::tag(
+            'tr',
+            implode("\n", $cells),
+            $this->headerRowOptions
+        );
+
+        if ($this->filterPosition === self::FILTER_POS_HEADER) {
             $content = $this->renderFilters() . $content;
         } elseif ($this->filterPosition === self::FILTER_POS_BODY) {
             $content .= $this->renderFilters();
-        }*/
+        }
 
-        return "<ul class='table-title flex gap20 mb-14'>\n" . $content . "\n</ul>";
+        return "<thead>\n" . $content . "\n</thead>";
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function renderFilters(): string
+    {
+        if ($this->filterModel === null) {
+            return '';
+        }
+
+        $cells = [];
+        foreach ($this->columns as $column) {
+            /* @var $column Column */
+            $cells[] = $column->renderFilterCell();
+        }
+
+        $options = $this->filterRowOptions;
+
+        if ($this->collapsibleFilters && !$this->hasActiveFilters()) {
+            $existing = $options['style'] ?? '';
+            $options['style'] = 'display:none;' . $existing;
+        }
+
+        return Html::tag('tr', implode('', $cells), $options);
     }
 
     /**
      * Renders the table body.
      * @return string the rendering result.
      */
-    public function renderTableBody()
+    public function renderTableBody(): string
     {
         $models = array_values($this->dataProvider->getModels());
         $keys = $this->dataProvider->getKeys();
@@ -96,7 +142,10 @@ class GridView extends \yii\grid\GridView
         foreach ($models as $index => $model) {
             $key = $keys[$index];
             if ($this->beforeRow !== null) {
-                $row = call_user_func($this->beforeRow, $model, $key, $index, $this);
+                $row = call_user_func(
+                    $this->beforeRow,
+                    $model, $key, $index, $this
+                );
                 if (!empty($row)) {
                     $rows[] = $row;
                 }
@@ -105,7 +154,10 @@ class GridView extends \yii\grid\GridView
             $rows[] = $this->renderTableRow($model, $key, $index);
 
             if ($this->afterRow !== null) {
-                $row = call_user_func($this->afterRow, $model, $key, $index, $this);
+                $row = call_user_func(
+                    $this->afterRow,
+                    $model, $key, $index, $this
+                );
                 if (!empty($row)) {
                     $rows[] = $row;
                 }
@@ -115,10 +167,12 @@ class GridView extends \yii\grid\GridView
         if (empty($rows) && $this->emptyText !== false) {
             $colspan = count($this->columns);
 
-            return "<ul class=\"flex flex-column\">\n<DIV><DIV colspan=\"$colspan\">" . $this->renderEmpty() . "</DIV></DIV>\n</ul>";
+            return "<tbody>\n<tr><td colspan=\"$colspan\">"
+                . $this->renderEmpty()
+                . "</td></tr>\n</tbody>";
         }
 
-        return "<ul class=\"flex flex-column\">\n" . implode("\n", $rows) . "\n</ul>";
+        return "<tbody>\n" . implode("\n", $rows) . "\n</tbody>";
     }
 
     /**
@@ -128,53 +182,93 @@ class GridView extends \yii\grid\GridView
      * @param int $index the zero-based index of the data model among the model array returned by [[dataProvider]].
      * @return string the rendering result
      */
-    public function renderTableRow($model, $key, $index)
+    public function renderTableRow($model, $key, $index): string
     {
         $cells = [];
         /* @var $column Column */
         foreach ($this->columns as $column) {
-            $cells[] = $column->renderDataCell($model, $key, $index);
+            $cells[] = $column->renderDataCell(
+                $model, $key, $index
+            );
         }
+
         if ($this->rowOptions instanceof \Closure) {
-            $options = call_user_func($this->rowOptions, $model, $key, $index, $this);
+            $options = call_user_func(
+                $this->rowOptions,
+                $model, $key, $index, $this
+            );
         } else {
             $options = $this->rowOptions;
         }
-        $options['data-key'] = is_array($key) ? json_encode($key) : (string) $key;
+        $options['data-key'] = is_array($key)
+            ? json_encode($key)
+            : (string) $key;
 
-        $content =  '';
-        if($cells) {
-            foreach ($cells as $cell) {
-                if($cell == end($cells)) {
-                    $content .= Html::tag('div', $cell, ['class' => 'list-icon-function', 'style' => 'width: 110px;']);
-                } else {
-                    $content .= Html::tag('div', $cell, ['class' => 'body-text']);
-                }
-
-            }
-        }
-
-
-        return Html::tag('li', $content, $options);
+        return Html::tag('tr', implode("\n", $cells), $options);
     }
 
     /**
      * Renders the pager.
      * @return string the rendering result
      */
-    public function renderPager()
+    public function renderPager(): string
     {
         $pagination = $this->dataProvider->getPagination();
-        if ($pagination === false || $this->dataProvider->getCount() <= 0) {
+        if ($pagination === false
+            || $this->dataProvider->getCount() <= 0
+        ) {
             return '';
         }
         /* @var $class \Mitisk\Yii2Admin\widgets\LinkPager */
         $pager = $this->pager;
-        //$class = ArrayHelper::remove($pager, 'class', LinkPager::className());
 
         $pager['pagination'] = $pagination;
         $pager['view'] = $this->getView();
 
-        return \Mitisk\Yii2Admin\widgets\LinkPager::widget($pager);
+        return LinkPager::widget($pager);
+    }
+
+    /**
+     * Проверяет, есть ли активные (непустые) значения фильтров.
+     * @return bool
+     */
+    protected function hasActiveFilters(): bool
+    {
+        if ($this->filterModel === null) {
+            return false;
+        }
+        foreach ($this->filterModel->attributes() as $attr) {
+            $val = $this->filterModel->$attr;
+            if ($val !== null && $val !== '' && $val !== []) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Регистрирует JS для кнопки .js-toggle-filters.
+     */
+    protected function registerFilterToggleJs(): void
+    {
+        $gridId = $this->options['id'];
+        $active = $this->hasActiveFilters() ? 'true' : 'false';
+        $js = <<<JS
+(function(){
+    var gridId = '{$gridId}';
+    var active = {$active};
+    var btn = document.querySelector('.js-toggle-filters');
+    if (!btn) return;
+    if (active) btn.classList.add('active');
+    btn.addEventListener('click', function() {
+        var row = document.querySelector('#' + gridId + '-filters');
+        if (!row) return;
+        var hidden = row.style.display === 'none';
+        row.style.display = hidden ? '' : 'none';
+        btn.classList.toggle('active', hidden);
+    });
+})();
+JS;
+        $this->getView()->registerJs($js);
     }
 }

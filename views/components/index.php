@@ -77,9 +77,6 @@ $this->params['breadcrumbs'][] = $this->title;
     echo GridView::widget([
         'dataProvider' => $AdminControllerMapProvider,
         'filterModel' => $AdminControllerMapModel,
-        'tableOptions' => ['class' => 'wg-table table-all-roles'],
-        'rowOptions' => ['class' => "roles-item"],
-        'contentOptions' => ['class' => "body-text"],
         'columns' => [
             'controller_id',
             'class',
@@ -114,7 +111,6 @@ $this->params['breadcrumbs'][] = $this->title;
                     }
                     return '#';
                 },
-                'buttonOptions' => ['class' => '']
             ],
         ],
     ]);

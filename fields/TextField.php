@@ -8,12 +8,6 @@ class TextField extends Field
     /** @var int Максимальная длина поля */
     public $maxlength;
 
-    /** @var string Подтип поля */
-    public $subtype;
-
-    /** @var boolean Только для чтения */
-    public $readonly;
-
     /**
      * @inheritdoc
      * @param string $column Выводимое поле

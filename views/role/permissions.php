@@ -10,8 +10,9 @@ $this->title = 'Управление разрешениями';
 $this->params['breadcrumbs'][] = ['label' => 'Роли', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 $this->registerCss("
-.wg-table.table-all-roles .roles-item>div:first-child, .wg-table.table-all-roles ul.table-title li:first-child {
-    width: 300px !important;
+.modern-table th:first-child,
+.modern-table td:first-child {
+    width: 300px;
 }");
 ?>
 <?php Pjax::begin(['id' => 'permissions-grid']); ?>
@@ -33,9 +34,6 @@ $this->registerCss("
     </div>
     <?= GridView::widget([
         'dataProvider' => $dataProvider,
-        'tableOptions' => ['class' => 'wg-table table-all-roles'],
-        'rowOptions' => ['class' => "roles-item"],
-        'contentOptions' => ['class' => "body-text"],
         'columns' => [
             [
                 'attribute' => 'name',
@@ -89,30 +87,27 @@ $this->registerCss("
                 'format' => ['datetime', 'php:d.m.Y H:i:s'],
             ],
             [
-                'class' => 'yii\grid\ActionColumn',
-                'header' => 'Действия',
+                'class' => 'Mitisk\Yii2Admin\widgets\ActionColumn',
                 'template' => '{delete}',
                 'urlCreator' => function ($action, $model, $key, $index) {
                     return ['delete-permission', 'name' => $model['name']];
                 },
                 'buttons' => [
                     'delete' => function ($url, $model, $key) {
-                        // защищенные разрешения нельзя удалять
                         $protected = ['superAdmin', 'manageUserRoles', 'manageRoles'];
                         if (in_array($model['name'], $protected, true)) {
-                            return '<span class="item disabled" title="Защищена от удаления" data-pjax="0">
+                            return '<span class="btn-action" title="Защищена от удаления">
                                         <i class="fa-light fa-shield-keyhole"></i>
                                     </span>';
                         }
-                        // если разрешение используется хотя бы в одной роли — блокируем удаление
                         if ((int)$model['rolesCount'] > 0) {
-                            return '<span class="item disabled" title="Используется в ролях" data-pjax="0">
+                            return '<span class="btn-action" title="Используется в ролях">
                                         <i class="fa-light fa-shield-user"></i>
                                     </span>';
                         }
-                        return Html::a('<i class="fas fa-trash-alt"></i>', $url, [
+                        return Html::a('<i class="icon-trash-2"></i>', $url, [
                             'title' => 'Удалить',
-                            'class' => 'item trash',
+                            'class' => 'btn-action delete',
                             'data-confirm' => 'Удалить разрешение \'' . Html::encode($model['name']) . '\'?',
                             'data-method' => 'post',
                             'data-pjax' => 0,

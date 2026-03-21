@@ -105,7 +105,9 @@ $this->registerJs("
                             </div>
                             <div class="header-grid">
 
-
+                                <a href="/" target="_blank" rel="noopener" class="header-site-link" title="Открыть сайт">
+                                    <i class="icon-external-link"></i>
+                                </a>
 
                                 <?= \Mitisk\Yii2Admin\widgets\UserPersonalMenu::widget() ?>
 
@@ -122,7 +124,7 @@ $this->registerJs("
                             <div class="main-content-wrap">
 
                                 <div class="flex items-center flex-wrap justify-between gap20 mb-27">
-                                    <h3><?= $this->title ?></h3>
+                                    <h3><?= $this->title ?><?php if (isset($this->params['recordCount'])): ?><span class="record-count"><?= (int)$this->params['recordCount'] ?></span><?php endif ?></h3>
 
                                     <?php if (!empty($this->params['breadcrumbs'])): ?>
                                         <?= Breadcrumbs::widget([
@@ -143,7 +145,17 @@ $this->registerJs("
                         <!-- bottom-page -->
                         <div class="bottom-page">
                             <div class="body-text">
-                                <span id="currentDateTime"><?= date('d.m.Y H:i')?></span> <a href="https://keypage.ru/"><i class="icon-heart"></i> KeyPage.ru</a>
+                                <span id="currentDateTime"><?= date('d.m.Y H:i') ?></span>
+                                <a href="https://keypage.ru/"><i class="icon-heart"></i> KeyPage.ru</a>
+                                <span class="footer-version">v<?= \Mitisk\Yii2Admin\Module::VERSION ?></span>
+                                <?php
+                                $latestVer = \Mitisk\Yii2Admin\Module::getLatestRelease();
+                                if ($latestVer && version_compare($latestVer, \Mitisk\Yii2Admin\Module::VERSION, '>')) :
+                                ?>
+                                <a href="https://github.com/Mitisk/yii2-admin/releases/latest" target="_blank" rel="noopener" class="footer-update">
+                                    <i class="icon-arrow-up-circle"></i> v<?= $latestVer ?>
+                                </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <!-- /bottom-page -->

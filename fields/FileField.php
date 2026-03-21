@@ -13,9 +13,6 @@ class FileField extends Field
     /** @var boolean Мультизагрузка */
     public $multiple;
 
-    /** @var boolean Только для чтения */
-    public $readonly;
-
     /**
      * @inheritdoc
      * @param string $column Выводимое поле
@@ -23,42 +20,133 @@ class FileField extends Field
      */
     public function renderList(string $column): array
     {
+        $maxVisible = 3;
         return [
             'attribute' => $column,
             'format' => 'raw',
-            'value' => function ($data) use ($column) {
+            'filter' => ['' => '---', '1' => 'Есть', '0' => 'Нет'],
+            'value' => function ($data) use ($column, $maxVisible) {
                 /** @var File[] $files */
                 $files = FieldsHelper::getFiles($data, $this->name);
-                $values = [];
+                if (empty($files)) {
+                    return $this->renderEmptyPlaceholder();
+                }
+
+                $images = [];
+                $nonImages = [];
+                $lightboxGroup = $this->name . '-' . $data->id;
 
                 foreach ($files as $file) {
-
-                    $isImage = $file->isImage();
-
-                    if ($isImage) {
-                        $values[] = Html::a(
-                            Html::img($file->getUrl() ?: $file->path, ['alt' => $file->alt_attribute]),
-                            $file->getUrl() ?: $file->path,
-                            [
-                                'data' => [
-                                    'lightbox' => $this->name . '-' . $data->id,
-                                    'title'    => $file->alt_attribute
-                                ],
-                                'class' => 'gallery-image'
-                            ]
-                        );
+                    if ($file->isImage()) {
+                        $images[] = $file;
                     } else {
-                        $values[] = Html::a(
-                            Html::encode($file->filename ?: $file->path),
-                            $file->getUrl() ?: $file->path,
-                            ['target' => '_blank', 'rel' => 'noopener', 'class' => 'file-link']
-                        );
+                        $nonImages[] = $file;
                     }
                 }
 
-                return Html::tag('div', implode(' ', $values), ['class' => 'gallery-container']);
+                $html = '';
+
+                if (!empty($images)) {
+                    $html .= $this->renderImageStack(
+                        $images,
+                        $lightboxGroup,
+                        $maxVisible
+                    );
+                }
+
+                foreach ($nonImages as $file) {
+                    $html .= ' ' . Html::a(
+                        Html::encode($file->filename ?: $file->path),
+                        $file->getUrl() ?: $file->path,
+                        [
+                            'target' => '_blank',
+                            'rel' => 'noopener',
+                            'class' => 'file-link',
+                        ]
+                    );
+                }
+
+                return $html;
             }
         ];
+    }
+
+    /**
+     * Рендерит image-stack с превью и more-indicator.
+     *
+     * @param File[] $images
+     * @param string $lightboxGroup
+     * @param int $maxVisible
+     * @return string
+     */
+    private function renderImageStack(
+        array $images,
+        string $lightboxGroup,
+        int $maxVisible
+    ): string {
+        $total = count($images);
+        $visible = array_slice($images, 0, $maxVisible);
+        $hidden = array_slice($images, $maxVisible);
+        $zIndex = $maxVisible + 1;
+        $items = [];
+
+        foreach ($visible as $file) {
+            $zIndex--;
+            $url = $file->getUrl() ?: $file->path;
+            $items[] = Html::a(
+                Html::img($url, [
+                    'alt' => $file->alt_attribute,
+                    'title' => $file->alt_attribute,
+                    'style' => 'z-index:' . $zIndex,
+                ]),
+                $url,
+                [
+                    'data' => [
+                        'lightbox' => $lightboxGroup,
+                        'title' => $file->alt_attribute,
+                    ],
+                    'class' => 'stack-image',
+                ]
+            );
+        }
+
+        // Скрытые изображения — не видны, но участвуют в lightbox
+        foreach ($hidden as $file) {
+            $url = $file->getUrl() ?: $file->path;
+            $items[] = Html::a('', $url, [
+                'data' => [
+                    'lightbox' => $lightboxGroup,
+                    'title' => $file->alt_attribute,
+                ],
+                'class' => 'stack-image-hidden',
+                'style' => 'display:none',
+            ]);
+        }
+
+        // Индикатор «ещё N»
+        if ($total > $maxVisible) {
+            $rest = $total - $maxVisible;
+            $items[] = Html::tag('div', '+' . $rest, [
+                'class' => 'more-indicator js-stack-more',
+                'title' => 'Ещё ' . $rest,
+                'data-lightbox-group' => $lightboxGroup,
+            ]);
+        }
+
+        return Html::tag('div', implode('', $items), [
+            'class' => 'image-stack',
+        ]);
+    }
+
+    /**
+     * Заглушка для пустого поля.
+     * @return string
+     */
+    private function renderEmptyPlaceholder(): string
+    {
+        return '<div class="image-placeholder">'
+            . '<i class="icon-image"></i>'
+            . '</div>';
     }
 
     /**

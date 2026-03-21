@@ -9,9 +9,6 @@ use Mitisk\Yii2Admin\widgets\GridView;
 echo GridView::widget([
     'dataProvider' => $provider,
     'filterModel' => $model,
-    'tableOptions' => ['class' => 'wg-table table-all-roles'],
-    'rowOptions' => ['class' => "roles-item"],
-    'contentOptions' => ['class' => "body-text"],
     'columns' => [
         [
             'header'=>'No',
@@ -63,23 +60,22 @@ echo GridView::widget([
             'buttons' => [
                 'login-as' => function ($url, $model, $key) {
                     if (Yii::$app->user->id == $model->id || !Yii::$app->user->can('admin')) {
-                        return '<div style="width: 20px"></div>';
+                        return '';
                     }
                     if ($model->status != \Mitisk\Yii2Admin\models\AdminUser::STATUS_ACTIVE) {
-                        return '<div title="Пользователь неактивен"><div class="item eye disabled"><i class="icon-log-in"></i></div></div>';
+                        return '<span class="btn-action" title="Пользователь неактивен"><i class="icon-log-in"></i></span>';
                     }
                     return Html::a(
-                        '<div class="item eye"><i class="icon-log-in"></i></div>',
+                        '<i class="icon-log-in"></i>',
                         ['user/login-as', 'id' => $model->id],
                         [
                             'title' => 'Войти как этот пользователь',
+                            'class' => 'btn-action view',
                             'data-confirm' => 'Вы уверены, что хотите войти от имени этого пользователя?',
-
                         ]
                     );
                 },
             ],
-            'buttonOptions' => ['class' => '']
         ],
     ],
 ]);

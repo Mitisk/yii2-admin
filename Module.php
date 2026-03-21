@@ -10,6 +10,8 @@ use Mitisk\Yii2Admin\components\ExtAdminController;
 
 final class Module extends \yii\base\Module implements BootstrapInterface
 {
+    public const VERSION = '1.5.0';
+
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
 
@@ -90,23 +92,94 @@ final class Module extends \yii\base\Module implements BootstrapInterface
 
     public function beforeAction($action)
     {
-        // Подключаем пользователя админки и errorAction только в контексте модуля
         if (Yii::$app->has('adminUser')) {
             Yii::$app->set('user', Yii::$app->get('adminUser'));
         }
         Yii::$app->errorHandler->errorAction = 'admin/default/error';
 
-        // Редирект гостя — здесь
-        // Исключаем экшен логина, чтобы не зациклиться
         if (Yii::$app->request->isConsoleRequest === false) {
             $route = $action->uniqueId;
-            $isLogin = ($route === 'admin/default/login' || $route === 'admin/default/check-user');
-            if (Yii::$app->user->isGuest && !$isLogin) {
+            $skipRoutes = [
+                'admin/default/login',
+                'admin/default/check-user',
+                'admin/default/upgrade',
+                'admin/default/run-migrations',
+            ];
+
+            if (Yii::$app->user->isGuest && !in_array($route, $skipRoutes, true)) {
                 Yii::$app->response->redirect(['/admin/default/login'])->send();
                 return false;
             }
+
+            // Проверка версии — редирект на страницу обновления
+            if (!Yii::$app->user->isGuest && !in_array($route, $skipRoutes, true)) {
+                if ($this->needsUpgrade()) {
+                    Yii::$app->response->redirect(['/admin/default/upgrade'])->send();
+                    return false;
+                }
+            }
         }
         return parent::beforeAction($action);
+    }
+
+    /**
+     * Проверяет, отличается ли текущая версия модуля от сохранённой.
+     */
+    public function needsUpgrade(): bool
+    {
+        try {
+            $saved = Yii::$app->settings->get('GENERAL', 'version');
+            return $saved !== self::VERSION;
+        } catch (\Throwable $e) {
+            return true;
+        }
+    }
+
+    private const GITHUB_REPO = 'Mitisk/yii2-admin';
+    private const GITHUB_CACHE_KEY = 'admin_latest_release';
+    private const GITHUB_CACHE_TTL = 3600;
+
+    /**
+     * Возвращает последнюю версию с GitHub или null.
+     * Кеширует результат на 1 час.
+     */
+    public static function getLatestRelease(): ?string
+    {
+        $cache = Yii::$app->cache;
+        $cached = $cache->get(self::GITHUB_CACHE_KEY);
+        if ($cached !== false) {
+            return $cached ?: null;
+        }
+
+        $version = null;
+        try {
+            $url = 'https://api.github.com/repos/'
+                . self::GITHUB_REPO
+                . '/releases/latest';
+            $ctx = stream_context_create([
+                'http' => [
+                    'header' => "User-Agent: Yii2Admin\r\n"
+                        . "Accept: application/vnd.github.v3+json\r\n",
+                    'timeout' => 5,
+                ],
+            ]);
+            $json = @file_get_contents($url, false, $ctx);
+            if ($json) {
+                $data = json_decode($json, true);
+                $tag = $data['tag_name'] ?? '';
+                $version = ltrim($tag, 'vV');
+            }
+        } catch (\Throwable $e) {
+            // Не блокируем работу при ошибке сети
+        }
+
+        $cache->set(
+            self::GITHUB_CACHE_KEY,
+            $version ?: '',
+            self::GITHUB_CACHE_TTL
+        );
+
+        return $version ?: null;
     }
 
     private function buildControllerMapFromDb(): array

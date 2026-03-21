@@ -18,6 +18,7 @@ class PostedField extends Field
         return [
             'attribute' => $column,
             'format' => 'raw',
+            'filter' => ['' => '---', '1' => 'Активно', '0' => 'Неактивно'],
             'value' => function ($data) use ($column) {
                 $isActive = (bool)$data->{$column};
 

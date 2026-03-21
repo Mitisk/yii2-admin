@@ -14,7 +14,6 @@ class TextareaField extends Field
     /** @var int Количество строк */
     public $rows;
 
-    /** @var boolean Только для чтения */
     public $readonly;
 
     /**

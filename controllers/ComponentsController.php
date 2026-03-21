@@ -5,6 +5,7 @@ namespace Mitisk\Yii2Admin\controllers;
 use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\models\AdminControllerMap;
 use Mitisk\Yii2Admin\models\AdminModel;
+use Mitisk\Yii2Admin\models\AdminModelInfo;
 use Mitisk\Yii2Admin\models\AdminUserMap;
 use Yii;
 use yii\filters\AccessControl;
@@ -120,6 +121,17 @@ class ComponentsController extends BaseController
 
         // PRG: после успешного сохранения делаем redirect
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            // Сохраняем инструкцию, если передана
+            if ($model->model_class) {
+                $infoPost = Yii::$app->request->post('AdminModelInfo');
+                if (is_array($infoPost)) {
+                    $criteria = ['model_class' => $model->model_class];
+                    $info = AdminModelInfo::findOne($criteria)
+                        ?? new AdminModelInfo($criteria);
+                    $info->load($infoPost, '');
+                    $info->save();
+                }
+            }
             Yii::$app->session->setFlash('success', 'Компонент обновлен.');
             return $this->redirect(['update', 'id' => $model->id]);
         }
@@ -143,6 +155,7 @@ class ComponentsController extends BaseController
         $modelInstance = null;
         $requiredColumns = [];
         $addedAttributes = [];
+        $publicProps = [];
 
         if ($model->model_class) {
             if (!class_exists($model->model_class)) {
@@ -183,13 +196,25 @@ class ComponentsController extends BaseController
         $auth = Yii::$app->authManager;
         $roles = $auth->getRoles();
 
+        $info = $model->model_class
+            ? AdminModelInfo::findOne(['model_class' => $model->model_class])
+            : null;
+
+        if (!$model->model_class) {
+            $model->alias = $model->name;
+            $model->name = null;
+            $model->model_class = 'app\models\\';
+        }
+
         return $this->render('update', compact(
             'model',
+            'info',
             'columnsNames',
             'modelInstance',
             'requiredColumns',
             'addedAttributes',
             'allColumnsNames',
+            'publicProps',
             'publicStaticMethods',
             'publicSaveMethods',
             'roles'
@@ -273,21 +298,16 @@ class ComponentsController extends BaseController
                             $publicMethods[$method] = $className . '::' . $method . '()';
                         }
                     } else {
-                        //Если есть зависимости через viaTable
+                        // Связи ActiveQuery (hasOne, hasMany, viaTable)
                         $returnType = $reflectionMethod->getReturnType();
 
-                        if ($returnType && $returnType->allowsNull() === false && $returnType->getName() === \yii\db\ActiveQuery::class) {
-                            // Вызываем метод связи, чтобы получить экземпляр ActiveQuery
-                            $query = (new $className)->{$method}();
-
-                            if ($query instanceof \yii\db\ActiveQuery) {
-                                // Проверяем, использует ли связь viaTable
-                                if ($query->via !== null) {
-                                    $publicMethods[$method] = $className . '::' . $method . '()';
-                                }
-                            }
+                        if ($returnType
+                            && $returnType->allowsNull() === false
+                            && $returnType->getName() === \yii\db\ActiveQuery::class
+                        ) {
+                            $publicMethods[$method] = $className
+                                . '::' . $method . '()';
                         }
-
                     }
                 } else  {
                     //Поиск методов для сохранения значений
@@ -299,11 +319,6 @@ class ComponentsController extends BaseController
                 }
 
             }
-        }
-
-        //Добавляем пустую строку
-        if ($publicMethods) {
-            $publicMethods = array_merge([null => '---'], $publicMethods);
         }
 
         return $publicMethods;

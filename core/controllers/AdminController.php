@@ -1,6 +1,7 @@
 <?php
 namespace Mitisk\Yii2Admin\core\controllers;
 
+use Mitisk\Yii2Admin\components\AuditService;
 use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\core\models\AdminModel;
 use Yii;
@@ -109,10 +110,19 @@ class AdminController extends BaseController
     public function actionIndex()
     {
         /** @var AdminModel $model */
-        $model = new AdminModel(\Yii::createObject(['class' => $this->_modelName]));
+        $model = new AdminModel(
+            \Yii::createObject(['class' => $this->_modelName])
+        );
 
-        // Используем метод search для получения ActiveDataProvider
-        $dataProvider = $model->search(ArrayHelper::getValue(\Yii::$app->request->get(), $model->getModel()->formName().'.search'));
+        $filterModel = $model->getModel();
+        $filterModel->load(\Yii::$app->request->get());
+
+        $globalSearch = ArrayHelper::getValue(
+            \Yii::$app->request->get(),
+            $filterModel->formName() . '.search'
+        );
+
+        $dataProvider = $model->search($globalSearch, $filterModel);
 
         return $this->render($this->actionIndexTemplate, [
             'model' => $model,
@@ -132,6 +142,7 @@ class AdminController extends BaseController
         if (\Yii::$app->request->isPost) {
             $modelData = $model->getModel();
             if ($modelData->load(\Yii::$app->request->post()) && $modelData->save()) {
+                AuditService::log('create', $modelData);
                 if($model->afterSave()) {
                     Yii::$app->session->setFlash('success', 'Запись успешно добавлена');
                     return $this->redirect(['index']);
@@ -154,7 +165,18 @@ class AdminController extends BaseController
 
         if (\Yii::$app->request->isPost) {
             $modelData = $model->getModel();
+            $oldAttributes = $modelData->getOldAttributes();
             if ($modelData->load(\Yii::$app->request->post()) && $modelData->save()) {
+                $changed = [];
+                foreach ($modelData->getAttributes() as $attr => $newVal) {
+                    $oldVal = $oldAttributes[$attr] ?? null;
+                    if ((string)$oldVal !== (string)$newVal) {
+                        $changed[$attr] = $oldVal;
+                    }
+                }
+                if ($changed) {
+                    AuditService::log('update', $modelData, $changed);
+                }
                 if($model->afterSave()) {
                     Yii::$app->session->setFlash('success', 'Запись успешно обновлена');
                     return $this->redirect(['index']);
@@ -184,7 +206,9 @@ class AdminController extends BaseController
     {
         $adminModel = $this->findModel();
 
-        if($adminModel?->beforeDelete() && $adminModel?->getModel()?->delete()) {
+        $arModel = $adminModel?->getModel();
+        if($adminModel?->beforeDelete() && $arModel?->delete()) {
+            AuditService::log('delete', $arModel);
             Yii::$app->session->setFlash('success', 'Запись успешно удалена');
         } else {
             Yii::$app->session->setFlash('error', 'Ошибка удаления');
@@ -209,6 +233,7 @@ class AdminController extends BaseController
             if ($record) {
                 $adminModel = new AdminModel($record);
                 if ($adminModel->beforeDelete() && $adminModel->getModel()->delete()) {
+                    AuditService::log('delete', $record);
                     $count++;
                 }
             }

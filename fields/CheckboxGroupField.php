@@ -18,9 +18,6 @@ class CheckboxGroupField extends Field
     /** @var array Values [label, value, selected] */
     public $values;
 
-    /** @var boolean Только для чтения */
-    public $readonly;
-
     /** @var string Публичный статический метод, который возвращает массив значений */
     public $publicStaticMethod;
 

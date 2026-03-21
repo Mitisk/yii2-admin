@@ -100,7 +100,6 @@ class GetGridColumnHelper extends \yii\base\BaseObject
             'urlCreator' => function ($action, $model, $key) {
                 return $this->createActionUrl($action, $key);
             },
-            'buttonOptions' => ['class' => ''],
         ];
     }
 

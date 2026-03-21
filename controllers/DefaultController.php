@@ -3,6 +3,7 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
+use Mitisk\Yii2Admin\Module;
 use Yii;
 use Mitisk\Yii2Admin\models\LoginForm;
 use yii\filters\AccessControl;
@@ -162,6 +163,110 @@ class DefaultController extends BaseController
     }
 
     /**
+     * Страница обновления — проверка и запуск миграций.
+     *
+     * @return string
+     */
+    public function actionUpgrade(): string
+    {
+        $this->layout = false;
+
+        $migrationPath = Yii::getAlias(
+            '@Mitisk/Yii2Admin/migrations'
+        );
+        $pending = $this->getPendingMigrations($migrationPath);
+        $savedVersion = Yii::$app->settings->get(
+            'GENERAL', 'version'
+        ) ?: '0.0.0';
+
+        return $this->render('upgrade', [
+            'currentVersion' => Module::VERSION,
+            'savedVersion' => $savedVersion,
+            'pendingCount' => count($pending),
+            'pendingList' => $pending,
+        ]);
+    }
+
+    /**
+     * AJAX: запуск миграций.
+     *
+     * @return array
+     */
+    public function actionRunMigrations(): Response
+    {
+        $migrationPath = Yii::getAlias(
+            '@Mitisk/Yii2Admin/migrations'
+        );
+        $pending = $this->getPendingMigrations($migrationPath);
+
+        if (empty($pending)) {
+            Yii::$app->settings->set(
+                'GENERAL', 'version',
+                Module::VERSION, 'string'
+            );
+            return $this->asJson([
+                'success' => true,
+                'message' => 'Нет миграций для применения.',
+                'applied' => [],
+            ]);
+        }
+
+        $applied = [];
+        $errors = [];
+
+        foreach ($pending as $migrationName) {
+            $file = $migrationPath . '/'
+                . $migrationName . '.php';
+            if (!is_file($file)) {
+                $errors[] = $migrationName
+                    . ': файл не найден';
+                continue;
+            }
+
+            ob_start();
+            try {
+                include_once $file;
+                $migration = new $migrationName();
+                if ($migration->up() === false) {
+                    $output = ob_get_clean();
+                    $errors[] = $migrationName
+                        . ': ' . ($output ?: 'failed');
+                    break;
+                }
+                ob_end_clean();
+
+                Yii::$app->db->createCommand()->insert(
+                    '{{%migration}}',
+                    [
+                        'version' => $migrationName,
+                        'apply_time' => time(),
+                    ]
+                )->execute();
+
+                $applied[] = $migrationName;
+            } catch (\Throwable $e) {
+                ob_end_clean();
+                $errors[] = $migrationName
+                    . ': ' . $e->getMessage();
+                break;
+            }
+        }
+
+        if (empty($errors)) {
+            Yii::$app->settings->set(
+                'GENERAL', 'version',
+                Module::VERSION, 'string'
+            );
+        }
+
+        return $this->asJson([
+            'success' => empty($errors),
+            'applied' => $applied,
+            'errors' => $errors,
+        ]);
+    }
+
+    /**
      * Logout action.
      *
      * @return Response
@@ -171,5 +276,47 @@ class DefaultController extends BaseController
         Yii::$app->user->logout();
 
         return $this->goHome();
+    }
+
+    /**
+     * Возвращает список непримененных миграций модуля.
+     *
+     * @param string $migrationPath Путь к директории миграций
+     * @return string[] Имена классов миграций
+     */
+    private function getPendingMigrations(
+        string $migrationPath
+    ): array {
+        if (!is_dir($migrationPath)) {
+            return [];
+        }
+
+        $files = glob($migrationPath . '/m*.php');
+        if (!$files) {
+            return [];
+        }
+
+        // Получаем уже применённые миграции
+        try {
+            $appliedRaw = Yii::$app->db
+                ->createCommand(
+                    'SELECT version FROM {{%migration}}'
+                )
+                ->queryColumn();
+        } catch (\Throwable $e) {
+            $appliedRaw = [];
+        }
+        $applied = array_flip($appliedRaw);
+
+        $pending = [];
+        foreach ($files as $file) {
+            $name = pathinfo($file, PATHINFO_FILENAME);
+            if (!isset($applied[$name])) {
+                $pending[] = $name;
+            }
+        }
+
+        sort($pending);
+        return $pending;
     }
 }

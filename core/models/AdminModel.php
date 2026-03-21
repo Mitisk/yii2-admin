@@ -251,11 +251,14 @@ class AdminModel extends BaseObject
     /**
      * Метод для поиска по всем полям модели.
      *
-     * @param string $text Поисковой запрос
+     * @param string|null $text Глобальный поисковой запрос
+     * @param \yii\db\ActiveRecord|null $filterModel Модель с загруженными фильтрами колонок
      * @return ActiveDataProvider
      */
-    public function search($text)
-    {
+    public function search(
+        $text = null,
+        $filterModel = null
+    ) {
         $query = $this->_model->find();
 
         $sortConfig = [];
@@ -268,25 +271,219 @@ class AdminModel extends BaseObject
             ];
         }
 
-        // Создаем провайдер данных
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => $sortConfig,
         ]);
 
-        // Загружаем параметры формы
-        if (!$text || ($text && !is_string($text))) {
-            return $dataProvider;
+        // Глобальный поиск
+        if ($text && is_string($text)) {
+            $searchValue = trim($text);
+            if (!empty($searchValue)) {
+                $query->andFilterWhere(
+                    ['or', ...$this->buildSearchConditions($searchValue)]
+                );
+            }
         }
 
-        // Добавляем условие поиска по всем полям
-        $searchValue = trim($text);
-
-        if (!empty($searchValue)) {
-            $query->andFilterWhere(['or', ...$this->buildSearchConditions($searchValue)]);
+        // Фильтры колонок
+        if ($filterModel !== null) {
+            $this->applyColumnFilters($query, $filterModel);
         }
 
         return $dataProvider;
+    }
+
+    /**
+     * Карта типов полей из конфига компонента: [attribute => type].
+     * @return array
+     */
+    protected function getFieldTypeMap(): array
+    {
+        $map = [];
+        $data = json_decode($this->component->data ?? '[]', true);
+        if (is_array($data)) {
+            foreach ($data as $cfg) {
+                $name = $cfg['name'] ?? null;
+                $type = $cfg['type'] ?? null;
+                if ($name && $type) {
+                    $map[$name] = $type;
+                }
+            }
+        }
+        return $map;
+    }
+
+    /**
+     * Применяет фильтры отдельных колонок из filterModel к запросу.
+     *
+     * @param \yii\db\ActiveQuery $query
+     * @param \yii\db\ActiveRecord $filterModel
+     */
+    protected function applyColumnFilters($query, $filterModel): void
+    {
+        $tableSchema = $filterModel->getTableSchema();
+        if ($tableSchema === null) {
+            return;
+        }
+
+        $fieldTypes = $this->getFieldTypeMap();
+
+        foreach ($filterModel->attributes() as $attribute) {
+            $value = $filterModel->$attribute;
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            $type = $fieldTypes[$attribute] ?? null;
+
+            // UserField — поиск по name/username/email в таблице user
+            if ($type === 'user') {
+                $this->applyUserFilter($query, $attribute, $value);
+                continue;
+            }
+
+            // FileField — есть/нет файлы
+            if ($type === 'file') {
+                $this->applyFileFilter($query, $attribute, $value, $filterModel);
+                continue;
+            }
+
+            // DateField — оператор + дата
+            if ($type === 'date') {
+                $this->applyDateFilter($query, $attribute, $value, $tableSchema);
+                continue;
+            }
+
+            // Стандартная логика для остальных (select, posted, text и т.д.)
+            $column = $tableSchema->getColumn($attribute);
+            if ($column === null) {
+                continue;
+            }
+
+            if ($column->phpType === 'integer' || $column->phpType === 'double') {
+                $query->andFilterWhere([$attribute => $value]);
+            } else {
+                $query->andFilterWhere(['like', $attribute, $value]);
+            }
+        }
+    }
+
+    /**
+     * UserField: поиск по имени/логину/email пользователя.
+     */
+    protected function applyUserFilter($query, string $attribute, $value): void
+    {
+        $userTable = \Mitisk\Yii2Admin\models\AdminUser::tableName();
+        $userIds = (new \yii\db\Query())
+            ->select('id')
+            ->from($userTable)
+            ->where(['or',
+                ['like', 'username', $value],
+                ['like', 'email', $value],
+                ['like', 'name', $value],
+            ])
+            ->column();
+
+        if (!empty($userIds)) {
+            $query->andWhere([$attribute => $userIds]);
+        } else {
+            $query->andWhere('0=1');
+        }
+    }
+
+    /**
+     * FileField: фильтр «есть файлы / нет файлов».
+     */
+    protected function applyFileFilter(
+        $query,
+        string $attribute,
+        $value,
+        $filterModel
+    ): void {
+        $fileTable = \Mitisk\Yii2Admin\models\File::tableName();
+        $modelClass = get_class($filterModel);
+        $tableName = $filterModel->tableName();
+
+        $subQuery = (new \yii\db\Query())
+            ->select('1')
+            ->from($fileTable)
+            ->where([
+                'class_name' => $modelClass,
+                'field_name' => $attribute,
+            ])
+            ->andWhere($fileTable . '.item_id = ' . $tableName . '.id')
+            ->limit(1);
+
+        if ($value === '1') {
+            $query->andWhere(['exists', $subQuery]);
+        } else {
+            $query->andWhere(['not exists', $subQuery]);
+        }
+    }
+
+    /**
+     * DateField: фильтр с оператором (=, >=, <=).
+     * Поддерживает хранение даты как timestamp (int) и как строку.
+     */
+    protected function applyDateFilter(
+        $query,
+        string $attribute,
+        $value,
+        $tableSchema
+    ): void {
+        $ops = \Yii::$app->request->get('_df_op', []);
+        $op = $ops[$attribute] ?? '=';
+        if (!in_array($op, ['=', '>=', '<='], true)) {
+            $op = '=';
+        }
+
+        $column = $tableSchema->getColumn($attribute);
+        if ($column === null) {
+            return;
+        }
+
+        $isInt = in_array(
+            $column->type,
+            ['integer', 'bigint', 'smallint'],
+            true
+        );
+
+        $ts = strtotime($value);
+        if ($ts === false) {
+            return;
+        }
+
+        if ($isInt) {
+            // Timestamp в int — сравниваем числа
+            if ($op === '=') {
+                $dayStart = strtotime(date('Y-m-d', $ts));
+                $dayEnd = $dayStart + 86400;
+                $query->andWhere([
+                    'and',
+                    ['>=', $attribute, $dayStart],
+                    ['<', $attribute, $dayEnd],
+                ]);
+            } else {
+                $query->andWhere([$op, $attribute, $ts]);
+            }
+        } else {
+            // Строковая дата (datetime, date, varchar)
+            $dateStr = date('Y-m-d', $ts);
+            if ($op === '=') {
+                $query->andFilterWhere([
+                    'like', $attribute, $dateStr,
+                ]);
+            } elseif ($op === '>=') {
+                $query->andWhere(
+                    ['>=', $attribute, $dateStr . ' 00:00:00']
+                );
+            } else {
+                $query->andWhere(
+                    ['<=', $attribute, $dateStr . ' 23:59:59']
+                );
+            }
+        }
     }
 
     /**

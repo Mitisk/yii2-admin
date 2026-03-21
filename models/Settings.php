@@ -21,6 +21,14 @@ use Yii;
 class Settings extends \yii\db\ActiveRecord
 {
     /**
+     * In-memory кеш настроек, индексированный по model_name.
+     * Формат: ['ModelName' => ['attribute' => Settings, ...], ...]
+     * null для model_name означает глобальные (без model_name) настройки.
+     * @var array
+     */
+    private static array $_cache = [];
+
+    /**
      * {@inheritdoc}
      */
     public static function tableName() : string
@@ -61,6 +69,40 @@ class Settings extends \yii\db\ActiveRecord
     }
 
     /**
+     * Очистить in-memory кеш настроек (полностью или для конкретной модели).
+     * @param string|null $modelName Имя модели для очистки, или null для полной очистки.
+     */
+    public static function clearCache(?string $modelName = null) : void
+    {
+        if ($modelName !== null) {
+            unset(static::$_cache[$modelName]);
+        } else {
+            static::$_cache = [];
+        }
+    }
+
+    /**
+     * Загрузить и закешировать все настройки для данного model_name.
+     * @param string $modelName
+     */
+    private static function warmCache(string $modelName) : void
+    {
+        if (array_key_exists($modelName, static::$_cache)) {
+            return;
+        }
+        $settings = static::find()
+            ->where(['model_name' => $modelName])
+            ->orderBy(['id' => SORT_ASC])
+            ->all();
+        $map = [];
+        foreach ($settings as $s) {
+            // Последняя запись с тем же attribute перезапишет предыдущие (эквивалент ORDER BY id DESC + LIMIT 1)
+            $map[$s->attribute] = $s;
+        }
+        static::$_cache[$modelName] = $map;
+    }
+
+    /**
      * Получить значение настройки
      * @param string|null $modelName
      * @param string $attribute
@@ -71,8 +113,11 @@ class Settings extends \yii\db\ActiveRecord
     public static function getValue(string|null $modelName = null, string $attribute = '', mixed $default = null, bool $getOnlyValue = true) : mixed
     {
         if ($modelName) {
-            $setting = static::find()->where(['model_name' => $modelName, 'attribute' => $attribute])->orderBy(['id' => SORT_DESC])->one();
+            // Используем in-memory кеш: загружаем все настройки модели одним запросом
+            static::warmCache($modelName);
+            $setting = static::$_cache[$modelName][$attribute] ?? null;
         } else {
+            // Глобальный поиск без model_name — редкий кейс, оставляем прямой запрос
             $setting = static::find()->where(['attribute' => $attribute])->orderBy(['id' => SORT_DESC])->one();
         }
 
@@ -110,7 +155,10 @@ class Settings extends \yii\db\ActiveRecord
         $setting->value = (string)$value;
         $setting->type = $type;
         $setting->updated_at = time();
-        return $setting->save();
+        $result = $setting->save();
+        // Инвалидируем кеш для этой модели, чтобы следующий getValue получил свежие данные
+        static::clearCache($modelName);
+        return $result;
     }
 
     /**

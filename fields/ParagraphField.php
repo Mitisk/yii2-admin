@@ -5,9 +5,6 @@ use yii\helpers\Html;
 
 class ParagraphField extends Field
 {
-    /** @var int Тип [p, address, blockquote, canvas, output] */
-    public $subtype;
-
     /**
      * @inheritdoc
      * @return string

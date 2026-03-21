@@ -95,10 +95,7 @@ final class IndexCenterComponentWidget extends Widget
         $componentHtml = GridView::widget([
             'dataProvider' => $dataProvider,
             'filterModel' => $adminModelWrapper->getModel(),
-            'tableOptions' => ['class' => 'wg-table table-all-roles'],
-            'rowOptions' => ['class' => 'roles-item'],
-            'contentOptions' => ['class' => 'body-text'],
-            'columns' => $adminModelWrapper->getGridColumns(),
+            'columns' => $adminModelWrapper->getGridColumns()
         ]);
 
         // Возвращаем итоговый рендер секции.

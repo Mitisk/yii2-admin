@@ -41,6 +41,13 @@ class FieldsHelper extends BaseObject
             case 'active':
                 return 'posted';
                 break;
+            case 'user_id':
+            case 'author_id':
+            case 'created_by':
+            case 'updated_by':
+            case 'owner_id':
+                return 'user';
+                break;
             default:
                 return 'text';
                 break;
@@ -78,7 +85,17 @@ class FieldsHelper extends BaseObject
 
         if ($field->publicStaticMethod) {
             $reflectionClass = $field->model->getReflectionClass();
-            $reflectionMethod = $reflectionClass->getMethod($field->publicStaticMethod);
+
+            // Извлекаем имя метода, если сохранён полный путь
+            $methodName = $field->publicStaticMethod;
+            if (str_contains($methodName, '::')) {
+                $methodName = rtrim(
+                    substr($methodName, strrpos($methodName, '::') + 2),
+                    '()'
+                );
+            }
+
+            $reflectionMethod = $reflectionClass->getMethod($methodName);
 
             if ($reflectionMethod) {
                 // Создаем экземпляр модели
@@ -99,9 +116,16 @@ class FieldsHelper extends BaseObject
                     // Получаем данные из базы данных
                     $queryResult = $query->all();
 
-                    // Преобразуем результат в массив ключ-значение
+                    // Определяем поле для отображения
+                    $labelAttr = self::detectLabelAttribute(
+                        $query->modelClass
+                    );
+
                     foreach ($queryResult as $item) {
-                        $values[$item->id] = ArrayHelper::getValue($item, 'name'); // Заменить 'id' и 'name' на соответствующие поля
+                        $values[$item->id] = ArrayHelper::getValue(
+                            $item,
+                            $labelAttr
+                        ) ?? (string)$item->id;
                     }
 
                 } elseif (is_array($result)) {
@@ -129,9 +153,63 @@ class FieldsHelper extends BaseObject
     }
 
     /**
-     * Проверка на картинку
-     * @param string|null $localPath Локальный путь
-     * @param string $publicPath Публичный путь
+     * Определяет подходящий атрибут для отображения в списке.
+     *
+     * @param string $modelClass FQCN модели
+     *
+     * @return string
+     */
+    public static function detectLabelAttribute(
+        string $modelClass
+    ): string {
+        // Приоритет: admin_label из компонента
+        $component = \Mitisk\Yii2Admin\models\AdminModel::find()
+            ->select('admin_label')
+            ->where(
+                [
+                    'model_class' => $modelClass,
+                    'view' => 1,
+                ]
+            )
+            ->one();
+
+        if ($component && $component->admin_label) {
+            return $component->admin_label;
+        }
+
+        $candidates = [
+            'name', 'title', 'label', 'key',
+            'username', 'email', 'slug',
+        ];
+
+        $instance = new $modelClass();
+        foreach ($candidates as $attr) {
+            if ($instance->hasAttribute($attr)) {
+                return $attr;
+            }
+        }
+
+        // Первый строковый атрибут (не id и не *_id)
+        foreach ($instance->attributes() as $attr) {
+            if ($attr === 'id' || str_ends_with($attr, '_id')) {
+                continue;
+            }
+            $schema = $instance::getTableSchema();
+            $col = $schema->getColumn($attr);
+            if ($col && $col->phpType === 'string') {
+                return $attr;
+            }
+        }
+
+        return 'id';
+    }
+
+    /**
+     * Проверка на картинку.
+     *
+     * @param string|null $localPath  Локальный путь
+     * @param string      $publicPath Публичный путь
+     *
      * @return bool true если картинка
      */
     public static function isImageFile(?string $localPath, string $publicPath): bool

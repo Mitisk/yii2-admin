@@ -23,6 +23,7 @@ use yii\helpers\ArrayHelper;
  * @property int|null $view
  * @property string $default_sort_attribute
  * @property int $default_sort_direction
+ * 
  */
 class AdminModel extends \yii\db\ActiveRecord
 {
@@ -134,10 +135,66 @@ class AdminModel extends \yii\db\ActiveRecord
                 'rule' => $this->model_class . '\view',
                 'title' => $this->name,
             ]);
+
+            // Создаём RBAC-разрешения и назначаем роли manager
+            if ($this->model_class) {
+                $this->ensureManagerPermissions($this->model_class);
+            }
         } elseif (!$this->in_menu && isset($changedAttributes['in_menu'])) {
             // Удаляем элемент из меню, если флаг in_menu изменился на false
             Menu::removeFromMenu('admin', '/admin/' . $this->alias . '/');
         }
         parent::afterSave($insert, $changedAttributes);
+    }
+
+    /**
+     * Создаёт RBAC-разрешения (view, create, update, delete) для модели
+     * и назначает их роли manager, если они ещё не назначены.
+     *
+     * @param string $modelClass Namespace модели
+     *
+     * @return void
+     */
+    protected function ensureManagerPermissions(string $modelClass): void
+    {
+        $auth = Yii::$app->authManager;
+        if (!$auth) {
+            return;
+        }
+
+        $managerRole = $auth->getRole('manager');
+        if (!$managerRole) {
+            return;
+        }
+
+        $actions = [
+            'view' => 'Просмотр',
+            'create' => 'Создание',
+            'update' => 'Изменение',
+            'delete' => 'Удаление',
+        ];
+
+        $modelTitle = \yii\helpers\StringHelper::basename($modelClass);
+
+        foreach ($actions as $action => $actionTitle) {
+            $permissionName = $modelClass . '\\' . $action;
+
+            // Создаём разрешение, если не существует
+            $permission = $auth->getPermission($permissionName);
+            if (!$permission) {
+                $permission = $auth->createPermission($permissionName);
+                $permission->description = "{$actionTitle}: {$modelTitle}";
+                $auth->add($permission);
+            }
+
+            // Назначаем разрешение роли manager, если ещё не назначено
+            if (!$auth->hasChild($managerRole, $permission)) {
+                try {
+                    $auth->addChild($managerRole, $permission);
+                } catch (\Exception $e) {
+                    Yii::error("Ошибка назначения разрешения {$permissionName} роли manager: " . $e->getMessage());
+                }
+            }
+        }
     }
 }

@@ -10,8 +10,9 @@ $this->title = 'Управление ролями';
 $this->params['breadcrumbs'][] = $this->title;
 
 $this->registerCss("
-.wg-table.table-all-roles .roles-item>div:first-child, .wg-table.table-all-roles ul.table-title li:first-child {
-    width: 300px !important;
+.modern-table th:first-child,
+.modern-table td:first-child {
+    width: 300px;
 }");
 ?>
 <?php Pjax::begin(['id' => 'roles-grid']); ?>
@@ -41,9 +42,6 @@ $this->registerCss("
 
         <?= GridView::widget([
             'dataProvider' => $dataProvider,
-            'tableOptions' => ['class' => 'wg-table table-all-roles'],
-            'rowOptions' => ['class' => "roles-item"],
-            'contentOptions' => ['class' => "body-text"],
             'columns' => [
                 [
                     'attribute' => 'description',
@@ -82,42 +80,26 @@ $this->registerCss("
                 ],
 
                 [
-                    'class' => 'yii\grid\ActionColumn',
-                    'header' => 'Действия',
+                    'class' => 'Mitisk\Yii2Admin\widgets\ActionColumn',
                     'template' => '{view} {update} {delete}',
                     'urlCreator' => function ($action, $model, $key, $index) {
                         return [$action, 'name' => $model['name']];
                     },
                     'buttons' => [
-                        'view' => function ($url, $model, $key) {
-                            return Html::a('<i class="icon-eye"></i>', $url, [
-                                'title' => 'Просмотр',
-                                'class' => 'item eye',
-                            ]);
-                        },
-                        'update' => function ($url, $model, $key) {
-                            return Html::a('<i class="icon-edit-3"></i>', $url, [
-                                'title' => 'Редактировать',
-                                'class' => 'item edit',
-                            ]);
-                        },
                         'delete' => function ($url, $model, $key) {
-                            // Защищенные роли нельзя удалять
                             if (in_array($model['name'], ['admin', 'superAdminRole'])) {
-                                return '<span class="item disabled" title="Защищена от удаления">
+                                return '<span class="btn-action" title="Защищена от удаления">
                                         <i class="fa-light fa-shield-keyhole"></i>
                                     </span>';
                             }
-
                             if ($model['usersCount'] > 0) {
-                                return '<span class="item disabled" title="Роль используется">
+                                return '<span class="btn-action" title="Роль используется">
                                         <i class="fa-light fa-shield-user"></i>
                                     </span>';
                             }
-
                             return Html::a('<i class="icon-trash-2"></i>', $url, [
                                 'title' => 'Удалить',
-                                'class' => 'item trash',
+                                'class' => 'btn-action delete',
                                 'data-confirm' => 'Вы уверены, что хотите удалить роль "' . $model['name'] . '"?',
                                 'data-method' => 'post',
                             ]);
