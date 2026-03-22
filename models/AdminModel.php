@@ -57,7 +57,11 @@ class AdminModel extends \yii\db\ActiveRecord
             [['alias'], 'unique'],
             ['alias', fn($attribute) => \Mitisk\Yii2Admin\components\ReservedAlias::validateForModel($this, $attribute)],
             [['alias', 'model_class', 'name', 'admin_label'], 'trim'],
-            [['table_name', 'model_class', 'name', 'alias', 'admin_label', 'default_sort_attribute'], 'string', 'max' => 255],
+            [
+                ['table_name', 'model_class', 'name', 'alias',
+                 'admin_label', 'default_sort_attribute', 'file_path'],
+                'string', 'max' => 255,
+            ],
             [['default_sort_direction'], 'default', 'value' => SORT_ASC],
         ];
     }
@@ -105,6 +109,7 @@ class AdminModel extends \yii\db\ActiveRecord
             'default_sort_attribute' => 'Поле сортировки',
             'default_sort_direction' => 'Порядок сортировки',
             'attribute_labels' => 'Названия полей',
+            'file_path' => 'Путь для файлов на сервере',
         ];
     }
 

@@ -14,7 +14,7 @@ use yii\helpers\Html;
         'uncheck' => 0,
     ]) ?>
     <label for="<?= $fieldId ?>" class="body-text">
-        <?php // Html::encode($field->label) ?>
+        <?= Html::encode($field->label) ?>
     </label>
     <div class="col-lg-7 invalid-feedback"></div>
 </div>

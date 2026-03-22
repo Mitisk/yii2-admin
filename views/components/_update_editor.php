@@ -136,6 +136,25 @@ echo $form->field($model, 'model_class')
     );
 ?>
             </fieldset>
+
+            <fieldset class="name">
+<?php
+echo $form->field($model, 'file_path')
+    ->textInput(
+        [
+            'maxlength'   => 255,
+            'placeholder' => 'Например: /web/items/',
+        ]
+    )
+    ->label('Путь для файлов на сервере')
+    ->hint(
+        '<i class="fas fa-info-circle me-1"></i>'
+        . 'Если указан — файлы этого компонента будут'
+        . ' сохраняться и отдаваться по этому пути'
+        . ' вместо глобального хранилища (S3/FTP).'
+    );
+?>
+            </fieldset>
         </div>
 
         <?php if ($allColumnsNames) : ?>

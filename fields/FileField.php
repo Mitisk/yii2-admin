@@ -28,7 +28,13 @@ class FileField extends Field
             'value' => function ($data) use ($column, $maxVisible) {
                 /** @var File[] $files */
                 $files = FieldsHelper::getFiles($data, $this->name);
+
+                // Fallback: значение хранится в атрибуте модели
                 if (empty($files)) {
+                    $url = $this->_resolveAttributeUrl($data);
+                    if ($url !== null) {
+                        return $this->_renderInlineImage($url, $data);
+                    }
                     return $this->renderEmptyPlaceholder();
                 }
 
@@ -156,7 +162,10 @@ class FileField extends Field
     public function renderField(): string
     {
         /** @var File[] $files */
-        $files = FieldsHelper::getFiles($this->model->getModel(), $this->name);
+        $files = FieldsHelper::getFiles(
+            $this->model->getModel(),
+            $this->name
+        );
         $preloadedFiles = [];
 
         foreach ($files as $file) {
@@ -168,9 +177,33 @@ class FileField extends Field
                 "data" => [
                     'alt' => $file->alt_attribute,
                     'file_id' => $file->id,
-                    'field_name' => $this->name
-                    ],
+                    'field_name' => $this->name,
+                ],
             ];
+        }
+
+        // Fallback: файл в атрибуте модели + file_path
+        if (empty($preloadedFiles)) {
+            $url = $this->_resolveAttributeUrl(
+                $this->model->getModel()
+            );
+            if ($url !== null) {
+                $model = $this->model->getModel();
+                $raw = $model->getAttribute($this->name);
+                $preloadedFiles[] = [
+                    "type" => \yii\helpers\FileHelper::getMimeTypeByExtension(
+                        $raw
+                    ) ?? 'application/octet-stream',
+                    "size" => 0,
+                    "file" => $url,
+                    "name" => basename($raw),
+                    "data" => [
+                        'alt' => '',
+                        'file_id' => 0,
+                        'field_name' => $this->name,
+                    ],
+                ];
+            }
         }
 
         $preloadedFiles = json_encode($preloadedFiles);
@@ -179,7 +212,7 @@ class FileField extends Field
             'field' => $this,
             'model' => $this->model,
             'fieldId' => $this->fieldId,
-            'files' => $preloadedFiles
+            'files' => $preloadedFiles,
         ]);
     }
 
@@ -189,13 +222,108 @@ class FileField extends Field
      */
     public function renderView(): string
     {
-        $files = FieldsHelper::getFiles($this->model->getModel(), $this->name);
+        $files = FieldsHelper::getFiles(
+            $this->model->getModel(),
+            $this->name
+        );
         if ($files) {
             return $this->render('_file_view', [
                 'files' => $files,
             ]);
         }
+
+        // Fallback: файл в атрибуте модели + file_path
+        $url = $this->_resolveAttributeUrl(
+            $this->model->getModel()
+        );
+        if ($url !== null) {
+            return Html::img($url, [
+                'style' => 'max-width:320px;max-height:240px;',
+            ]);
+        }
+
         return '';
+    }
+
+    /**
+     * Строит URL из значения атрибута модели + file_path компонента.
+     * Возвращает null, если значение пустое или file_path не задан.
+     *
+     * @param \yii\db\BaseActiveRecord $model
+     *
+     * @return string|null
+     */
+    private function _resolveAttributeUrl($model): ?string
+    {
+        if (!$model->hasAttribute($this->name)) {
+            return null;
+        }
+
+        $raw = $model->getAttribute($this->name);
+        if ($raw === null || $raw === '' || is_numeric($raw)) {
+            return null;
+        }
+
+        $filePath = $this->_getComponentFilePath();
+
+        // Если значение уже содержит путь (начинается с /)
+        // используем как есть
+        if (str_starts_with($raw, '/')) {
+            return $raw;
+        }
+
+        // Нужен file_path чтобы построить URL
+        if ($filePath === null) {
+            return null;
+        }
+
+        return rtrim($filePath, '/') . '/' . ltrim($raw, '/');
+    }
+
+    /**
+     * Рендерит inline-картинку для GridView (fallback).
+     *
+     * @param string                   $url  URL файла
+     * @param \yii\db\BaseActiveRecord $data Модель записи
+     *
+     * @return string
+     */
+    private function _renderInlineImage(string $url, $data): string
+    {
+        $ext = strtolower(
+            pathinfo($url, PATHINFO_EXTENSION)
+        );
+        $imageExts = [
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg',
+        ];
+
+        if (in_array($ext, $imageExts, true)) {
+            $group = $this->name . '-' . $data->id;
+            return Html::tag(
+                'div',
+                Html::a(
+                    Html::img($url, [
+                        'alt' => basename($url),
+                        'style' => 'z-index:1',
+                    ]),
+                    $url,
+                    [
+                        'data' => [
+                            'lightbox' => $group,
+                            'title' => basename($url),
+                        ],
+                        'class' => 'stack-image',
+                    ]
+                ),
+                ['class' => 'image-stack']
+            );
+        }
+
+        return Html::a(
+            Html::encode(basename($url)),
+            $url,
+            ['target' => '_blank', 'rel' => 'noopener']
+        );
     }
 
     /**
@@ -264,82 +392,149 @@ class FileField extends Field
         }
 
         //Добавляем новые файлы
-        if($files) {
-            $storage = \Yii::createObject(\Mitisk\Yii2Admin\components\FileStorage::class);
-            $storageType = $storage->getStorageType();
+        if ($files) {
+            $componentFilePath = $this->_getComponentFilePath();
+
+            $storage = \Yii::createObject(
+                \Mitisk\Yii2Admin\components\FileStorage::class
+            );
+            $storageType = $componentFilePath
+                ? 'local'
+                : $storage->getStorageType();
 
             $i = 0;
             foreach ($files as $file) {
-                // Debug logging
-                try {
-                    $logPath = \Yii::getAlias('@webroot/file_field_debug.log');
-                    $msg = date('Y-m-d H:i:s') . " - FileField save. Detected Storage Type: '$storageType'. File: '{$file->name}'. Temp: '{$file->tempName}'\n";
-                    @file_put_contents($logPath, $msg, FILE_APPEND);
-                } catch (\Exception $e) {}
-
                 $i++;
-                // Generate unique filename
                 $filename = uniqid() . '.' . $file->extension;
 
-                // Если S3, добавляем папку с именем модели
-                if ($storageType === 's3') {
-                    $modelName = strtolower(StringHelper::basename(get_class($this->model->getModel())));
-                    $filename = $modelName . '/' . $filename;
+                // Серверный путь компонента — сохраняем локально
+                if ($componentFilePath) {
+                    $savedPath = $this->_saveToComponentPath(
+                        $file->tempName,
+                        $filename,
+                        $componentFilePath
+                    );
+                } else {
+                    // Если S3, добавляем папку с именем модели
+                    if ($storageType === 's3') {
+                        $modelName = strtolower(
+                            StringHelper::basename(
+                                get_class($this->model->getModel())
+                            )
+                        );
+                        $filename = $modelName . '/' . $filename;
+                    }
+                    $savedPath = $storage->save(
+                        $file->tempName,
+                        $filename
+                    );
                 }
-                
-                // Use FileStorage to save
-                // For local storage, we want to maintain the 'uploads/' directory convention if not handled by FileStorage settings?
-                // FileStorage::saveLocal uses 'local_upload_dir' setting, defaulting to 'uploads/'. 
-                // That seems compatible with current '/uploads/'.
-                
-                $savedPath = $storage->save($file->tempName, $filename);
 
                 if ($savedPath !== false) {
-                     $fileModel = new File();
-                     $fileModel->class_name = get_class($this->model->getModel());
-                     $fileModel->item_id = $this->model->getModel()->id;
-                     $fileModel->field_name = $this->name;
-                     $fileModel->filename = $file->name;
-                     $fileModel->file_size = $file->size;
-                     $fileModel->mime_type = $file->type;
-                     $fileModel->storage_type = $storageType;
-                     $fileModel->alt_attribute = ArrayHelper::getValue($tempFiles, $i . '.alt');
+                    $fileModel = new File();
+                    $fileModel->class_name = get_class(
+                        $this->model->getModel()
+                    );
+                    $fileModel->item_id = $this->model
+                        ->getModel()->id;
+                    $fileModel->field_name = $this->name;
+                    $fileModel->filename = $file->name;
+                    $fileModel->file_size = $file->size;
+                    $fileModel->mime_type = $file->type;
+                    $fileModel->storage_type = $storageType;
+                    $fileModel->alt_attribute = ArrayHelper::getValue(
+                        $tempFiles,
+                        $i . '.alt'
+                    );
 
-                     // Handle path differences for legacy local support vs new storage
-                     if ($storageType === 'local') {
-                         // Previous logic stored '/web/uploads/filename'
-                         // FileStorage::saveLocal returns 'uploads/filename' (relative to webroot usually)
-                         // We might need to prepend '/web' if the application relies on it?
-                         // Looking at line 190: $fileModel->path = '/web' . $filePath; where $filePath was '/uploads/...'
-                         // So it was storing '/web/uploads/...'
-                         // Let's replicate this prefix if it's really needed, OR rely on File::getUrl/isImage handling it.
-                         // But to be safe and consistent with previous "FileField" behavior:
-                         $fileModel->path = '/web/' . ltrim($savedPath, '/'); 
-                     } else {
-                         // For S3/FTP, store the key/path as is
-                         $fileModel->path = $savedPath;
-                     }
+                    if ($componentFilePath) {
+                        // Путь компонента уже содержит /web/
+                        $fileModel->path = '/'
+                            . ltrim($savedPath, '/');
+                    } elseif ($storageType === 'local') {
+                        $fileModel->path = '/web/'
+                            . ltrim($savedPath, '/');
+                    } else {
+                        $fileModel->path = $savedPath;
+                    }
 
-                     if ($fileModel->save()) {
-                         // Если у модели есть поле (например file_id), записываем туда ID файла
-                         // Делаем это только если это не мультизагрузка, или берем последний
-                         // Обычно привязка ID идет для одиночных полей.
-                         $relatedModel = $this->model->getModel();
-                         if ($relatedModel->hasAttribute($this->name)) {
-                             $relatedModel->setAttribute($this->name, $fileModel->id);
-                             $relatedModel->save(false, [$this->name]);
-                         }
-                     } else {
-                         $this->model->getModel()->addError($this->name, 'Ошибка при сохранении записи файла в БД');
-                     }
+                    if ($fileModel->save()) {
+                        $relatedModel = $this->model->getModel();
+                        if ($relatedModel->hasAttribute($this->name)) {
+                            $relatedModel->setAttribute(
+                                $this->name,
+                                $fileModel->id
+                            );
+                            $relatedModel->save(
+                                false,
+                                [$this->name]
+                            );
+                        }
+                    } else {
+                        $this->model->getModel()->addError(
+                            $this->name,
+                            'Ошибка при сохранении записи файла в БД'
+                        );
+                    }
                 } else {
-                    $this->model->getModel()->addError($this->name, 'Невозможно сохранить файл "' . $file->name . '"');
+                    $this->model->getModel()->addError(
+                        $this->name,
+                        'Невозможно сохранить файл "'
+                            . $file->name . '"'
+                    );
                     return false;
                 }
             }
         }
 
         return true;
+    }
+
+    /**
+     * Возвращает серверный путь для файлов из настроек компонента.
+     *
+     * @return string|null Путь или null, если не задан
+     */
+    private function _getComponentFilePath(): ?string
+    {
+        $filePath = $this->model->component->file_path ?? null;
+        if ($filePath === null || $filePath === '') {
+            return null;
+        }
+        return rtrim($filePath, '/') . '/';
+    }
+
+    /**
+     * Сохраняет файл в серверную директорию компонента.
+     *
+     * @param string $sourcePath Путь к временному файлу
+     * @param string $filename   Имя файла для сохранения
+     * @param string $filePath   Путь из настроек компонента
+     *
+     * @return string|false Относительный путь или false
+     */
+    private function _saveToComponentPath(
+        string $sourcePath,
+        string $filename,
+        string $filePath
+    ): string|false {
+        // Приводим file_path к абсолютному пути на диске
+        // Например: /web/items/ → @app/web/items/
+        $absDir = \Yii::getAlias('@app')
+            . '/' . ltrim($filePath, '/');
+
+        if (!is_dir($absDir)) {
+            \yii\helpers\FileHelper::createDirectory($absDir);
+        }
+
+        $target = $absDir . $filename;
+        if (rename($sourcePath, $target)) {
+            // Возвращаем путь без ведущего /web/
+            // (prefix /web/ добавится при записи в File.path)
+            return ltrim($filePath, '/') . $filename;
+        }
+
+        return false;
     }
 
     /**

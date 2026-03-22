@@ -291,8 +291,16 @@ class ComponentsController extends BaseController
                 //Поиск методов, возвращающих массив значений
                 if (!$forSave) {
                     if ($reflectionMethod->isStatic()) {
+                        // Пропускаем методы с обязательными параметрами
+                        if ($reflectionMethod->getNumberOfRequiredParameters() > 0) {
+                            continue;
+                        }
                         // Вызываем метод статически
-                        $returnValue = $reflectionMethod->invoke(null);
+                        try {
+                            $returnValue = $reflectionMethod->invoke(null);
+                        } catch (\Throwable) {
+                            continue;
+                        }
                         // Проверяем, возвращает ли метод массив
                         if (is_array($returnValue)) {
                             $publicMethods[$method] = $className . '::' . $method . '()';

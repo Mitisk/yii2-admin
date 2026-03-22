@@ -15,26 +15,29 @@ class PostedField extends Field
      */
     public function renderList(string $column): array
     {
+        $knownNames = ['active', 'published', 'status'];
+        $isKnown = in_array($column, $knownNames, true);
+        $onLabel = $isKnown ? 'Активно' : Html::encode($this->label);
+        $offLabel = $isKnown ? 'Неактивно' : Html::encode($this->label);
+
         return [
             'attribute' => $column,
             'format' => 'raw',
-            'filter' => ['' => '---', '1' => 'Активно', '0' => 'Неактивно'],
-            'value' => function ($data) use ($column) {
+            'filter' => ['' => '---', '1' => $onLabel, '0' => $offLabel],
+            'value' => function ($data) use ($column, $isKnown, $onLabel, $offLabel) {
                 $isActive = (bool)$data->{$column};
 
+                $labelText = $isActive ? $onLabel : $offLabel;
+
                 if (!(\Yii::$app->user->can(get_class($data) . '\update') || \Yii::$app->user->can('admin'))) {
-                     return $isActive 
-                        ? '<div class="block-available">Активно</div>'
-                        : '<div class="block-not-available">Неактивно</div>';
+                    $cls = $isActive ? 'block-available' : 'block-not-available';
+                    return '<div class="' . $cls . '">' . $labelText . '</div>';
                 }
 
                 $statusClass = $isActive ? 'block-available' : 'block-not-available';
-                $labelText = $isActive ? 'Активно' : 'Неактивно';
                 $checked = $isActive ? 'checked' : '';
-                
-                // Get the primary key for the AJAX update
+
                 $id = $data->getPrimaryKey();
-                // Model class name for the controller to know what to update
                 $modelClass = addslashes(get_class($data));
 
                 return <<<HTML
@@ -64,9 +67,22 @@ HTML;
      */
     public function renderView(): string
     {
-        $value = Html::getAttributeValue($this->model->getModel(), $this->name);
-        return $value
-            ? '<div class="block-available">Активно</div>'
-            : '<div class="block-not-available">Неактивно</div>';
+        $value = Html::getAttributeValue(
+            $this->model->getModel(),
+            $this->name
+        );
+
+        $knownNames = ['active', 'published', 'status'];
+        if (in_array($this->name, $knownNames, true)) {
+            $label = $value ? 'Активно' : 'Неактивно';
+        } else {
+            $label = Html::encode($this->label);
+        }
+
+        $cls = $value
+            ? 'block-available'
+            : 'block-not-available';
+        return '<div class="' . $cls . '">'
+            . $label . '</div>';
     }
 }
