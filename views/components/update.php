@@ -92,4 +92,6 @@ $form = ActiveForm::begin(
 
 <?php ActiveForm::end() ?>
 
+<?php require __DIR__ . '/_update_links_js.php' ?>
+<?php require __DIR__ . '/_update_link_slots_js.php' ?>
 <?php require __DIR__ . '/_update_canvas_js.php' ?>

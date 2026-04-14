@@ -10,7 +10,7 @@ use Mitisk\Yii2Admin\components\ExtAdminController;
 
 final class Module extends \yii\base\Module implements BootstrapInterface
 {
-    public const VERSION = '1.5.1';
+    public const VERSION = '1.5.2';
 
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;

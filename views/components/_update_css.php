@@ -267,5 +267,167 @@ $this->registerCss(<<<CSS
     background: #fee2e2; color: #dc2626;
     box-shadow: 0 1px 2px rgba(0,0,0,.05);
 }
+
+/* ─── Пользовательские ссылки-кнопки ──────────────────── */
+.admin-link-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 8px; font-size: 13px;
+    color: #1e293b; background: #f1f5f9;
+    border: 1px solid rgba(0,0,0,.06); text-decoration: none;
+    transition: transform .08s ease, box-shadow .12s ease;
+    line-height: 1.2; white-space: nowrap;
+}
+.admin-link-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,.08); color: #0f172a;
+    text-decoration: none;
+}
+.admin-link-btn--sm { padding: 3px 8px; font-size: 12px; }
+.admin-link-btn.pastel-blue   { background: #dbeafe; }
+.admin-link-btn.pastel-green  { background: #dcfce7; }
+.admin-link-btn.pastel-pink   { background: #fce7f3; }
+.admin-link-btn.pastel-yellow { background: #fef9c3; }
+.admin-link-btn.pastel-purple { background: #ede9fe; }
+.admin-link-btn.pastel-orange { background: #ffedd5; }
+.admin-link-btn.pastel-cyan   { background: #cffafe; }
+.admin-link-btn.pastel-red    { background: #fee2e2; }
+.admin-link-btn.pastel-gray   { background: #e5e7eb; }
+.admin-link-btn-group {
+    display: inline-flex; flex-wrap: wrap; gap: 4px;
+}
+
+/* ─── Таб «Ссылки» ─────────────────────────────────────── */
+.links-editor { display: flex; flex-direction: column; gap: 12px; }
+.links-editor__head {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.links-editor__empty {
+    padding: 24px; text-align: center; color: #64748b;
+    border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc;
+}
+.link-card {
+    display: grid; grid-template-columns: 24px 1fr 220px;
+    gap: 12px; padding: 12px; border: 1px solid #e2e8f0;
+    border-radius: 10px; background: #fff;
+    align-items: start;
+}
+.link-card__drag {
+    cursor: grab; color: #94a3b8; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    height: 28px;
+}
+.link-card__body { display: flex; flex-direction: column; gap: 8px; }
+.link-card__row {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+}
+.link-card__row input[type=text] {
+    flex: 1 1 200px; min-width: 120px;
+    padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px;
+    font-size: 13px;
+}
+.link-card__preview-wrap {
+    display: flex; flex-direction: column; gap: 6px; align-items: flex-end;
+}
+.link-card__preview {
+    min-height: 28px; display: flex; align-items: center;
+    justify-content: flex-end;
+}
+.link-card__delete {
+    background: none; border: 0; color: #dc2626; cursor: pointer;
+    font-size: 13px; padding: 2px 6px;
+}
+.link-card__delete:hover { text-decoration: underline; }
+.link-card__targets label {
+    font-size: 12px; color: #475569; margin-right: 10px;
+}
+.link-card__icon-btn, .link-card__color-btn {
+    padding: 4px 10px; font-size: 12px; border: 1px solid #e2e8f0;
+    border-radius: 6px; background: #f8fafc; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.link-card__color-swatch {
+    width: 14px; height: 14px; border-radius: 4px; display: inline-block;
+    border: 1px solid rgba(0,0,0,.08);
+}
+.link-card__hint {
+    font-size: 11px; color: #64748b;
+}
+
+/* Палитра в попапе */
+.link-color-palette {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+    padding: 10px;
+}
+.link-color-palette__item {
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+    border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+}
+.link-color-palette__item:hover { transform: scale(1.05); }
+.link-color-palette__item.is-active { border-color: #0f172a; }
+.link-color-palette__none {
+    grid-column: span 5; text-align: center; font-size: 12px;
+    color: #64748b; cursor: pointer; padding: 4px;
+}
+
+/* Модалка иконок */
+.link-icon-grid {
+    display: grid; grid-template-columns: repeat(8, 1fr);
+    gap: 6px; max-height: 360px; overflow-y: auto; padding: 4px;
+}
+.link-icon-grid__item {
+    width: 36px; height: 36px; display: flex; align-items: center;
+    justify-content: center; border: 1px solid #e2e8f0; border-radius: 6px;
+    cursor: pointer; background: #fff; font-size: 16px; color: #334155;
+}
+.link-icon-grid__item:hover { background: #f1f5f9; }
+.link-icon-grid__item.is-active {
+    background: #0f172a; color: #fff; border-color: #0f172a;
+}
+
+/* Слоты-колонки для ссылок в табе Grid */
+.link-slot-card {
+    border: 1px dashed #94a3b8; border-radius: 10px; background: #f8fafc;
+    padding: 10px; margin-top: 8px;
+}
+.link-slot-card__head {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 6px;
+}
+.link-slot-card__name {
+    flex: 1; padding: 4px 8px; border: 1px solid #e2e8f0;
+    border-radius: 6px; font-size: 13px;
+}
+.link-slot-card__drop {
+    min-height: 40px; border: 1px dashed #cbd5e1; border-radius: 6px;
+    padding: 6px; display: flex; flex-wrap: wrap; gap: 4px;
+    background: #fff;
+}
+.link-slot-card__drop:empty::before {
+    content: 'Перетащите ссылки сюда';
+    color: #94a3b8; font-size: 12px; padding: 4px;
+}
+.link-slot-chip {
+    display: inline-flex; align-items: center; gap: 4px; cursor: grab;
+}
+.link-slot-chip .remove {
+    color: #dc2626; cursor: pointer; padding: 0 4px; font-weight: bold;
+}
+.links-pool {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 8px;
+    border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;
+    min-height: 42px;
+}
+.links-pool:empty::before {
+    content: 'Нет созданных ссылок — добавьте их во вкладке «Ссылки»';
+    color: #94a3b8; font-size: 12px;
+}
+
+/* Элемент ссылки в холсте */
+.canvas-field[data-type="link"] {
+    background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%);
+}
+.canvas-field[data-link-deleted="1"] {
+    background: #fee2e2 !important; border-color: #dc2626 !important;
+}
 CSS
 );

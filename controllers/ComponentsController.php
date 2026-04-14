@@ -190,6 +190,9 @@ class ComponentsController extends BaseController
         $this->configureList($list, $allColumnsNames, $modelInstance, $model);
         $model->list = $list;
 
+        // Нормализуем пул ссылок компонента
+        $this->configureLinks($model);
+
         $publicStaticMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class) : []);
         $publicSaveMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class, true) : []);
 
@@ -348,6 +351,35 @@ class ComponentsController extends BaseController
         $list['admin_checkbox']['name'] = 'Чекбокс';
         $list['admin_checkbox']['description'] = 'Выбрать строку';
 
+        // Нормализация слотов-колонок для ссылок (admin_link_*)
+        foreach ($list as $key => $cfg) {
+            if (!is_string($key)) {
+                continue;
+            }
+            if (strncmp($key, 'admin_link_', 11) !== 0) {
+                continue;
+            }
+            $list[$key]['type']        = 'links';
+            $list[$key]['name']        = (string)ArrayHelper::getValue(
+                $cfg,
+                'name',
+                'Ссылки'
+            );
+            $list[$key]['description'] = 'Слот пользовательских ссылок';
+
+            $items = ArrayHelper::getValue($cfg, 'items', []);
+            if (!is_array($items)) {
+                $items = [];
+            }
+            $filtered = [];
+            foreach ($items as $v) {
+                if (is_string($v) && $v !== '') {
+                    $filtered[] = $v;
+                }
+            }
+            $list[$key]['items'] = $filtered;
+        }
+
         if ($modelInstance) {
             foreach ($allColumns as $column) {
                 $list[$column] = is_array(ArrayHelper::getValue($list, $column, [])) ? ArrayHelper::getValue($list, $column, []) : [ArrayHelper::getValue($list, $column, [])];
@@ -366,5 +398,51 @@ class ComponentsController extends BaseController
             <i class="icon-trash-2 js-list-actions ' . (ArrayHelper::getValue($list, 'admin_actions.data.delete') ? 'active' : '') . '">'
             . Html::hiddenInput(Html::getInputName($model, 'list').'[admin_actions][data][delete]', ArrayHelper::getValue($list, 'admin_actions.data.delete', '0'))
             . '</i>';
+    }
+
+    /**
+     * Нормализует и валидирует JSON-пул ссылок компонента.
+     * Гарантирует структуру: [{id,title,icon,color,url,target}, ...].
+     *
+     * @param AdminModel $model Компонент админки
+     *
+     * @return void
+     */
+    private function configureLinks(AdminModel $model): void
+    {
+        $raw = $model->links;
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($raw)) {
+            $raw = [];
+        }
+
+        $palette = \Mitisk\Yii2Admin\core\components\LinkPalette::class;
+        $clean = [];
+        foreach ($raw as $link) {
+            if (!is_array($link)) {
+                continue;
+            }
+            $id = (string)ArrayHelper::getValue($link, 'id', '');
+            if ($id === '') {
+                $id = 'lnk_' . substr(md5(uniqid('', true)), 0, 8);
+            }
+            $icon   = (string)ArrayHelper::getValue($link, 'icon', '');
+            $color  = (string)ArrayHelper::getValue($link, 'color', '');
+            $target = (string)ArrayHelper::getValue($link, 'target', '_self');
+
+            $clean[] = [
+                'id'     => $id,
+                'title'  => (string)ArrayHelper::getValue($link, 'title', ''),
+                'icon'   => $palette::isValidIcon($icon) ? $icon : '',
+                'color'  => $palette::isValidColor($color) ? $color : '',
+                'url'    => (string)ArrayHelper::getValue($link, 'url', ''),
+                'target' => $palette::isValidTarget($target) ? $target : '_self',
+            ];
+        }
+
+        $model->links = $clean;
     }
 }

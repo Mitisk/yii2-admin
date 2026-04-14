@@ -23,7 +23,8 @@ use yii\helpers\ArrayHelper;
  * @property int|null $view
  * @property string $default_sort_attribute
  * @property int $default_sort_direction
- * 
+ * @property string|array|null $links JSON-массив пользовательских ссылок-кнопок
+ *
  */
 class AdminModel extends \yii\db\ActiveRecord
 {
@@ -52,7 +53,11 @@ class AdminModel extends \yii\db\ActiveRecord
         return [
             //[['table_name'], 'required'],
             [['view', 'default_sort_direction'], 'integer'],
-            [['data', 'in_menu', 'can_create', 'non_encode', 'list', 'attribute_labels'], 'safe'],
+            [
+                ['data', 'in_menu', 'can_create', 'non_encode',
+                 'list', 'attribute_labels', 'links'],
+                'safe',
+            ],
             [['alias'], 'Mitisk\Yii2Admin\components\AliasValidator', 'skipOnEmpty' => false],
             [['alias'], 'unique'],
             ['alias', fn($attribute) => \Mitisk\Yii2Admin\components\ReservedAlias::validateForModel($this, $attribute)],
@@ -86,6 +91,10 @@ class AdminModel extends \yii\db\ActiveRecord
         if ($this->attribute_labels) {
             $this->attribute_labels = json_decode($this->attribute_labels, true);
         }
+        if ($this->links) {
+            $decoded = json_decode($this->links, true);
+            $this->links = is_array($decoded) ? $decoded : [];
+        }
     }
 
     /**
@@ -110,6 +119,7 @@ class AdminModel extends \yii\db\ActiveRecord
             'default_sort_direction' => 'Порядок сортировки',
             'attribute_labels' => 'Названия полей',
             'file_path' => 'Путь для файлов на сервере',
+            'links' => 'Ссылки',
         ];
     }
 
@@ -123,7 +133,22 @@ class AdminModel extends \yii\db\ActiveRecord
         }
 
         if ($this->attribute_labels && is_array($this->attribute_labels)) {
-            $this->attribute_labels = json_encode($this->attribute_labels, JSON_UNESCAPED_UNICODE);
+            $this->attribute_labels = json_encode(
+                $this->attribute_labels,
+                JSON_UNESCAPED_UNICODE
+            );
+        }
+
+        if ($this->links && is_array($this->links)) {
+            $this->links = json_encode(
+                array_values($this->links),
+                JSON_UNESCAPED_UNICODE
+            );
+        } elseif (is_string($this->links)
+            && $this->links !== ''
+            && json_decode($this->links, true) === null
+        ) {
+            $this->links = null;
         }
 
         return parent::beforeSave($insert);

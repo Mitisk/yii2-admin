@@ -89,6 +89,7 @@ $this->registerJsVar(
     const elAvail   = document.getElementById('canvas-available-fields');
     const elPublic  = document.getElementById('canvas-public-fields');
     const elContent = document.getElementById('canvas-content-fields');
+    const elLinks   = document.getElementById('canvas-link-fields');
     const elCanvas  = document.getElementById('form-canvas');
     const elEmpty   = document.getElementById('canvas-empty');
     const elPanel   = document.getElementById('canvas-props-panel');
@@ -141,6 +142,51 @@ $this->registerJsVar(
             elPublic.innerHTML = '';
             getAvailablePublic().forEach(f => elPublic.appendChild(_makePill(f, 'public')));
         }
+
+        renderLinkPalette();
+    }
+
+    function _linkPreviewHtml(link) {
+        if (!link) {
+            return '<span class="admin-link-btn admin-link-btn--sm pastel-red">'
+                + '<i class="icon-x"></i><span>удалена</span></span>';
+        }
+        const colors = window.adminLinkColorsMap || {};
+        const icons  = new Set(window.adminLinkIconsList || []);
+        let cls = 'admin-link-btn admin-link-btn--sm';
+        if (link.color && colors[link.color]) cls += ' ' + link.color;
+        let inner = '';
+        if (link.icon && icons.has(link.icon)) {
+            inner += `<i class="${link.icon}"></i>`;
+        }
+        if (link.title) {
+            inner += (inner ? ' ' : '') + `<span>${link.title}</span>`;
+        }
+        if (!inner) inner = '<i class="icon-link"></i>';
+        return `<span class="${cls}">${inner}</span>`;
+    }
+
+    function renderLinkPalette() {
+        if (!elLinks) return;
+        const pool = Array.isArray(window.adminLinksPool)
+            ? window.adminLinksPool : [];
+        elLinks.innerHTML = '';
+        if (!pool.length) {
+            elLinks.innerHTML = '<div class="body-text"'
+                + ' style="font-size:12px;color:#94a3b8;">'
+                + 'Нет ссылок. Создайте их во вкладке «Ссылки».</div>';
+            return;
+        }
+        pool.forEach(link => {
+            const pill = document.createElement('div');
+            pill.className = 'canvas-field-pill';
+            pill.dataset.isLink = 'true';
+            pill.dataset.linkId = link.id;
+            pill.innerHTML =
+                '<i class="fas fa-grip-vertical drag-icon"></i>'
+                + '<span>' + _linkPreviewHtml(link) + '</span>';
+            elLinks.appendChild(pill);
+        });
     }
 
     function renderCanvas() {
@@ -162,6 +208,17 @@ $this->registerJsVar(
                 if (item.type === 'header')    inner = `<${item.tag || 'h2'}>${item.text || 'Заголовок'}</${item.tag || 'h2'}>`;
                 if (item.type === 'paragraph') inner = `<p style="margin:0;">${item.text || 'Текст абзаца...'}</p>`;
                 if (item.type === 'divider')   inner = '';
+                if (item.type === 'link') {
+                    const pool = Array.isArray(window.adminLinksPool)
+                        ? window.adminLinksPool : [];
+                    const link = pool.find(l => l.id === item.link_id) || null;
+                    el.dataset.type = 'link';
+                    if (!link) el.dataset.linkDeleted = '1';
+                    inner = '<div style="display:flex;align-items:center;gap:8px;">'
+                        + _linkPreviewHtml(link)
+                        + '<small style="color:#64748b;">(ссылка-кнопка)</small>'
+                        + '</div>';
+                }
             } else {
                 const icon = ICON_MAP[item.type] || 'fa-keyboard';
                 const reqBadge = item.required ? `<span class="canvas-req-badge">Req</span>` : '';
@@ -223,6 +280,14 @@ $this->registerJsVar(
             onEnd(evt) { if (evt.to === elCanvas) handleDrop(evt, true); }
         });
 
+        if (elLinks) {
+            new Sortable(elLinks, { ...shared,
+                onEnd(evt) {
+                    if (evt.to === elCanvas) handleDrop(evt, true, true);
+                }
+            });
+        }
+
         new Sortable(elCanvas, {
             group: 'canvas', animation: 150, handle: '.drag-icon',
             ghostClass: 'sortable-ghost', filter: '#canvas-empty',
@@ -240,7 +305,7 @@ $this->registerJsVar(
         });
     }
 
-    function handleDrop(evt, isContent) {
+    function handleDrop(evt, isContent, isLink) {
         evt.item.remove(); // удаляем клон из DOM
 
         const offset = elEmpty.style.display === 'none' ? 0 : 1;
@@ -248,7 +313,13 @@ $this->registerJsVar(
 
         let newItem = { id: genId(), isContent, width: '100' };
 
-        if (isContent) {
+        if (isLink) {
+            newItem.type    = 'link';
+            newItem.link_id = evt.item.dataset.linkId;
+            var _pool = Array.isArray(window.adminLinksPool) ? window.adminLinksPool : [];
+            var _link = _pool.find(function (l) { return l.id === newItem.link_id; });
+            newItem.label = (_link && (_link.title || _link.url)) || 'Ссылка';
+        } else if (isContent) {
             newItem.type = evt.item.dataset.type;
             if (newItem.type === 'header')    { newItem.tag = 'h2'; newItem.text = 'Новый заголовок'; }
             if (newItem.type === 'paragraph') { newItem.text = 'Новый абзац...'; }
@@ -290,11 +361,12 @@ $this->registerJsVar(
             dbGroup.style.display      = 'none';
             contentGroup.style.display = 'block';
 
+            const isLink = item.type === 'link';
             document.getElementById('props-content-header-opts').style.display  = item.type === 'header'    ? 'block' : 'none';
-            document.getElementById('props-content-text-opts').style.display    = item.type !== 'divider'   ? 'block' : 'none';
-            document.getElementById('props-content-divider-note').style.display = item.type === 'divider'   ? 'flex'  : 'none';
+            document.getElementById('props-content-text-opts').style.display    = (!isLink && item.type !== 'divider') ? 'block' : 'none';
+            document.getElementById('props-content-divider-note').style.display = (item.type === 'divider' || isLink) ? 'flex'  : 'none';
             if (item.type === 'header')    document.getElementById('prop-content-tag').value  = item.tag  || 'h2';
-            if (item.type !== 'divider')   document.getElementById('prop-content-text').value = item.text || '';
+            if (!isLink && item.type !== 'divider') document.getElementById('prop-content-text').value = item.text || '';
         } else {
             dbGroup.style.display      = 'block';
             contentGroup.style.display = 'none';
@@ -400,6 +472,14 @@ $this->registerJsVar(
     buildSelectSources();
     renderAll();
     initSortable();
+
+    // При изменении пула ссылок — перерисовать палитру и холст
+    document.addEventListener('admin-links:changed', function () {
+        renderLinkPalette();
+        renderCanvas();
+        syncHidden();
+        initSortable();
+    });
 })();
 JS,
     View::POS_END

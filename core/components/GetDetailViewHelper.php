@@ -51,14 +51,22 @@ class GetDetailViewHelper extends \yii\base\BaseObject
             foreach ($this->columns as $input) {
                 $field = new Field(['input' => $input, 'model' => $this->model]);
 
-                if($field->getLabel() && $field->getViewData()) {
-                    $return[] = [
-                        'attribute' => $field->getLabel(),
-                        'value' => $field->getViewData(),
-                        'format' => 'raw'
-                    ];
+                $isLink = ArrayHelper::getValue($input, 'type') === 'link';
+                $label  = $field->getLabel();
+                $value  = $field->getViewData();
+
+                if (!$value) {
+                    continue;
+                }
+                if (!$label && !$isLink) {
+                    continue;
                 }
 
+                $return[] = [
+                    'attribute' => $label ?: 'Действие',
+                    'value'     => $value,
+                    'format'    => 'raw',
+                ];
             }
         }
         return $return;

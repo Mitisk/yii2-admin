@@ -213,8 +213,42 @@ class AdminModel extends BaseObject
             json_decode($this->component->data, true),
             $this
         );
+        $helper->linksPool = $this->getLinks();
 
         return $helper->getColumns();
+    }
+
+    /**
+     * Возвращает пул пользовательских ссылок-кнопок компонента.
+     *
+     * @return array<int, array>
+     */
+    public function getLinks(): array
+    {
+        $raw = $this->component->links ?? null;
+        if (is_array($raw)) {
+            return $raw;
+        }
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
+    }
+
+    /**
+     * Возвращает конфигурацию ссылки по uid, либо null.
+     *
+     * @param string $id UID ссылки
+     *
+     * @return array|null
+     */
+    public function getLinkById(string $id): ?array
+    {
+        return \Mitisk\Yii2Admin\core\components\LinkRenderer::findById(
+            $this->getLinks(),
+            $id
+        );
     }
 
     /**

@@ -64,6 +64,12 @@ if ($model->data) {
         </button>
     </li>
     <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-links-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-links" type="button" role="tab">
+            <i class="fas fa-link me-1"></i> Ссылки
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
         <button class="nav-link active" id="tab-canvas-btn" data-bs-toggle="tab"
                 data-bs-target="#tab-canvas" type="button" role="tab">
             <i class="fas fa-paint-brush me-1"></i> Визуальный холст
@@ -250,6 +256,21 @@ echo $form->field($model, 'file_path')
                         <?php continue; ?>
                     <?php endif; ?>
                     <?php
+                    $isLinkSlot = is_string($key)
+                        && strncmp($key, 'admin_link_', 11) === 0;
+                    ?>
+                    <?php if ($isLinkSlot) : ?>
+                        <?php echo $this->render(
+                            '_list_item_link_slot',
+                            [
+                                'model'      => $model,
+                                'column'     => $key,
+                                'columnData' => $columnData,
+                            ]
+                        ) ?>
+                        <?php continue; ?>
+                    <?php endif; ?>
+                    <?php
                     $label = $canvasLabels[$key]
                         ?? $effectiveLabels[$key]
                         ?? ArrayHelper::getValue($columnData, 'name');
@@ -266,11 +287,31 @@ echo $form->field($model, 'file_path')
                     ?>
                 <?php endforeach; ?>
             </div>
+            <button type="button"
+                    class="tf-button style-2 mt-10 js-link-slot-add">
+                <i class="icon-plus"></i> Добавить колонку для ссылок
+            </button>
+        </div>
+
+        <div class="wg-box mb-20" id="link-slots-box">
+            <h4>
+                <i class="fas fa-link text-secondary me-2"></i>Пул ссылок
+            </h4>
+            <p class="body-text" style="font-size:13px;color:#64748b;">
+                Перетаскивайте ссылки из пула ниже в drop-зону нужного слота
+                в списке колонок выше. Слоты участвуют в общей сортировке
+                колонок таблицы наравне с остальными полями.
+            </p>
+            <div id="links-pool" class="links-pool"></div>
         </div>
 
         <?php endif; ?>
     </div>
     <?php /* ─── /TAB: Таблица (Grid) ────────────────────── */ ?>
+
+    <?php /* ─── TAB: Ссылки ──────────────────────────────── */ ?>
+    <?php require __DIR__ . '/_update_links.php' ?>
+    <?php /* ─── /TAB: Ссылки ─────────────────────────────── */ ?>
 
     <?php /* ─── TAB: Визуальный холст ───────────────────── */ ?>
     <div class="tab-pane fade show active" id="tab-canvas" role="tabpanel">
@@ -295,6 +336,15 @@ echo $form->field($model, 'file_path')
                 </p>
                 <div id="canvas-public-fields" class="canvas-fields-list"></div>
                 <?php endif; ?>
+
+                <div class="canvas-section-title">
+                    <i class="fas fa-link me-1"></i> Ссылки-кнопки
+                </div>
+                <p class="body-text" style="font-size:13px;color:#64748b;margin-bottom:10px;line-height:1.3;">
+                    Перетащите, чтобы разместить кнопку в форме.
+                    Добавляйте новые во вкладке «Ссылки».
+                </p>
+                <div id="canvas-link-fields" class="canvas-fields-list"></div>
 
                 <div class="canvas-section-title">Оформление и макет</div>
                 <p class="body-text" style="font-size:13px;color:#64748b;margin-bottom:10px;line-height:1.3;">
