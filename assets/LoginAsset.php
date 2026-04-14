@@ -17,11 +17,11 @@ class LoginAsset extends AssetBundle
     public $sourcePath = '@Mitisk/Yii2Admin/assets';
 
     public $css = [
-        'css/login.css',
+        'css/login.min.css',
     ];
 
     public $js = [
-        'js/login.js',
+        'js/login.min.js',
     ];
 
     public $jsOptions = [
