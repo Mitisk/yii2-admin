@@ -3,15 +3,24 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 
 /** @var \Mitisk\Yii2Admin\models\Settings[] $settings */
+/** @var array $settingsBlock Имена и описания блоков настроек */
 
 // Index settings by attribute for easier access
 $items = ArrayHelper::index($settings, 'attribute');
 
+$blockKey = 'Mitisk\\Yii2Admin\\models\\File';
+$title = ArrayHelper::getValue($settingsBlock ?? [], $blockKey . '.label', 'Хранилище файлов');
+$description = ArrayHelper::getValue($settingsBlock ?? [], $blockKey . '.description');
+if (!$description) {
+    $description = '<i class="icon-edit"></i>';
+}
 ?>
 <div class="wg-box">
     <div class="left js-change-header">
-        <h5 class="mb-4">Хранилище файлов</h5>
-        <div class="body-text">Настройки сохранения загружаемых файлов (Local, FTP, S3)</div>
+        <h5 class="mb-4"><?= Html::encode($title) ?></h5>
+        <input type="text" name="names[<?= $blockKey ?>]" value="<?= Html::encode($title) ?>" tabindex="2" style="display: none">
+        <div class="body-text"><?= $description ?></div>
+        <textarea name="description[<?= $blockKey ?>]" style="display: none"><?= $description ?></textarea>
     </div>
 
     <div class="right flex-grow">

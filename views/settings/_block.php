@@ -64,5 +64,17 @@ if (!$description) {
                 <?php endif; ?>
             </fieldset>
         <?php endforeach; ?>
+
+        <div class="add-setting-row">
+            <button type="button"
+                    class="add-setting-btn js-add-setting"
+                    data-model="<?= Html::encode($modelName) ?>">
+                <span class="add-setting-btn__plus" aria-hidden="true">+</span>
+                <span class="add-setting-btn__text">
+                    <span class="add-setting-btn__title">Добавить настройку</span>
+                    <span class="add-setting-btn__sub">Создаст новый параметр в блоке «<?= Html::encode($title) ?>»</span>
+                </span>
+            </button>
+        </div>
     </div>
 </div>
