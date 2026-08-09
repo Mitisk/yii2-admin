@@ -14,6 +14,7 @@ use Mitisk\Yii2Admin\fields\FieldsHelper;
 /* @var $allColumnsNames array */
 /* @var $publicStaticMethods string */
 /* @var $publicSaveMethods string */
+/* @var $suggestions array<string, array> Инференс-конфиг полей холста */
 /* @var $roles \yii\rbac\Role[] */
 /* @var $modelClassCandidates array<int, string> Классы, найденные по таблице */
 
@@ -46,11 +47,17 @@ $allDbAttributesForJs = [];
 $allPublicAttributesForJs = [];
 if ($allColumnsNames) {
     foreach ($allColumnsNames as $col) {
+        $suggest = $suggestions[$col] ?? null;
+        // Лейбл из настроек админки (attribute_labels) — высший приоритет
+        if ($suggest !== null && !empty($model->attribute_labels[$col])) {
+            $suggest['label'] = $model->attribute_labels[$col];
+        }
         $entry = [
             'name'     => $col,
             'label'    => $effectiveLabels[$col] ?? $col,
             'type'     => FieldsHelper::getFieldsTypeByName($col),
             'required' => in_array($col, $requiredColumns, true),
+            'suggest'  => $suggest,
         ];
         if (isset($publicPropsSet[$col])) {
             $allPublicAttributesForJs[] = $entry;

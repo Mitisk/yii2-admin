@@ -3,6 +3,7 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
+use Mitisk\Yii2Admin\components\FieldInferenceService;
 use Mitisk\Yii2Admin\components\ModelClassLocator;
 use Mitisk\Yii2Admin\models\AdminControllerMap;
 use Mitisk\Yii2Admin\models\AdminModel;
@@ -197,6 +198,25 @@ class ComponentsController extends BaseController
         $publicStaticMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class) : []);
         $publicSaveMethods = json_encode($model->model_class ? self::getPublicMethods($model->model_class, true) : []);
 
+        // Инференс конфигурации полей для визуального холста.
+        // При любом сбое молча откатываемся к текущему поведению.
+        $suggestions = [];
+        if ($tableSchema || $modelInstance) {
+            try {
+                $inference = new FieldInferenceService(
+                    $tableSchema,
+                    $modelInstance,
+                    json_decode($publicStaticMethods, true) ?: []
+                );
+                $suggestions = $inference->suggestAll($allColumnsNames, $requiredColumns);
+            } catch (\Throwable $e) {
+                Yii::warning(
+                    'Инференс полей холста не удался: ' . $e->getMessage(),
+                    __METHOD__
+                );
+            }
+        }
+
         $auth = Yii::$app->authManager;
         $roles = $auth->getRoles();
 
@@ -239,6 +259,7 @@ class ComponentsController extends BaseController
             'publicProps',
             'publicStaticMethods',
             'publicSaveMethods',
+            'suggestions',
             'roles',
             'modelClassCandidates'
         ));
