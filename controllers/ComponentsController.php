@@ -14,6 +14,7 @@ use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
+use yii\web\BadRequestHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
@@ -43,6 +44,7 @@ class ComponentsController extends BaseController
                 'actions' => [
                     'install' => ['POST'],
                     'uninstall' => ['POST'],
+                    'preview-form' => ['POST'],
                 ],
             ],
         ];
@@ -263,6 +265,50 @@ class ComponentsController extends BaseController
             'roles',
             'modelClassCandidates'
         ));
+    }
+
+    /**
+     * Серверный предпросмотр формы записи по текущему (несохранённому)
+     * JSON визуального холста. Данные компонента подменяются только
+     * в памяти — в БД ничего не пишется.
+     *
+     * @param int $id ID компонента (AdminModel)
+     * @return string HTML формы (renderAjax)
+     * @throws NotFoundHttpException Если компонент или класс модели не найден
+     * @throws BadRequestHttpException Если JSON некорректен или форма не собирается
+     */
+    public function actionPreviewForm(int $id): string
+    {
+        $component = AdminModel::findOne($id);
+        if (!$component
+            || !$component->model_class
+            || !class_exists($component->model_class)
+        ) {
+            throw new NotFoundHttpException(
+                'Компонент не найден или класс модели не задан.'
+            );
+        }
+
+        $raw = Yii::$app->request->post('data');
+        $decoded = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($decoded)) {
+            throw new BadRequestHttpException('Некорректный JSON холста.');
+        }
+
+        try {
+            $instance = new $component->model_class();
+            $core = new \Mitisk\Yii2Admin\core\models\AdminModel($instance);
+        } catch (\Throwable $e) {
+            throw new BadRequestHttpException(
+                'Не удалось построить форму: ' . $e->getMessage()
+            );
+        }
+
+        // Подменяем данные холста в памяти — без сохранения
+        $component->data = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+        $core->component = $component;
+
+        return $this->renderAjax('/core/_form_preview', ['model' => $core]);
     }
 
     public function updateUserComponent()
