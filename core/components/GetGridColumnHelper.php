@@ -180,19 +180,26 @@ class GetGridColumnHelper extends \yii\base\BaseObject
     /**
      * Создаёт URL для действий
      *
+     * URL абсолютный, с алиасом компонента: грид рендерится не только на
+     * /admin/<alias>/, но и в виджете на главной /admin/, где относительные
+     * пути указывали бы на несуществующие маршруты.
+     *
      * @param string $action Действие
      * @param mixed $key Ключ модели
      * @return string|null Возвращает URL или null, если действие неизвестно
      */
     private function createActionUrl(string $action, $key): ?string
     {
+        $alias = $this->model?->component?->alias;
+        if ($alias === null || $alias === '') {
+            return null;
+        }
+
         switch ($action) {
             case 'view':
-                return 'view/?id=' . $key;
             case 'update':
-                return 'update/?id=' . $key;
             case 'delete':
-                return 'delete/?id=' . $key;
+                return '/admin/' . $alias . '/' . $action . '/?id=' . $key;
             default:
                 return null;
         }
