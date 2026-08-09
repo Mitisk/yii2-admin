@@ -484,6 +484,38 @@ $this->registerJsVar(
         renderAll();
     };
 
+    // Заголовок-секция для авто-сборки
+    function makeSectionHeader(text) {
+        return {
+            id: genId(), isContent: true, type: 'header',
+            tag: 'h3', text: text, width: '100', auto: true,
+        };
+    }
+
+    window.canvasAutoBuild = function () {
+        const missing = getAvailable().concat(getAvailablePublic());
+        if (!missing.length) {
+            alert('Все поля уже на холсте.');
+            return;
+        }
+
+        const regular = [], seo = [], service = [];
+        missing.forEach(base => {
+            const item = makeItemFromField(base);
+            const group = (base.suggest && base.suggest.group) || null;
+            if (group === 'seo') seo.push(item);
+            else if (group === 'service') service.push(item);
+            else regular.push(item);
+        });
+
+        // Только добавление: существующие элементы холста не трогаем
+        canvasItems = canvasItems.concat(regular);
+        if (seo.length) canvasItems = canvasItems.concat([makeSectionHeader('SEO')], seo);
+        if (service.length) canvasItems = canvasItems.concat([makeSectionHeader('Служебное')], service);
+
+        renderAll();
+    };
+
     window.canvasToggleSelectOpts = function () {
         const type     = document.getElementById('prop-type');
         const selGrp   = document.getElementById('props-select-group');

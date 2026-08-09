@@ -375,9 +375,14 @@ echo $form->field($model, 'file_path')
                             Кликните поле — откроются настройки ширины и параметров
                         </div>
                     </div>
-                    <button type="button" class="tf-button style-2" onclick="canvasClear()">
-                        <i class="fas fa-trash-alt me-1"></i> Очистить
-                    </button>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" class="tf-button style-2" onclick="canvasAutoBuild()">
+                            <i class="fas fa-magic me-1"></i> Собрать автоматически
+                        </button>
+                        <button type="button" class="tf-button style-2" onclick="canvasClear()">
+                            <i class="fas fa-trash-alt me-1"></i> Очистить
+                        </button>
+                    </div>
                 </div>
 
                 <div id="form-canvas" class="canvas-drop-area">
