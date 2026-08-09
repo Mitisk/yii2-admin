@@ -9,7 +9,19 @@
         <div class="flex items-center justify-between">
             <h5><?= $userComponentModel->getComponentName() ?></h5>
         </div>
+        <?php
+        // Пагинация/сортировка/фильтры грида обновляют только виджет,
+        // не переписывая URL и историю главной страницы.
+        \yii\widgets\Pjax::begin(
+            [
+                'id' => 'dashboard-component-pjax',
+                'timeout' => 8000,
+                'enablePushState' => false,
+            ]
+        );
+        ?>
         <?= $userComponent ?>
+        <?php \yii\widgets\Pjax::end(); ?>
     </div>
 <?php else: ?>
     <div class="wg-chart-default wg-chart-add dashboard-add-center-widget-section">
