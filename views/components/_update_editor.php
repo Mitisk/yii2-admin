@@ -379,6 +379,9 @@ echo $form->field($model, 'file_path')
                         <button type="button" class="tf-button style-2" onclick="canvasAutoBuild()">
                             <i class="fas fa-magic me-1"></i> Собрать автоматически
                         </button>
+                        <button type="button" class="tf-button style-2" onclick="canvasPreview()">
+                            <i class="fas fa-eye me-1"></i> Предпросмотр
+                        </button>
                         <button type="button" class="tf-button style-2" onclick="canvasClear()">
                             <i class="fas fa-trash-alt me-1"></i> Очистить
                         </button>
@@ -659,6 +662,22 @@ $this->registerJs(
     </div>
     <div class="canvas-props-footer">
         <button type="button" class="tf-button w-100" onclick="canvasCloseProps()">Готово</button>
+    </div>
+</div>
+
+<?php /* Модалка предпросмотра формы */ ?>
+<div class="modal fade" id="canvas-preview-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2 text-secondary"></i>Предпросмотр формы
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body" id="canvas-preview-body"></div>
+        </div>
     </div>
 </div>
 

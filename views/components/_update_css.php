@@ -443,5 +443,20 @@ $this->registerCss(<<<CSS
     font-size: 10px; font-weight: 700;
     vertical-align: middle; margin-left: 4px;
 }
+
+/* ─── Предпросмотр формы ────────────────────────────────── */
+#canvas-preview-modal .modal-body { background: #f1f5f9; }
+.form-preview-wrap {
+    max-width: 1100px; margin: 0 auto; background: #fff;
+    border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 24px; position: relative;
+}
+.form-preview-banner {
+    margin: -24px -24px 20px; padding: 10px 24px;
+    background: #eff6ff; color: #1e40af; font-weight: 700;
+    border-bottom: 1px solid #bfdbfe; border-radius: 12px 12px 0 0;
+}
+.form-preview-body { position: relative; }
+.form-preview-overlay { position: absolute; inset: 0; z-index: 50; }
 CSS
 );

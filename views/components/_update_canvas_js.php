@@ -20,6 +20,7 @@
  */
 
 use yii\helpers\Json;
+use yii\helpers\Url;
 use yii\web\View;
 
 // Передаём данные в JS
@@ -36,6 +37,11 @@ $this->registerJsVar(
 );
 $this->registerJsVar(
     'allPublicAttributesData', $allPublicAttributesForJs, View::POS_END
+);
+$this->registerJsVar(
+    'canvasPreviewUrl',
+    \yii\helpers\Url::to(['preview-form', 'id' => $model->id]),
+    View::POS_END
 );
 ?>
 
@@ -514,6 +520,30 @@ $this->registerJsVar(
         if (service.length) canvasItems = canvasItems.concat([makeSectionHeader('Служебное')], service);
 
         renderAll();
+    };
+
+    window.canvasPreview = function () {
+        syncHidden();
+        var modalEl = document.getElementById('canvas-preview-modal');
+        if (!modalEl) return;
+        var $body = $('#canvas-preview-body');
+        $body.html(
+            '<div class="text-center p-5">' +
+            '<div class="spinner-border text-secondary"></div></div>'
+        );
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        // ВАЖНО: вставка через $().html(), чтобы выполнились <script>
+        // из renderAjax (инициализация Trumbowyg, датапикеров и т.п.)
+        $.post(canvasPreviewUrl, { data: elHidden ? elHidden.value : '[]' })
+            .done(function (html) { $body.html(html); })
+            .fail(function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                    || ('HTTP ' + xhr.status);
+                $body.html(
+                    '<div class="alert alert-danger m-4">' +
+                    'Не удалось построить предпросмотр: ' + msg + '</div>'
+                );
+            });
     };
 
     window.canvasToggleSelectOpts = function () {
