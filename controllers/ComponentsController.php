@@ -3,6 +3,7 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
+use Mitisk\Yii2Admin\components\ModelClassLocator;
 use Mitisk\Yii2Admin\models\AdminControllerMap;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Mitisk\Yii2Admin\models\AdminModelInfo;
@@ -203,10 +204,28 @@ class ComponentsController extends BaseController
             ? AdminModelInfo::findOne(['model_class' => $model->model_class])
             : null;
 
+        $modelClassCandidates = [];
+
         if (!$model->model_class) {
             $model->alias = $model->name;
             $model->name = null;
             $model->model_class = 'app\models\\';
+
+            // Ищем ActiveRecord-классы приложения, привязанные к таблице
+            // компонента, для автоподстановки на шаге базовой настройки
+            $locator = $this->module instanceof \Mitisk\Yii2Admin\Module
+                ? new ModelClassLocator($this->module->modelNamespaces)
+                : new ModelClassLocator();
+            try {
+                $modelClassCandidates = $locator->findByTable(
+                    (string) $model->table_name
+                );
+            } catch (\Throwable $e) {
+                Yii::warning(
+                    'Автопоиск класса модели не удался: ' . $e->getMessage(),
+                    __METHOD__
+                );
+            }
         }
 
         return $this->render('update', compact(
@@ -220,7 +239,8 @@ class ComponentsController extends BaseController
             'publicProps',
             'publicStaticMethods',
             'publicSaveMethods',
-            'roles'
+            'roles',
+            'modelClassCandidates'
         ));
     }
 

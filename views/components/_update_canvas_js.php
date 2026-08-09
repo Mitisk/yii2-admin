@@ -52,10 +52,13 @@ $this->registerJsVar(
 
     const ICON_MAP = {
         text: 'fa-font', textarea: 'fa-align-left',
-        html: 'fa-code', visual: 'fa-palette',
-        select: 'fa-list', file: 'fa-image', date: 'fa-calendar',
+        html: 'fa-code', visual: 'fa-palette', json: 'fa-brackets-curly',
+        select: 'fa-list', file: 'fa-image', image: 'fa-crop',
+        date: 'fa-calendar',
         posted: 'fa-check-square', number: 'fa-hashtag', hidden: 'fa-lock',
         user: 'fa-user',
+        email: 'fa-envelope', url: 'fa-link', phone: 'fa-phone',
+        slug: 'fa-tag', icon: 'fa-star',
     };
 
     /* ─── Состояние ───────────────────────────────────────── */
@@ -75,6 +78,7 @@ $this->registerJsVar(
         withTime: false,
         roles: [], selectMultiple: false,
         selectSourceType: 'method', selectSourceVal: '', selectSaveMethod: '',
+        aspectRatio: '',
         tag: undefined, text: undefined,
     }, item, { id: item.id || genId() }));
 
@@ -335,7 +339,7 @@ $this->registerJsVar(
                 required: base.required || false, readonly: false,
                 hint: '', withTime: false, fileMultiple: false,
                 roles: [], selectMultiple: false, selectSourceType: 'method',
-                selectSourceVal: '', selectSaveMethod: '',
+                selectSourceVal: '', selectSaveMethod: '', aspectRatio: '',
             });
         }
 
@@ -383,6 +387,7 @@ $this->registerJsVar(
             document.getElementById('prop-sel-source-type').value   = item.selectSourceType || 'method';
             document.getElementById('prop-sel-source-val').value    = item.selectSourceVal  || '';
             document.getElementById('prop-sel-save-method').value   = item.selectSaveMethod || '';
+            document.getElementById('prop-image-aspect').value      = item.aspectRatio      || '';
 
             document.querySelectorAll('.role-cb').forEach(cb => {
                 cb.checked = Array.isArray(item.roles) && item.roles.includes(cb.value);
@@ -427,6 +432,7 @@ $this->registerJsVar(
             item.selectSourceType  = document.getElementById('prop-sel-source-type').value;
             item.selectSourceVal   = document.getElementById('prop-sel-source-val').value;
             item.selectSaveMethod  = document.getElementById('prop-sel-save-method').value;
+            item.aspectRatio       = document.getElementById('prop-image-aspect').value;
             item.roles = Array.from(document.querySelectorAll('.role-cb:checked')).map(cb => cb.value);
         }
 
@@ -464,6 +470,10 @@ $this->registerJsVar(
         var fileGrp = document.getElementById('props-file-group');
         if (type && fileGrp) {
             fileGrp.style.display = type.value === 'file' ? 'block' : 'none';
+        }
+        var imageGrp = document.getElementById('props-image-group');
+        if (type && imageGrp) {
+            imageGrp.style.display = type.value === 'image' ? 'block' : 'none';
         }
     };
 

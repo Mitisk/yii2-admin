@@ -15,6 +15,7 @@ use Mitisk\Yii2Admin\fields\FieldsHelper;
 /* @var $publicStaticMethods string */
 /* @var $publicSaveMethods string */
 /* @var $roles \yii\rbac\Role[] */
+/* @var $modelClassCandidates array<int, string> Классы, найденные по таблице */
 
 $this->title = 'Редактирование компонента';
 $this->params['breadcrumbs'][] = ['label' => 'Компоненты', 'url' => ['index']];
@@ -23,11 +24,7 @@ $this->params['breadcrumbs'][] = $this->title;
 $bundle = \Mitisk\Yii2Admin\assets\ComponentFormAsset::register($this);
 $this->registerJsVar('i18nFormBuilderLocation', $bundle->baseUrl . '/component/form-builder/lang/', View::POS_END);
 
-// SortableJS для визуального холста
-$this->registerJsFile(
-    'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js',
-    ['position' => View::POS_HEAD]
-);
+// SortableJS подключается локально через ComponentFormAsset (см. бандл).
 
 $host = Yii::$app->request->hostInfo;
 

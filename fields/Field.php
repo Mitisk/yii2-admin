@@ -13,6 +13,7 @@
 
 namespace Mitisk\Yii2Admin\fields;
 
+use Mitisk\Yii2Admin\contracts\FieldInterface;
 use Mitisk\Yii2Admin\core\models\AdminModel;
 use Yii;
 use yii\base\Widget;
@@ -28,7 +29,7 @@ use yii\helpers\Html;
  * @license  MIT https://opensource.org/licenses/MIT
  * @link     https://github.com/mitisk/yii2-admin
  */
-class Field extends Widget
+class Field extends Widget implements FieldInterface
 {
     /**
      * Initial field settings array.
@@ -106,6 +107,15 @@ class Field extends Widget
      * @var boolean
      */
     public $withTime = false;
+
+    /**
+     * Соотношение сторон кадрирования (used by ImageField): '16/9', '1', …
+     * или пусто — свободное. Объявлено в базовом классе, чтобы canvas-ключ
+     * проходил через конструктор у любого типа поля без ошибки.
+     *
+     * @var string|null
+     */
+    public $aspectRatio;
 
     /**
      * Field subtype (e.g. h2/h3 for headers, p for paragraphs).
@@ -204,6 +214,14 @@ class Field extends Widget
     {
         $fieldClass = $this->_buildField();
         $fieldClass->model = $this->model;
+
+        // Регистрируем конкретное поле, чтобы модель могла пакетно
+        // предзагрузить его данные до рендеринга строк (анти-N+1).
+        if (is_object($this->model)
+            && method_exists($this->model, 'registerListField')
+        ) {
+            $this->model->registerListField($fieldClass);
+        }
 
         $config = $fieldClass->renderList($column)
             + ['visible' => $fieldClass->canRender()];
@@ -456,6 +474,22 @@ class Field extends Widget
         return [
             'attribute' => $column
         ];
+    }
+
+    /**
+     * Пакетная предзагрузка данных для рендеринга колонки списка.
+     *
+     * Вызывается один раз со всеми моделями текущей страницы грида ДО
+     * рендеринга строк. Конкретные поля переопределяют метод, чтобы одним
+     * запросом загрузить связанные данные (файлы, пользователей, связи) и
+     * тем самым устранить проблему N+1. По умолчанию — ничего не делает.
+     *
+     * @param array $models Модели текущей страницы
+     *
+     * @return void
+     */
+    public function preloadList(array $models): void
+    {
     }
 
     /**

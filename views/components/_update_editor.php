@@ -522,11 +522,18 @@ $this->registerJs(
                     <option value="textarea">📝 Текст</option>
                     <option value="html">📄 HTML-редактор</option>
                     <option value="visual">🎨 Визуальный редактор</option>
+                    <option value="json">🧩 JSON-редактор</option>
                     <option value="select">📋 Выпадающий список</option>
                     <option value="file">🖼 Файл / Изображение</option>
+                    <option value="image">✂️ Изображение с кадрированием</option>
                     <option value="date">📅 Дата / Время</option>
                     <option value="posted">✅ Чекбокс</option>
                     <option value="number">🔢 Число</option>
+                    <option value="email">✉️ Email</option>
+                    <option value="url">🔗 URL</option>
+                    <option value="phone">📞 Телефон</option>
+                    <option value="slug">🏷 Slug (ЧПУ)</option>
+                    <option value="icon">⭐ Иконка</option>
                     <option value="hidden">🔒 Скрытое поле</option>
                     <option value="user">👤 Пользователь (User ID)</option>
                 </select>
@@ -593,6 +600,25 @@ $this->registerJs(
                         Множественная загрузка
                     </label>
                 </div>
+            </div>
+
+            <div id="props-image-group" class="prop-section mb-14"
+                 style="display:none;background:#eff6ff;border-color:#93c5fd;">
+                <h6 style="color:#1e40af;">
+                    <i class="fas fa-crop me-2"></i>Настройки изображения
+                </h6>
+                <label class="body-title mb-10" style="font-size:12px;">Формат кадрирования</label>
+                <select class="form-select form-select-sm" id="prop-image-aspect"
+                        onchange="canvasUpdateField()">
+                    <option value="">Любой (свободное + пресеты в окне)</option>
+                    <option value="1">Квадрат 1:1</option>
+                    <option value="4/3">4:3</option>
+                    <option value="3/2">3:2</option>
+                    <option value="16/9">16:9</option>
+                    <option value="3/4">Портрет 3:4</option>
+                    <option value="2/3">Портрет 2:3</option>
+                    <option value="9/16">Портрет 9:16</option>
+                </select>
             </div>
 
             <div class="prop-section">
