@@ -20,7 +20,6 @@
  */
 
 use yii\helpers\Json;
-use yii\helpers\Url;
 use yii\web\View;
 
 // Передаём данные в JS
@@ -328,7 +327,7 @@ $this->registerJsVar(
             label: s.label || base.label || base.name,
             type: s.type || base.type || 'text',
             width: s.width || '100',
-            required: !!(s.required || base.required),
+            required: ('required' in s) ? !!s.required : !!base.required,
             readonly: !!s.readonly,
             hint: '', withTime: !!s.withTime, fileMultiple: false,
             roles: [], selectMultiple: false,
@@ -498,6 +497,13 @@ $this->registerJsVar(
         };
     }
 
+    // Есть ли уже на холсте заголовок-секция с таким текстом
+    function hasSectionHeader(text) {
+        return canvasItems.some(
+            i => i.isContent && i.type === 'header' && i.text === text
+        );
+    }
+
     window.canvasAutoBuild = function () {
         const missing = getAvailable().concat(getAvailablePublic());
         if (!missing.length) {
@@ -516,8 +522,18 @@ $this->registerJsVar(
 
         // Только добавление: существующие элементы холста не трогаем
         canvasItems = canvasItems.concat(regular);
-        if (seo.length) canvasItems = canvasItems.concat([makeSectionHeader('SEO')], seo);
-        if (service.length) canvasItems = canvasItems.concat([makeSectionHeader('Служебное')], service);
+        if (seo.length) {
+            if (!hasSectionHeader('SEO')) {
+                canvasItems = canvasItems.concat([makeSectionHeader('SEO')]);
+            }
+            canvasItems = canvasItems.concat(seo);
+        }
+        if (service.length) {
+            if (!hasSectionHeader('Служебное')) {
+                canvasItems = canvasItems.concat([makeSectionHeader('Служебное')]);
+            }
+            canvasItems = canvasItems.concat(service);
+        }
 
         renderAll();
     };
