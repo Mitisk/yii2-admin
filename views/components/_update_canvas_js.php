@@ -228,10 +228,14 @@ $this->registerJsVar(
                 const reqBadge = item.required ? `<span class="canvas-req-badge">Req</span>` : '';
                 const rolesBadge = (item.roles && item.roles.length)
                     ? `<span class="badge bg-info text-dark" style="font-size:11px;"><i class="fas fa-users"></i></span>` : '';
+                const autoBadge = item.auto
+                    ? `<span class="canvas-auto-badge" title="Настроено автоматически">авто</span>` : '';
+                const srcBadge = item.sourceMissing
+                    ? `<span class="canvas-warn-badge" title="Источник данных не найден — настройте вручную">источник?</span>` : '';
                 inner = `
                     <div class="canvas-item-label">
                         <i class="fas ${icon} text-secondary"></i> ${item.label || item.name}
-                        ${reqBadge} ${rolesBadge}
+                        ${reqBadge} ${rolesBadge} ${autoBadge} ${srcBadge}
                     </div>
                     <div class="canvas-item-meta">
                         <span>DB: <code>${item.name}</code></span>
@@ -309,6 +313,27 @@ $this->registerJsVar(
         });
     }
 
+    // Строит элемент холста из поля сайдбара с учётом инференса (suggest)
+    function makeItemFromField(base) {
+        const s = base.suggest || {};
+        return {
+            id: genId(), isContent: false,
+            name: base.name,
+            label: s.label || base.label || base.name,
+            type: s.type || base.type || 'text',
+            width: s.width || '100',
+            required: !!(s.required || base.required),
+            readonly: !!s.readonly,
+            hint: '', withTime: !!s.withTime, fileMultiple: false,
+            roles: [], selectMultiple: false,
+            selectSourceType: s.selectSourceType || 'method',
+            selectSourceVal: s.selectSourceVal || '',
+            selectSaveMethod: '', aspectRatio: '',
+            auto: true,
+            sourceMissing: !!s.sourceMissing,
+        };
+    }
+
     function handleDrop(evt, isContent, isLink) {
         evt.item.remove(); // удаляем клон из DOM
 
@@ -335,18 +360,17 @@ $this->registerJsVar(
             if (!base) return;
             // Не добавляем дубликат
             if (usedNames().has(fieldName)) return;
-            Object.assign(newItem, base, {
-                required: base.required || false, readonly: false,
-                hint: '', withTime: false, fileMultiple: false,
-                roles: [], selectMultiple: false, selectSourceType: 'method',
-                selectSourceVal: '', selectSaveMethod: '', aspectRatio: '',
-            });
+            newItem = makeItemFromField(base);
         }
 
         canvasItems.splice(insertIdx, 0, newItem);
-        activeId = newItem.id;
         renderAll();
-        canvasOpenProps(newItem.id);
+        // Поля падают уже настроенными — панель открываем только для
+        // контентных блоков, где нужно ввести текст
+        if (isContent && !isLink && newItem.type !== 'divider') {
+            activeId = newItem.id;
+            canvasOpenProps(newItem.id);
+        }
     }
 
     /* ─── Панель свойств ─────────────────────────────────── */
@@ -434,6 +458,9 @@ $this->registerJsVar(
             item.selectSaveMethod  = document.getElementById('prop-sel-save-method').value;
             item.aspectRatio       = document.getElementById('prop-image-aspect').value;
             item.roles = Array.from(document.querySelectorAll('.role-cb:checked')).map(cb => cb.value);
+            // Любая ручная правка снимает флаг авто-настройки
+            item.auto = false;
+            if (item.selectSourceVal) item.sourceMissing = false;
         }
 
         renderCanvas();

@@ -438,7 +438,8 @@ class Field extends Widget implements FieldInterface
             $input['selectMultiple'], $input['selectSourceType'],
             $input['selectSourceVal'], $input['selectSaveMethod'],
             $input['fileMultiple'],
-            $input['tag'], $input['text']
+            $input['tag'], $input['text'],
+            $input['auto'], $input['sourceMissing'], $input['suggest']
         );
 
         return $input;

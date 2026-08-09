@@ -429,5 +429,19 @@ $this->registerCss(<<<CSS
 .canvas-field[data-link-deleted="1"] {
     background: #fee2e2 !important; border-color: #dc2626 !important;
 }
+
+/* ─── Магия холста: бейджи ──────────────────────────────── */
+.canvas-auto-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    vertical-align: middle; margin-left: 4px;
+}
+.canvas-warn-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    background: #fffbeb; color: #92400e; border: 1px solid #fcd34d;
+    font-size: 10px; font-weight: 700;
+    vertical-align: middle; margin-left: 4px;
+}
 CSS
 );
