@@ -49,6 +49,9 @@ final class ReservedAlias
         'core',
         'email-template',
         'seo-rule',
+        'content',
+        'content-block',
+        'page',
         'log',
         'model-info',
     ];
