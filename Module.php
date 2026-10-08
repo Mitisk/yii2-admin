@@ -10,7 +10,7 @@ use Mitisk\Yii2Admin\components\ExtAdminController;
 
 final class Module extends \yii\base\Module implements BootstrapInterface
 {
-    public const VERSION = '1.5.2';
+    public const VERSION = '1.6.0';
 
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
@@ -62,6 +62,12 @@ final class Module extends \yii\base\Module implements BootstrapInterface
     // Все динамические вещи и правила — здесь
     public function bootstrap($app)
     {
+        // Консольное приложение: только команды модуля (php yii admin/update)
+        if ($app instanceof \yii\console\Application) {
+            $this->controllerNamespace = 'Mitisk\\Yii2Admin\\commands';
+            return;
+        }
+
         // 1) Правила URL
         $app->getUrlManager()->addRules([
             // Явные маршруты логина/логаута
@@ -92,6 +98,10 @@ final class Module extends \yii\base\Module implements BootstrapInterface
 
     public function beforeAction($action)
     {
+        if (Yii::$app->request->isConsoleRequest) {
+            return parent::beforeAction($action);
+        }
+
         if (Yii::$app->has('adminUser')) {
             Yii::$app->set('user', Yii::$app->get('adminUser'));
         }
@@ -104,6 +114,11 @@ final class Module extends \yii\base\Module implements BootstrapInterface
                 'admin/default/check-user',
                 'admin/default/upgrade',
                 'admin/default/run-migrations',
+                // Самообновление: между composer update и финальным шагом
+                // версия в коде уже новая, а в БД ещё старая — не редиректим
+                'admin/default/update',
+                'admin/default/update-start',
+                'admin/default/update-status',
             ];
 
             if (Yii::$app->user->isGuest && !in_array($route, $skipRoutes, true)) {

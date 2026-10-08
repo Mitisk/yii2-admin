@@ -99,12 +99,23 @@ php yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations --interacti
 
 ### 2.2 Console-конфиг (`config/console.php`)
 
+```php
+'bootstrap' => ['log', 'admin'],   // даёт консольные команды модуля: php yii admin/update
+'modules' => [
+    'admin' => ['class' => \Mitisk\Yii2Admin\Module::class],
+],
+'components' => [
+    // те же settings, cache, authManager, db, что и в web — вынесите в общий файл
+],
+```
+
 Миграции проекта, которые регистрируют компоненты через AR `AdminModel`, вызывают
 `Yii::$app->authManager` (создание разрешений) и могут обращаться к `Yii::$app->settings`.
 Поэтому в консольном конфиге должны быть **те же** `settings`, `cache`, `authManager`
 (вынесите их в общий файл и подключайте в оба конфига). Если `authManager` в консоли
 отсутствует, разрешения для сущности **молча не создадутся** и пункт меню будет
-скрыт для всех ролей, кроме супер-админа.
+скрыт для всех ролей, кроме супер-админа. Модуль в консоли нужен для команды
+обновления (§2.4); в консольном режиме он регистрирует только свои команды.
 
 ### 2.3 Проверка
 
@@ -112,6 +123,32 @@ php yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations --interacti
 2. При смене версии пакета админка сама редиректит на `/admin/default/upgrade`,
    где можно применить миграции модуля из UI.
 3. `/admin/components/` — список компонентов (нужна роль `superAdminRole`).
+
+### 2.4 Обновление модуля
+
+Обновление идёт через composer; файлы в `vendor/` руками не менять.
+
+- **Из админки:** бейдж новой версии в футере → `/admin/default/update` (роль
+  `superAdminRole`). Страница показывает проверки окружения (composer, PHP CLI,
+  права на `vendor/`, `proc_open`), кнопку «Обновить сейчас» и живой лог. Кнопка
+  запускает `php yii admin/update` фоновым процессом через `nohup`, composer в
+  веб-запросе не выполняется.
+- **Из консоли / cron:** `php yii admin/update` (нужен модуль в консольном конфиге,
+  §2.2). `php yii admin/update/check` — только диагностика окружения.
+- Команда делает: `composer update mitisk/yii2-admin --with-dependencies
+  --optimize-autoloader` (+ `--no-dev`, если vendor установлен без dev), затем в
+  **новом процессе** `admin/update/finish`: миграции модуля, очистка кэша,
+  запись версии в `GENERAL.version`.
+- Состояние хранится в настройке `HIDDEN.admin_update_state` (JSON), лог — в
+  `@runtime/admin-update/*.log` веб-приложения. Незавершённое обновление старше
+  30 минут или с мёртвым процессом помечается как `failed`.
+- Composer обновляет пакет только в пределах ограничения из `composer.json`
+  проекта; на новую мажорную версию переходят, меняя ограничение вручную.
+- Пути можно задать явно: настройки `GENERAL.composer_path`, `GENERAL.php_path`.
+- На время замены файлов (несколько секунд) админка может отдавать 500 — это
+  нормально, страница обновления продолжает опрос.
+- Первый переход на версию с этой функцией (1.6.0) делается вручную:
+  `composer update mitisk/yii2-admin`, затем страница `/admin/default/upgrade`.
 
 ---
 
@@ -655,9 +692,9 @@ $menu->save(false);
 
 | Ключ `model_name` | Где показывается |
 |---|---|
-| `GENERAL` | Вкладка «Основные» (`site_name`, `admin_email`, `timezone`, `api_key`, служебный `version`). |
+| `GENERAL` | Вкладка «Основные» (`site_name`, `admin_email`, `timezone`, `api_key`, `composer_path`, `php_path`, служебный `version`). |
 | `ADMIN` | Вкладка «Панель администратора» (`logo`, тип `file`). |
-| `HIDDEN` | Не показывается (например `mail_layout`). |
+| `HIDDEN` | Не показывается (`mail_layout`, `admin_update_state`). |
 | `Mitisk\Yii2Admin\models\File` | Вкладка «Файлы» (storage_type, s3_*, ftp_*). |
 | `Mitisk\Yii2Admin\models\MailTemplate` | SMTP: `mailserver_host`, `mailserver_port`, `mailserver_login`, `mailserver_password`, `mailserver_from_name`. |
 | `Mitisk\Yii2Admin\models\AdminUser` | Выбор шаблонов писем пользователей (`mail_template_new_password` и др.). |
@@ -1005,6 +1042,7 @@ $this->insert('{{%admin_controller_map}}', [
 | `Mitisk\Yii2Admin\models\AdminWidget` | виджеты дашборда |
 | `Mitisk\Yii2Admin\models\AdminModelInfo` | инструкция к компоненту |
 | `Mitisk\Yii2Admin\components\AuditService`, `models\AuditLog` | аудит |
+| `Mitisk\Yii2Admin\components\SelfUpdateService`, `commands\UpdateController` | самообновление через composer |
 | `Mitisk\Yii2Admin\components\SeoManager`, `models\SeoRule` | SEO |
 | `Mitisk\Yii2Admin\models\AdminUser` | пользователь админки, RBAC-трейт (`assignRole`, `revokeRole`, `can`) |
 

@@ -279,6 +279,56 @@ Yii::$app->seo->setContext([
 
 ---
 
+## 🔄 Обновление модуля
+
+Обновление делается через composer, напрямую править `vendor/` не нужно.
+
+### Из админки
+
+В футере админки показывается бейдж с номером свежего релиза на GitHub. Для роли
+`superAdminRole` он ведёт на страницу `/admin/default/update`, где есть проверка окружения
+(composer, PHP CLI, права на `vendor/`), кнопка «Обновить сейчас» и живой лог. Кнопка запускает
+фоновый процесс `php yii admin/update` — composer не выполняется в веб-запросе, поэтому
+таймауты PHP-FPM не мешают.
+
+Если на сервере нет прав на запись в `vendor/` от пользователя веб-сервера или отключён
+`proc_open`, страница покажет, что именно мешает, и команды для ручного запуска.
+
+### Из консоли или по cron
+
+Подключите модуль в консольный конфиг (`config/console.php`) вместе с теми же компонентами
+`settings`, `cache`, `authManager`, `db`, что и в web:
+
+```php
+'bootstrap' => ['log', 'admin'],
+'modules' => [
+    'admin' => ['class' => \Mitisk\Yii2Admin\Module::class],
+],
+```
+
+Команды:
+
+```bash
+php yii admin/update          # composer update mitisk/yii2-admin + миграции + очистка кэша + запись версии
+php yii admin/update/check    # показать, что найдено в окружении, без обновления
+```
+
+Ночное автообновление — одна строка в crontab владельца файлов проекта:
+
+```
+0 4 * * * /usr/bin/php /path/to/project/yii admin/update >> /path/to/project/runtime/admin-update.log 2>&1
+```
+
+Что делает `admin/update`: `composer update mitisk/yii2-admin --with-dependencies --optimize-autoloader`
+(с `--no-dev`, если vendor был установлен без dev-зависимостей), затем в новом процессе применяет
+миграции модуля, очищает кэш и сохраняет версию. Composer обновляет пакет только в пределах
+ограничения из `composer.json` проекта (например `^1.5`); переход на новую мажорную версию — вручную.
+
+Если composer или PHP CLI не находятся автоматически, укажите пути в
+«Настройки → Основные» (`composer_path`, `php_path`).
+
+---
+
 ## 🤖 Интеграция с Claude Code и другими AI-ассистентами
 
 В корне пакета лежит файл [`CLAUDE.md`](CLAUDE.md) — подробная инструкция для AI-ассистента:

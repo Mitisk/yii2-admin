@@ -152,7 +152,11 @@ $this->registerJs("
                                 $latestVer = \Mitisk\Yii2Admin\Module::getLatestRelease();
                                 if ($latestVer && version_compare($latestVer, \Mitisk\Yii2Admin\Module::VERSION, '>')) :
                                 ?>
-                                <a href="https://github.com/Mitisk/yii2-admin/releases/latest" target="_blank" rel="noopener" class="footer-update">
+                                <a href="<?= Yii::$app->user->can('superAdminRole')
+                                    ? \yii\helpers\Url::to(['/admin/default/update'])
+                                    : 'https://github.com/Mitisk/yii2-admin/releases/latest' ?>"
+                                   <?= Yii::$app->user->can('superAdminRole') ? '' : 'target="_blank" rel="noopener"' ?>
+                                   class="footer-update" title="Доступно обновление">
                                     <i class="icon-arrow-up-circle"></i> v<?= $latestVer ?>
                                 </a>
                                 <?php endif; ?>

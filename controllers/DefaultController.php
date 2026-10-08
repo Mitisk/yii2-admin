@@ -3,6 +3,7 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
+use Mitisk\Yii2Admin\components\SelfUpdateService;
 use Mitisk\Yii2Admin\Module;
 use Yii;
 use Mitisk\Yii2Admin\models\LoginForm;
@@ -24,12 +25,17 @@ class DefaultController extends BaseController
         return [
             'access' => [
                 'class' => AccessControl::class,
-                'only' => ['logout'],
+                'only' => ['logout', 'update', 'update-start', 'update-status'],
                 'rules' => [
                     [
                         'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
+                    ],
+                    [
+                        'actions' => ['update', 'update-start', 'update-status'],
+                        'allow' => true,
+                        'roles' => ['superAdminRole'],
                     ],
                 ],
             ],
@@ -37,6 +43,7 @@ class DefaultController extends BaseController
                 'class' => VerbFilter::class,
                 'actions' => [
                     'logout' => ['post'],
+                    'update-start' => ['post'],
                 ],
             ],
         ];
@@ -264,6 +271,80 @@ class DefaultController extends BaseController
             'applied' => $applied,
             'errors' => $errors,
         ]);
+    }
+
+    /**
+     * Страница самообновления модуля через composer.
+     *
+     * @return string
+     */
+    public function actionUpdate(): string
+    {
+        /** @var SelfUpdateService $service */
+        $service = Yii::createObject(SelfUpdateService::class);
+        $latest = Module::getLatestRelease();
+        $constraint = $service->getConstraint();
+
+        return $this->render('update', [
+            'service' => $service,
+            'currentVersion' => Module::VERSION,
+            'latestVersion' => $latest,
+            'hasNewVersion' => $latest && version_compare($latest, Module::VERSION, '>'),
+            'constraint' => $constraint,
+            'constraintAllows' => $service->constraintAllows($constraint, $latest),
+            'checks' => $service->checkBackground(),
+            'canRun' => $service->canRunInBackground(),
+            'state' => $service->getState(),
+            'log' => $service->readLog(),
+            'yiiScript' => $service->getYiiScript() ?? ($service->getProjectRoot() . '/yii'),
+            'phpPath' => $service->findPhp() ?? 'php',
+        ]);
+    }
+
+    /**
+     * AJAX: запуск обновления в фоне.
+     *
+     * @return array{success: bool, message?: string, state?: array}
+     */
+    public function actionUpdateStart(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        /** @var SelfUpdateService $service */
+        $service = Yii::createObject(SelfUpdateService::class);
+        try {
+            $state = $service->startBackground();
+            return ['success' => true, 'state' => $state];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * AJAX: состояние обновления и хвост лога.
+     *
+     * @return array{state: array, log: string, version: string}
+     */
+    public function actionUpdateStatus(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        /** @var SelfUpdateService $service */
+        $service = Yii::createObject(SelfUpdateService::class);
+        $state = $service->getState();
+
+        // После замены файлов сбрасываем opcache, чтобы FPM увидел новый код
+        if ($state['status'] === SelfUpdateService::STATUS_FINISHED
+            && function_exists('opcache_reset')
+            && empty($state['opcache_reset'])
+        ) {
+            @opcache_reset();
+            $state = $service->updateState(['opcache_reset' => true]);
+        }
+
+        return [
+            'state' => $state,
+            'log' => $service->readLog(),
+            'version' => Module::VERSION,
+        ];
     }
 
     /**
