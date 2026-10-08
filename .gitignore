@@ -6,3 +6,5 @@ composer.lock
 *.js
 !*.min.css
 !*.min.js
+!assets/src/**/*.js
+!assets/src/**/*.css

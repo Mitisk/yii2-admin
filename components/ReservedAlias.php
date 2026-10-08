@@ -45,6 +45,12 @@ final class ReservedAlias
         'ajax',
         'ajax-widget',
         'ajax-note',
+        'bar',
+        'core',
+        'email-template',
+        'seo-rule',
+        'log',
+        'model-info',
     ];
 
     /**

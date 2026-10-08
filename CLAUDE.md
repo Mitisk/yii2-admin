@@ -693,7 +693,7 @@ $menu->save(false);
 | Ключ `model_name` | Где показывается |
 |---|---|
 | `GENERAL` | Вкладка «Основные» (`site_name`, `admin_email`, `timezone`, `api_key`, `composer_path`, `php_path`, служебный `version`). |
-| `ADMIN` | Вкладка «Панель администратора» (`logo`, тип `file`). |
+| `ADMIN` | Вкладка «Панель администратора» (`logo`, тип `file`; `bar_enabled`, `bar_mode`, `bar_position` — панель на сайте). |
 | `HIDDEN` | Не показывается (`mail_layout`, `admin_update_state`). |
 | `Mitisk\Yii2Admin\models\File` | Вкладка «Файлы» (storage_type, s3_*, ftp_*). |
 | `Mitisk\Yii2Admin\models\MailTemplate` | SMTP: `mailserver_host`, `mailserver_port`, `mailserver_login`, `mailserver_password`, `mailserver_from_name`. |
@@ -972,6 +972,72 @@ $this->insert('{{%admin_controller_map}}', [
 
 ---
 
+## 9a. Панель администратора на сайте (Admin Bar)
+
+Плавающая панель для залогиненного администратора на страницах сайта. Код: `widgets/AdminBar.php`,
+`components/AdminBarComponent.php`, `components/AdminBarState.php`, `controllers/BarController.php`,
+`assets/src/admin-bar/` (сборка: `sh assets/src/build.sh`, нужен node). План и архитектура — `docs/admin-bar.md`.
+
+**Подключение** — в лейауте сайта перед `</body>`: `<?= \Mitisk\Yii2Admin\widgets\AdminBar::widget() ?>`.
+Требуется модуль `admin` в `bootstrap` (он регистрирует `adminUser` и `adminBar`). Для неадмина
+виджет возвращает пустую строку. Внутри `/admin/` не выводится.
+
+**Контекст из контроллера сайта** (`Yii::$app->adminBar`):
+
+```php
+Yii::$app->adminBar->setModel($product);   // чип записи: «Редактировать», «Все», «Добавить» (по правам и admin_model)
+Yii::$app->adminBar->addAction('export', 'Экспорт', ['url' => '...', 'icon' => 'download', 'target' => '_blank', 'confirm' => '...', 'permission' => 'viewReports']);
+Yii::$app->adminBar->addPanel('stats', 'Статистика', [['label' => 'Просмотров', 'value' => 128, 'icon' => 'eye', 'url' => '...']], ['icon' => 'layers', 'url' => '...']);
+Yii::$app->adminBar->setContext('key', $value);   // произвольные данные в state.context
+```
+
+**Серверные действия** (кнопка → `POST /admin/bar/action/`), конфиг компонента:
+
+```php
+'adminBar' => [
+    'class' => \Mitisk\Yii2Admin\components\AdminBarComponent::class,
+    'serverActions' => [
+        'warm-cache' => ['label' => 'Прогреть кэш', 'icon' => 'zap', 'permission' => 'manageSystem',
+                         'confirm' => 'Запустить?', 'handler' => fn() => 'Готово'],
+    ],
+],
+```
+Встроенное действие `clear-cache` (право `manageSystem`).
+
+**Правка текста на странице:** `AdminBar::editable($model, 'name', $html = null, ['tag' => 'span', 'type' => 'text'])`.
+Для посетителя — просто значение; для админа с правом `{FQCN}\update` и компонентом в `admin_model` —
+обёртка `<span data-ab-model data-ab-id data-ab-attr data-ab-type data-ab-label>`. Сохранение:
+`POST /admin/bar/attribute/` (`model`, `id`, `attr`, `value`) → атрибут должен быть в `safeAttributes()`,
+`validate([$attr])`, `AuditService::log`. Типы `html|block|image` зарезервированы под будущие этапы.
+В client-режиме обёртка выводится всегда (страница одинакова для всех).
+
+**Расширение состояния** (панели, бейджи, действия из любого кода, напр. в `bootstrap`):
+
+```php
+\yii\base\Event::on(\Mitisk\Yii2Admin\components\AdminBarState::class,
+    \Mitisk\Yii2Admin\components\AdminBarState::EVENT_BUILD,
+    function (\Mitisk\Yii2Admin\components\AdminBarBuildEvent $e) {
+        $e->state->badges['orders'] = 3;
+        $e->state->panels[] = ['id' => 'seo', 'label' => 'SEO', 'icon' => 'search', 'items' => [['label' => 'Title', 'value' => '...']]];
+    });
+```
+
+**Иконки** (имена для `icon`): home, edit, plus, list, refresh, search, menu, x, chevron, user, logout, sun, moon,
+minus, update, check, alert, external, settings, layers, eye, command, grid, zap, trash, mail, file, users, bell,
+star, folder, calendar, link, download, upload, info, clock, shield, tool, keyboard. Неизвестное имя → zap.
+
+**Эндпоинты** `/admin/bar/state/` (GET, client-режим; гостю 401), `/admin/bar/action/` (POST), `/admin/bar/attribute/` (POST).
+Маршруты исключены из редиректа на логин. Алиас `bar` зарезервирован.
+
+**Настройки** (раздел `ADMIN`): `bar_enabled` (boolean), `bar_mode` (`server`|`client`), `bar_position` (`bottom`|`top`).
+Личные предпочтения (тема, свёрнута, позиция) — в `localStorage` браузера.
+
+**JS-API:** `window.AdminBar.boot(state, {css})`, событие `admin-bar:ready` на `document`, экземпляр
+`window.AdminBar.instance` (`toast(text, type)`, `openPalette()`). Панель живёт в Shadow DOM элемента `<admin-bar>`,
+стили сайта на неё не влияют. Горячие клавиши: `Ctrl+K`, `Alt+Shift+A`.
+
+---
+
 ## 10. Подводные камни
 
 1. **Таблица `user` и RBAC-таблицы `auth_*` создаются миграцией модуля.** Если в проекте
@@ -985,9 +1051,7 @@ $this->insert('{{%admin_controller_map}}', [
 7. **`authManager` и `settings` нужны в консольном конфиге**, иначе миграции с `AdminModel`
    не создадут разрешения.
 8. **Имя разрешения содержит `\`:** в PHP пишите `Product::class . '\\view'`.
-9. **Alias уникален, транслитерируется и не может быть зарезервированным** (§11); UrlRule
-   не проверяет имена встроенных контроллеров модуля, поэтому alias `log` или `seo-rule`
-   перекроет соответствующий раздел админки.
+9. **Alias уникален, транслитерируется и не может быть зарезервированным** (§11).
 10. **URL файлов начинаются с `/web/`** — убедитесь, что они отдаются веб-сервером.
 11. **`set()` настроек не задаёт label/description** — для видимых настроек используйте AR `Settings`.
 12. **`MailService::send()` не бросает исключений** — проверяйте возвращаемое значение.
@@ -1021,8 +1085,8 @@ $this->insert('{{%admin_controller_map}}', [
 ### Зарезервированные alias / controller_id
 Технические: `index`, `error`, `captcha`, `contact`, `login`, `logout`, `default`, `auth`,
 `user`, `settings`, `role`, `menu`, `components`, `ajax`, `ajax-widget`, `ajax-note`.
-Встроенные контроллеры модуля (тоже не используйте): `core`, `email-template`, `seo-rule`,
-`log`, `model-info`. Плюс все существующие alias компонентов и controller_id.
+Встроенные контроллеры модуля (с версии 1.7.0 тоже в списке технических): `bar`, `core`, `email-template`,
+`seo-rule`, `log`, `model-info`. Плюс все существующие alias компонентов и controller_id.
 
 ### Основные классы
 | Класс | Назначение |
@@ -1044,6 +1108,7 @@ $this->insert('{{%admin_controller_map}}', [
 | `Mitisk\Yii2Admin\components\AuditService`, `models\AuditLog` | аудит |
 | `Mitisk\Yii2Admin\components\SelfUpdateService`, `commands\UpdateController` | самообновление через composer |
 | `Mitisk\Yii2Admin\components\SeoManager`, `models\SeoRule` | SEO |
+| `Mitisk\Yii2Admin\widgets\AdminBar`, `components\AdminBarComponent`, `components\AdminBarState`, `controllers\BarController` | панель администратора на сайте (§9a) |
 | `Mitisk\Yii2Admin\models\AdminUser` | пользователь админки, RBAC-трейт (`assignRole`, `revokeRole`, `can`) |
 
 ### URL-схема компонента

@@ -170,6 +170,11 @@ ob_start(); ?>
 
             </fieldset>
 
+            <?php foreach ($settings as $setting): ?>
+                <?php if ($setting->model_name !== 'ADMIN' || $setting->attribute === 'logo') { continue; } ?>
+                <?= $this->render('_field', ['setting' => $setting, 'modelName' => 'ADMIN', 'emailTemplates' => $emailTemplates]) ?>
+            <?php endforeach; ?>
+
         </div>
 
     </div>

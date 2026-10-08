@@ -10,7 +10,7 @@ use Mitisk\Yii2Admin\components\ExtAdminController;
 
 final class Module extends \yii\base\Module implements BootstrapInterface
 {
-    public const VERSION = '1.6.0';
+    public const VERSION = '1.7.0';
 
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
@@ -35,6 +35,11 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             'identityCookie' => ['name' => '_admin_identity', 'httpOnly' => true],
             'loginUrl' => ['/admin/default/login'],
         ]);
+
+        // Панель администратора на сайте
+        if (!\Yii::$app->has('adminBar')) {
+            \Yii::$app->set('adminBar', ['class' => 'Mitisk\\Yii2Admin\\components\\AdminBarComponent']);
+        }
 
         // Настройка authManager (RBAC)
         if (!\Yii::$app->has('authManager')) {
@@ -119,6 +124,10 @@ final class Module extends \yii\base\Module implements BootstrapInterface
                 'admin/default/update',
                 'admin/default/update-start',
                 'admin/default/update-status',
+                // Панель на сайте: сама отвечает 401 вместо редиректа на логин
+                'admin/bar/state',
+                'admin/bar/action',
+                'admin/bar/attribute',
             ];
 
             if (Yii::$app->user->isGuest && !in_array($route, $skipRoutes, true)) {
