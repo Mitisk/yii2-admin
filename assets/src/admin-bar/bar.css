@@ -208,6 +208,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .ab-root.is-collapsed .ab-fab { display: inline-flex; }
 .ab-fab:hover { background: var(--ab-accent); color: #fff; }
 .ab-fab .ab-dot { top: 2px; right: 2px; }
+.ab-fab.is-guest { background: var(--ab-accent); color: #fff; }
 
 /* ─── Палитра команд ─────────────────────────────────────── */
 .ab-overlay {

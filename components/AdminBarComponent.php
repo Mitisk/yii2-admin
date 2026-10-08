@@ -43,6 +43,12 @@ use yii\web\User;
  */
 class AdminBarComponent extends Component
 {
+    /** Cookie режима «Смотреть как гость» (ставит JS панели). */
+    public const COOKIE_GUEST = 'ab_guest';
+
+    /** Cookie режима «Показывать черновики» (ставит JS панели). */
+    public const COOKIE_DRAFTS = 'ab_drafts';
+
     /**
      * Серверные действия: id => [label, icon, permission, confirm, handler].
      * handler — callable, возвращает строку сообщения (или bool).
@@ -50,6 +56,18 @@ class AdminBarComponent extends Component
      * @var array<string, array<string, mixed>>
      */
     public array $serverActions = [];
+
+    /**
+     * Показывать тумблер «Черновики» на всех страницах.
+     *
+     * По умолчанию тумблер появляется только на страницах, которые сами вызвали
+     * {@see showDrafts()}. В client-режиме состояние собирается отдельным запросом,
+     * и узнать это нельзя, поэтому там тумблер включают этим флагом.
+     */
+    public bool $draftsToggle = false;
+
+    /** Страница спрашивала {@see showDrafts()} в этом запросе. */
+    private bool $_draftsRequested = false;
 
     /** @var array<int, array<string, mixed>> Действия-ссылки, добавленные на странице. */
     private array $_actions = [];
@@ -134,6 +152,70 @@ class AdminBarComponent extends Component
     {
         $class = is_object($model) ? get_class($model) : $model;
         return $this->can($class . '\update') || $this->can('admin');
+    }
+
+    // ------------------------------------------------------------------
+    // Режимы просмотра
+    // ------------------------------------------------------------------
+
+    /**
+     * Администратор включил «Смотреть как гость»: панель сворачивается в кнопку
+     * выхода из режима, inline-правка и черновики выключены.
+     */
+    public function isGuestView(): bool
+    {
+        return $this->readFlag(self::COOKIE_GUEST) && $this->isAdmin();
+    }
+
+    /**
+     * Показывать ли черновики на текущей странице.
+     *
+     * Сайт вызывает метод в своих выборках, например в ActiveQuery:
+     * ```php
+     * public function published(): static
+     * {
+     *     return Yii::$app->adminBar->showDrafts() ? $this : $this->andWhere(['status' => Status::Published->value]);
+     * }
+     * ```
+     * Для посетителя всегда false и без запросов к БД. Вызов метода сам по себе
+     * показывает администратору тумблер «Черновики» на этой странице.
+     */
+    public function showDrafts(): bool
+    {
+        $this->_draftsRequested = true;
+        return $this->isDraftsOn();
+    }
+
+    /**
+     * Включён ли режим «Черновики», без отметки, что страница его спрашивала.
+     */
+    public function isDraftsOn(): bool
+    {
+        return $this->readFlag(self::COOKIE_DRAFTS) && $this->isAdmin() && !$this->isGuestView();
+    }
+
+    /**
+     * Показывать ли администратору тумблер «Черновики».
+     *
+     * Включённый режим показываем всегда, чтобы его можно было выключить.
+     */
+    public function isDraftsToggleAvailable(): bool
+    {
+        return $this->draftsToggle || $this->_draftsRequested || $this->readFlag(self::COOKIE_DRAFTS);
+    }
+
+    /**
+     * Флаг режима из cookie.
+     *
+     * Cookie ставит JS панели, поэтому она без подписи Yii и читается напрямую.
+     * Это безопасно: значение — только переключатель, и действует он лишь вместе
+     * с проверкой {@see isAdmin()}.
+     *
+     * @param string $name Имя cookie, одна из констант `COOKIE_*`.
+     */
+    private function readFlag(string $name): bool
+    {
+        return ($_COOKIE[$name] ?? null) === '1';
     }
 
     // ------------------------------------------------------------------

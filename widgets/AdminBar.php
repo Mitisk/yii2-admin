@@ -160,6 +160,10 @@ class AdminBar extends Widget
         if (!$clientMode && (!$bar->isAdmin() || !$bar->canUpdate($model) || $bar->findComponent(get_class($model)) === null)) {
             return $content;
         }
+        // «Смотреть как гость» — страница без служебной разметки
+        if (!$clientMode && $bar->isGuestView()) {
+            return $content;
+        }
 
         $tag = $options['tag'] ?? 'span';
         $type = $options['type'] ?? 'text';

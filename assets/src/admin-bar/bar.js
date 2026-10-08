@@ -123,13 +123,17 @@
         if (this.prefs.collapsed) { this.root.classList.add('is-collapsed'); }
         this.shadow.appendChild(this.root);
 
-        this.renderImpersonation();
-        this.renderBar();
-        this.renderFab();
-        this.toasts = el('<div class="ab-toasts"></div>');
-        this.root.appendChild(this.toasts);
-        this.renderOverlay();
-        this.bindGlobal();
+        if ((this.state.view || {}).guest) {
+            this.renderGuest();
+        } else {
+            this.renderImpersonation();
+            this.renderBar();
+            this.renderFab();
+            this.toasts = el('<div class="ab-toasts"></div>');
+            this.root.appendChild(this.toasts);
+            this.renderOverlay();
+            this.bindGlobal();
+        }
 
         window.AdminBar.booted = true;
         document.dispatchEvent(new CustomEvent('admin-bar:ready', { detail: { bar: self } }));
@@ -180,6 +184,13 @@
                 chip.appendChild(el('<a class="ab-btn is-icon" href="' + esc(ctx.urls.create) + '" data-tip="Добавить">' + icon('plus', 16) + '</a>'));
             }
             bar.appendChild(chip);
+        }
+
+        // Включены черновики — заметный индикатор, клик выключает
+        if ((s.view || {}).drafts) {
+            var drafts = el('<button type="button" class="ab-btn is-accent" data-tip="Показаны черновики — выключить">' + icon('file', 16) + '<span class="ab-label">Черновики</span></button>');
+            drafts.addEventListener('click', this.setView.bind(this, 'drafts', false));
+            bar.appendChild(drafts);
         }
 
         // Панели
@@ -240,6 +251,14 @@
         this.root.appendChild(this.fab);
     };
 
+    /* «Смотреть как гость»: вместо панели — одна кнопка возврата */
+    AdminBar.prototype.renderGuest = function () {
+        this.root.classList.add('is-collapsed');
+        var b = el('<button type="button" class="ab-fab is-guest" title="Режим гостя — вернуть панель администратора">' + icon('eye') + '</button>');
+        b.addEventListener('click', this.setView.bind(this, 'guest', false));
+        this.root.appendChild(b);
+    };
+
     AdminBar.prototype.renderImpersonation = function () {
         var imp = this.state.impersonation || {};
         if (!imp.active) { return; }
@@ -295,6 +314,13 @@
         var posBtn = el('<button type="button" class="ab-item">' + icon('layers') + '<span class="ab-item-text">Панель ' + (pos === 'top' ? 'вниз' : 'вверх') + '</span></button>');
         posBtn.addEventListener('click', this.togglePosition.bind(this));
         pop.appendChild(posBtn);
+        var view = this.state.view || {};
+        if (view.cookies) {
+            if ((this.state.features || {}).drafts) {
+                pop.appendChild(this.viewItem('drafts', 'Показывать черновики', 'file', view.drafts));
+            }
+            pop.appendChild(this.viewItem('guest', 'Смотреть как гость', 'eye', false));
+        }
         pop.appendChild(el('<div class="ab-item" style="cursor:default">' + icon('keyboard') + '<span class="ab-item-text"><span class="ab-item-sub">Ctrl+K — поиск · ' + esc((this.state.prefs || {}).hotkey || 'Alt+Shift+A') + ' — свернуть</span></span></div>'));
         pop.appendChild(el('<div class="ab-pop-sep"></div>'));
         var logout = el('<button type="button" class="ab-item is-danger">' + icon('logout') + '<span class="ab-item-text">Выйти из админки</span></button>');
@@ -616,6 +642,22 @@
         btn.innerHTML = icon(next === 'light' ? 'moon' : 'sun');
         this.prefs.theme = next;
         savePrefs(this.prefs);
+    };
+
+    /* Пункт-переключатель режима просмотра; галочка — режим включён */
+    AdminBar.prototype.viewItem = function (name, label, ic, on) {
+        var b = el('<button type="button" class="ab-item">' + icon(ic) + '<span class="ab-item-text">' + esc(label) + '</span>' + (on ? icon('check') : '') + '</button>');
+        b.addEventListener('click', this.setView.bind(this, name, !on));
+        return b;
+    };
+
+    /* Режим читает сервер при рендере страницы, поэтому cookie + перезагрузка */
+    AdminBar.prototype.setView = function (name, on) {
+        var c = ((this.state.view || {}).cookies || {})[name];
+        if (!c) { return; }
+        document.cookie = c + '=' + (on ? '1' : '') + ';path=/;SameSite=Lax'
+            + (on ? '' : ';max-age=0') + (location.protocol === 'https:' ? ';Secure' : '');
+        location.reload();
     };
 
     AdminBar.prototype.togglePosition = function () {

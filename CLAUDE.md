@@ -1011,6 +1011,28 @@ Yii::$app->adminBar->setContext('key', $value);   // произвольные д
 `validate([$attr])`, `AuditService::log`. Типы `html|block|image` зарезервированы под будущие этапы.
 В client-режиме обёртка выводится всегда (страница одинакова для всех).
 
+**SEO-панель** добавляется сама для ролей `admin`/`superAdminRole`: правило `seo_rules`, сработавшее
+для URL (`SeoManager::findRule()`), его title/description/keywords/robots/OG с длиной в символах и
+ссылка на правку; нет правила — ссылка «Создать правило для этой страницы»
+(`/admin/seo-rule/create/?pattern=^/path$`). В server-режиме ещё и фактический `View::$title`.
+Своя панель с `id = 'seo'` (через `addPanel` или `EVENT_BUILD`) заменяет встроенную.
+
+**Режимы просмотра** (пункты в меню аккаунта; JS ставит cookie `ab_guest` / `ab_drafts` и перезагружает
+страницу; флаги действуют только вместе с `isAdmin()`):
+
+```php
+// Черновики: сайт сам решает, что считать черновиком. Для посетителя — false без запросов к БД.
+public function published(): static   // в ActiveQuery модели сайта
+{
+    return Yii::$app->adminBar->showDrafts() ? $this : $this->andWhere(['status' => Status::Published->value]);
+}
+Yii::$app->adminBar->isGuestView();   // «Смотреть как гость»: панель свёрнута в кнопку выхода, editable() отдаёт чистое значение
+```
+
+Тумблер «Черновики» появляется на страницах, вызвавших `showDrafts()`; в client-режиме (состояние
+собирается отдельным запросом) — только при `'draftsToggle' => true` в конфиге компонента `adminBar`.
+С полностраничным кэшем черновики работать не могут: кэш не различает cookie.
+
 **Расширение состояния** (панели, бейджи, действия из любого кода, напр. в `bootstrap`):
 
 ```php
