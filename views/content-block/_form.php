@@ -5,7 +5,6 @@
 /** @var bool $modal */
 
 use Mitisk\Yii2Admin\assets\ContentBlockAsset;
-use Mitisk\Yii2Admin\assets\TrumbowygAsset;
 use Mitisk\Yii2Admin\dto\ListItem;
 use Mitisk\Yii2Admin\enums\BlockType;
 use yii\helpers\Html;
@@ -14,9 +13,6 @@ use yii\widgets\ActiveForm;
 $type = $form->getBlockType();
 $manage = $form->scenario === $form::SCENARIO_MANAGE;
 ContentBlockAsset::register($this);
-if ($type === BlockType::Html) {
-    TrumbowygAsset::register($this);
-}
 $block = $form->block;
 ?>
 <?php $af = ActiveForm::begin([
@@ -70,6 +66,8 @@ $block = $form->block;
             <?= $af->field($form, 'itemFields')->checkboxList(array_combine(ListItem::FIELDS, ['Заголовок', 'Текст', 'Ссылка', 'Картинка'])) ?>
         <?php endif; ?>
         <div class="body-title mb-10">Пункты</div>
+        <?php // Sentinel: если все пункты удалены, в POST всё равно придёт items="" — пустой список ?>
+        <?= Html::hiddenInput(Html::getInputName($form, 'items'), '') ?>
         <div id="cb-items" class="flex flex-column gap10 mb-15">
             <?php foreach ($form->items as $rowKey => $row): ?>
                 <?= $this->render('_item', ['form' => $form, 'rowKey' => (string)$rowKey, 'row' => $row]) ?>

@@ -14,6 +14,7 @@ use Mitisk\Yii2Admin\enums\BlockType;
 use Mitisk\Yii2Admin\models\ContentBlock;
 use Yii;
 use yii\base\Model;
+use yii\validators\FileValidator;
 use yii\web\UploadedFile;
 
 /**
@@ -130,6 +131,7 @@ class ContentBlockForm extends Model
             ['linkTarget', 'in', 'range' => ['_self', '_blank']],
             ['items', 'validateItems'],
             ['itemFields', 'each', 'rule' => ['in', 'range' => ListItem::FIELDS]],
+            ['itemFields', 'validateItemFields', 'skipOnEmpty' => false],
             ['imageFile', 'file', 'skipOnEmpty' => true, 'extensions' => BlockImageStorage::ALLOWED, 'checkExtensionByMimeType' => true],
         ];
     }
@@ -144,9 +146,27 @@ class ContentBlockForm extends Model
         ];
     }
 
+    /**
+     * Загрузка из запроса браузера.
+     *
+     * - `imageFile` берётся только из `$_FILES`: Html::activeFileInput() шлёт ещё и скрытое
+     *   поле с тем же именем и пустой строкой, которое нельзя присвоить свойству типа UploadedFile;
+     * - `items=""` — sentinel формы: админ удалил все пункты, это пустой список;
+     * - `itemFields=""` — checkboxList без отмеченных полей, это пустой набор (ошибка валидации).
+     */
     public function load($data, $formName = null): bool
     {
+        $scope = $formName ?? $this->formName();
+        if (is_array($data) && isset($data[$scope]) && is_array($data[$scope])) {
+            unset($data[$scope]['imageFile']);
+        }
         $loaded = parent::load($data, $formName);
+        if (!is_array($this->items)) {
+            $this->items = [];
+        }
+        if (!is_array($this->itemFields)) {
+            $this->itemFields = [];
+        }
         $this->imageFile = UploadedFile::getInstance($this, 'imageFile');
         return $loaded || $this->imageFile !== null;
     }
@@ -176,7 +196,11 @@ class ContentBlockForm extends Model
             $this->addError($attribute, 'Неверный формат пунктов.');
             return;
         }
-        foreach ($this->items as $row) {
+        $fileValidator = new FileValidator([
+            'extensions' => BlockImageStorage::ALLOWED,
+            'checkExtensionByMimeType' => true,
+        ]);
+        foreach ($this->items as $rowKey => $row) {
             if (!is_array($row)) {
                 $this->addError($attribute, 'Неверный формат пункта.');
                 return;
@@ -185,6 +209,21 @@ class ContentBlockForm extends Model
             if ($url !== '' && !LinkValue::isSafeUrl($url)) {
                 $this->addError($attribute, 'Недопустимый адрес в пункте: ' . $url);
             }
+            // Загрузки пунктов проверяются так же строго, как картинка блока
+            $upload = UploadedFile::getInstance($this, 'items[' . $rowKey . '][imageFile]');
+            if ($upload !== null && !$fileValidator->validate($upload, $error)) {
+                $this->addError($attribute, 'Картинка «' . $upload->name . '»: ' . $error);
+            }
+        }
+    }
+
+    /**
+     * У пункта списка должно остаться хотя бы одно поле, иначе сохранение сотрёт все пункты.
+     */
+    public function validateItemFields(string $attribute): void
+    {
+        if (!is_array($this->itemFields) || $this->itemFields === []) {
+            $this->addError($attribute, 'Отметьте хотя бы одно поле пункта.');
         }
     }
 

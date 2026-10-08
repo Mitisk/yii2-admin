@@ -18,8 +18,10 @@ class ContentBlockAsset extends AssetBundle
         'js/page/content-block.min.js',
     ];
 
+    /** Trumbowyg — зависимость, чтобы загрузиться раньше скрипта страницы, который его инициализирует. */
     public $depends = [
         'yii\web\JqueryAsset',
         'yii\web\YiiAsset',
+        TrumbowygAsset::class,
     ];
 }
