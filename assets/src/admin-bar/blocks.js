@@ -12,7 +12,22 @@
     function Blocks(bar) {
         this.bar = bar;
         this.state = bar.state;
+        // Открытая сейчас модалка: {key, node, box}. Один слушатель на весь модуль:
+        // модалку закрывают и крестиком, и Escape, и кликом мимо — слушатель на каждое
+        // открытие копился бы и давал повторные тосты и обновления
+        this.current = null;
+        window.addEventListener('message', this.onMessage.bind(this));
     }
+
+    Blocks.prototype.onMessage = function (e) {
+        var c = this.current;
+        if (e.origin !== window.location.origin || !e.data || e.data.type !== 'ab-block-saved') { return; }
+        if (!c || !c.box.isConnected || e.data.key !== c.key) { return; }
+        this.current = null;
+        this.bar.hideOverlay();
+        this.bar.toast((c.node.dataset.abLabel || 'Блок') + ': сохранено', 'success');
+        this.refresh(c.key);
+    };
 
     Blocks.prototype.edit = function (node) {
         if (node.dataset.abType === 'text') { this.inline(node); } else { this.modal(node); }
@@ -54,7 +69,7 @@
     };
 
     Blocks.prototype.modal = function (node) {
-        var self = this, bar = this.bar, key = node.dataset.abBlock;
+        var bar = this.bar, key = node.dataset.abBlock;
         var box = document.createElement('div');
         box.className = 'ab-palette';
         box.style.cssText = 'width:min(920px,calc(100vw - 32px));height:min(80vh,760px);display:flex;flex-direction:column;padding:0;overflow:hidden';
@@ -65,14 +80,7 @@
         box.querySelector('iframe').src = this.state.urls.blockEdit + encodeURIComponent(key);
         box.querySelector('[data-close]').addEventListener('click', function () { bar.hideOverlay(); });
 
-        var onMessage = function (e) {
-            if (e.origin !== window.location.origin || !e.data || e.data.type !== 'ab-block-saved' || e.data.key !== key) { return; }
-            window.removeEventListener('message', onMessage);
-            bar.hideOverlay();
-            bar.toast((node.dataset.abLabel || 'Блок') + ': сохранено', 'success');
-            self.refresh(key);
-        };
-        window.addEventListener('message', onMessage);
+        this.current = { key: key, node: node, box: box };
         bar.showOverlay(box);
     };
 
