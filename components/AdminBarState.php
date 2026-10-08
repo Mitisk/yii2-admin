@@ -117,15 +117,18 @@ class AdminBarState extends Component
             ];
         }
 
+        // Адреса строит urlManager сайта: жёстко заданный слеш на конце при нормализаторе
+        // слешей давал 301, и POST (выход, действия, правка) превращался в GET
         $state->urls = [
-            'dashboard' => $base . '/admin/',
-            'profile' => $identity ? $base . '/admin/user/update/?id=' . $identity->id : $base . '/admin/',
-            'settings' => $base . '/admin/settings/',
-            'components' => $base . '/admin/components/',
-            'update' => $base . '/admin/default/update/',
-            'logout' => $base . '/admin/default/logout/',
-            'blocks' => $base . '/admin/content-block/',
-            'blockEdit' => $base . '/admin/content-block/update/?modal=1&key=',
+            'dashboard' => Url::to(['/admin/default/index']),
+            'profile' => $identity ? Url::to(['/admin/user/update', 'id' => $identity->id]) : Url::to(['/admin/default/index']),
+            'settings' => Url::to(['/admin/settings/index']),
+            'components' => Url::to(['/admin/components/index']),
+            'update' => Url::to(['/admin/default/update']),
+            'logout' => Url::to(['/admin/default/logout']),
+            'blocks' => Url::to(['/admin/content-block/index']),
+            // key дописывает JS — параметр должен идти последним
+            'blockEdit' => Url::to(['/admin/content-block/update', 'modal' => 1]) . '&key=',
         ];
 
         $state->csrf = [
@@ -134,10 +137,10 @@ class AdminBarState extends Component
         ];
 
         $state->endpoints = [
-            'state' => $base . '/admin/bar/state/',
-            'action' => $base . '/admin/bar/action/',
-            'attribute' => $base . '/admin/bar/attribute/',
-            'block' => $base . '/admin/bar/block/',
+            'state' => Url::to(['/admin/bar/state']),
+            'action' => Url::to(['/admin/bar/action']),
+            'attribute' => Url::to(['/admin/bar/attribute']),
+            'block' => Url::to(['/admin/bar/block']),
         ];
 
         $state->prefs = [
@@ -211,7 +214,7 @@ class AdminBarState extends Component
         if (Yii::$app->has('session') && Yii::$app->session->has('impersonator_id')) {
             $state->impersonation = [
                 'active' => true,
-                'returnUrl' => $base . '/admin/user/stop-impersonate/',
+                'returnUrl' => Url::to(['/admin/user/stop-impersonate']),
             ];
         }
 

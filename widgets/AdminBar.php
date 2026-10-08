@@ -11,6 +11,7 @@ use Yii;
 use yii\base\Widget;
 use yii\db\ActiveRecord;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\helpers\Json;
 use yii\web\View;
 
@@ -115,7 +116,7 @@ class AdminBar extends Widget
             'src' => $loaderUrl,
             'defer' => true,
             'data' => [
-                'state' => rtrim((string)Yii::$app->request->baseUrl, '/') . '/admin/bar/state/',
+                'state' => Url::to(['/admin/bar/state']),
                 'js' => $assets['js'],
                 'css' => $assets['css'],
                 'blocks' => $assets['blocks'],

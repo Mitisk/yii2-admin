@@ -39,7 +39,7 @@ $this->params['breadcrumbs'][] = $this->title;
             'attribute' => 'key',
             'format' => 'raw',
             'value' => static fn(ContentBlock $m): string => Html::tag('code', Html::encode($m->key))
-                . ($m->from_code ? ' <span class="badge bg-secondary" title="Создан из шаблона сайта">код</span>' : ''),
+                . ($m->from_code ? Html::tag('div', 'из шаблона сайта', ['class' => 'text-tiny mt-1', 'style' => 'color:#94a3b8']) : ''),
         ],
         ['attribute' => 'name', 'filter' => false],
         ['attribute' => 'group', 'filter' => ContentBlockSearch::groupOptions()],
@@ -62,8 +62,9 @@ $this->params['breadcrumbs'][] = $this->title;
             'attribute' => 'updated_at',
             'filter' => false,
             'format' => 'raw',
-            'value' => static fn(ContentBlock $m): string => Yii::$app->formatter->asDatetime($m->updated_at)
-                . ($m->updater ? '<br><small>' . Html::encode($m->updater->name ?: $m->updater->username) . '</small>' : ''),
+            // Формат явно: datetimeFormat приложения может быть любым (у тестового сайта он смешанный php/ICU)
+            'value' => static fn(ContentBlock $m): string => Html::tag('div', Yii::$app->formatter->asDatetime($m->updated_at, 'dd.MM.yyyy HH:mm'), ['class' => 'body-text'])
+                . ($m->updater ? Html::tag('div', Html::encode($m->updater->name ?: $m->updater->username), ['class' => 'text-tiny']) : ''),
         ],
         [
             'class' => 'Mitisk\Yii2Admin\widgets\ActionColumn',
