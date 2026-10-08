@@ -41,6 +41,11 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             \Yii::$app->set('adminBar', ['class' => 'Mitisk\\Yii2Admin\\components\\AdminBarComponent']);
         }
 
+        // Текстовые блоки раздела «Контент»
+        if (!\Yii::$app->has('blocks')) {
+            \Yii::$app->set('blocks', ['class' => 'Mitisk\\Yii2Admin\\components\\ContentBlockService']);
+        }
+
         // Настройка authManager (RBAC)
         if (!\Yii::$app->has('authManager')) {
             \Yii::$app->set('authManager', [

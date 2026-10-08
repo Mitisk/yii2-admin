@@ -205,6 +205,20 @@ class AdminBarComponent extends Component
     }
 
     /**
+     * Выводить ли обёртки блоков для правки через панель.
+     *
+     * В client-режиме страница одинакова для всех: обёртка выводится всегда,
+     * права проверяются при сохранении.
+     */
+    public function shouldWrapBlocks(): bool
+    {
+        if ((string)Yii::$app->settings->get('ADMIN', 'bar_mode', 'server') === 'client') {
+            return true;
+        }
+        return $this->isAdmin() && !$this->isGuestView() && $this->can('editContent');
+    }
+
+    /**
      * Флаг режима из cookie.
      *
      * Cookie ставит JS панели, поэтому она без подписи Yii и читается напрямую.
