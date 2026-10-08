@@ -6,7 +6,6 @@ namespace Mitisk\Yii2Admin\components\content;
 
 use Mitisk\Yii2Admin\dto\ImageValue;
 use Mitisk\Yii2Admin\dto\LinkValue;
-use Mitisk\Yii2Admin\dto\ListItem;
 use Mitisk\Yii2Admin\enums\BlockType;
 
 /**
@@ -18,7 +17,6 @@ use Mitisk\Yii2Admin\enums\BlockType;
  * | Html  | очищенный HTML                                 |
  * | Image | {"file_id": 12, "alt": "…", "title": "…"}      |
  * | Link  | {"text": "…", "url": "…", "target": "_self"}   |
- * | List  | [{"title","text","url","image"}, …]            |
  *
  * Повреждённый JSON никогда не бросает исключение: значение считается пустым,
  * чтобы сломанная запись не роняла страницу сайта.
@@ -27,21 +25,17 @@ final class BlockValueCodec
 {
     private const JSON_FLAGS = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR;
 
-    /**
-     * @return string|LinkValue|ImageValue|list<ListItem>
-     */
-    public static function decode(BlockType $type, ?string $raw): string|LinkValue|ImageValue|array
+    public static function decode(BlockType $type, ?string $raw): string|LinkValue|ImageValue
     {
         return match ($type) {
             BlockType::Text, BlockType::Html => (string)$raw,
             BlockType::Link => LinkValue::fromArray(self::json($raw)),
             BlockType::Image => ImageValue::fromArray(self::json($raw)),
-            BlockType::List => self::listItems(self::json($raw)),
         };
     }
 
     /**
-     * @param mixed $value Строка, DTO, массив DTO или сырой массив (значение по умолчанию из кода).
+     * @param mixed $value Строка, DTO или сырой массив (значение по умолчанию из кода).
      */
     public static function encode(BlockType $type, mixed $value): string
     {
@@ -55,10 +49,6 @@ final class BlockValueCodec
                 ($value instanceof ImageValue ? $value : ImageValue::fromArray(is_array($value) ? $value : []))->toArray(),
                 self::JSON_FLAGS
             ),
-            BlockType::List => json_encode(
-                array_map(static fn(ListItem $i): array => $i->toArray(), self::listItems(is_array($value) ? $value : [])),
-                self::JSON_FLAGS
-            ),
         };
     }
 
@@ -70,29 +60,7 @@ final class BlockValueCodec
     public static function fileIds(BlockType $type, ?string $raw): array
     {
         $value = self::decode($type, $raw);
-        if ($value instanceof ImageValue) {
-            return $value->fileId === null ? [] : [$value->fileId];
-        }
-        if ($type === BlockType::List) {
-            return array_values(array_filter(array_map(static fn(ListItem $i): ?int => $i->image, $value)));
-        }
-        return [];
-    }
-
-    /**
-     * @param array<mixed> $rows
-     * @return list<ListItem>
-     */
-    private static function listItems(array $rows): array
-    {
-        $out = [];
-        foreach ($rows as $row) {
-            $item = $row instanceof ListItem ? $row : (is_array($row) ? ListItem::fromArray($row) : null);
-            if ($item !== null && !$item->isEmpty()) {
-                $out[] = $item;
-            }
-        }
-        return $out;
+        return $value instanceof ImageValue && $value->fileId !== null ? [$value->fileId] : [];
     }
 
     /**

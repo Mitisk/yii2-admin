@@ -16,7 +16,6 @@ enum BlockType: string
     case Html = 'html';
     case Image = 'image';
     case Link = 'link';
-    case List = 'list';
 
     /**
      * Подпись для админки.
@@ -28,16 +27,15 @@ enum BlockType: string
             self::Html => 'HTML',
             self::Image => 'Картинка',
             self::Link => 'Ссылка',
-            self::List => 'Список',
         };
     }
 
     /**
-     * Значение хранится как JSON (картинка, ссылка, список).
+     * Значение хранится как JSON (картинка, ссылка).
      */
     public function isStructured(): bool
     {
-        return in_array($this, [self::Image, self::Link, self::List], true);
+        return in_array($this, [self::Image, self::Link], true);
     }
 
     /**

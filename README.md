@@ -334,9 +334,9 @@ if (!Yii::$app->adminBar->showDrafts()) {      // для посетителя в
 
 ## 📝 Текстовые блоки (раздел «Контент»)
 
-Именованные фрагменты сайта — телефон, текст на главной, баннер, ссылка, список преимуществ —
+Именованные фрагменты сайта — телефон, текст на главной, баннер, ссылка на оферту —
 которые разработчик выводит одной строкой, а администратор правит в разделе «Контент» или прямо
-на странице через Admin Bar. Типы: текст, HTML, картинка, ссылка, список.
+на странице через Admin Bar. Типы: текст, HTML, картинка, ссылка.
 
 ```php
 use Mitisk\Yii2Admin\widgets\ContentBlock;
@@ -344,11 +344,8 @@ use Mitisk\Yii2Admin\enums\BlockType;
 
 <?= ContentBlock::widget(['key' => 'header.phone', 'name' => 'Телефон в шапке', 'default' => '+7 (495) 000-00-00']) ?>
 <?= ContentBlock::widget(['key' => 'home.intro', 'type' => BlockType::Html, 'default' => '<p>Текст</p>']) ?>
-<?= ContentBlock::widget([
-    'key' => 'home.benefits', 'type' => BlockType::List, 'name' => 'Преимущества',
-    'itemFields' => ['title', 'text', 'image'],
-    'itemView' => '@app/views/site/_benefit.php',   // получает $item: title, text, url, image (URL)
-]) ?>
+<?= ContentBlock::widget(['key' => 'home.banner', 'type' => BlockType::Image, 'contentOptions' => ['class' => 'img-fluid']]) ?>
+<?= ContentBlock::widget(['key' => 'footer.offer', 'type' => BlockType::Link, 'default' => ['text' => 'Оферта', 'url' => '/offer']]) ?>
 ```
 
 Блока ещё нет в базе — он создаётся со значением `default` и сразу появляется в админке.

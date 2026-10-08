@@ -9,19 +9,17 @@ use Mitisk\Yii2Admin\components\content\BlockImageStorage;
 use Mitisk\Yii2Admin\components\content\BlockValueCodec;
 use Mitisk\Yii2Admin\dto\ImageValue;
 use Mitisk\Yii2Admin\dto\LinkValue;
-use Mitisk\Yii2Admin\dto\ListItem;
 use Mitisk\Yii2Admin\enums\BlockType;
 use Mitisk\Yii2Admin\models\ContentBlock;
 use Yii;
 use yii\base\Model;
-use yii\validators\FileValidator;
 use yii\web\UploadedFile;
 
 /**
  * Форма блока: поля зависят от типа и не совпадают со строкой таблицы.
  *
  * SCENARIO_EDIT (`editContent`) — только значение и активность.
- * SCENARIO_MANAGE (`manageContent`) — ещё ключ, название, группа, подсказка, тип (при создании), поля списка.
+ * SCENARIO_MANAGE (`manageContent`) — ещё ключ, название, группа, подсказка и тип (при создании).
  *
  * Свойства без типов намеренно: load() пишет сырые данные запроса (могут прийти массивы),
  * приведение и проверку делают правила.
@@ -62,12 +60,6 @@ class ContentBlockForm extends Model
     public $imageRemove = 0;
     public ?UploadedFile $imageFile = null;
 
-    /** @var array<string, array<string, mixed>> Пункты списка: ключ строки => поля */
-    public $items = [];
-
-    /** @var list<string> */
-    public $itemFields = ListItem::FIELDS;
-
     public function __construct(
         public readonly ContentBlock $block,
         private readonly BlockImageStorage $images = new BlockImageStorage(),
@@ -89,29 +81,24 @@ class ContentBlockForm extends Model
         $form->group = (string)$block->group;
         $form->hint = (string)$block->hint;
         $form->is_active = $block->isNewRecord ? 1 : (int)$block->is_active;
-        $form->itemFields = $block->getItemFields();
 
         $value = $block->getDecodedValue();
         if (is_string($value)) {
             $form->text = $value;
         } elseif ($value instanceof LinkValue) {
             [$form->linkText, $form->linkUrl, $form->linkTarget] = [$value->text, $value->url, $value->target];
-        } elseif ($value instanceof ImageValue) {
-            [$form->imageAlt, $form->imageTitle] = [$value->alt, $value->title];
         } else {
-            foreach ($value as $i => $item) {
-                $form->items['i' . $i] = $item->toArray();
-            }
+            [$form->imageAlt, $form->imageTitle] = [$value->alt, $value->title];
         }
         return $form;
     }
 
     public function scenarios(): array
     {
-        $edit = ['is_active', 'text', 'linkText', 'linkUrl', 'linkTarget', 'imageAlt', 'imageTitle', 'imageRemove', 'items', 'imageFile'];
+        $edit = ['is_active', 'text', 'linkText', 'linkUrl', 'linkTarget', 'imageAlt', 'imageTitle', 'imageRemove', 'imageFile'];
         return [
             self::SCENARIO_EDIT => $edit,
-            self::SCENARIO_MANAGE => array_merge($edit, ['key', 'name', 'type', 'group', 'hint', 'itemFields']),
+            self::SCENARIO_MANAGE => array_merge($edit, ['key', 'name', 'type', 'group', 'hint']),
         ];
     }
 
@@ -129,9 +116,6 @@ class ContentBlockForm extends Model
             ['linkUrl', 'string', 'max' => 2048],
             ['linkUrl', 'validateLinkUrl'],
             ['linkTarget', 'in', 'range' => ['_self', '_blank']],
-            ['items', 'validateItems'],
-            ['itemFields', 'each', 'rule' => ['in', 'range' => ListItem::FIELDS]],
-            ['itemFields', 'validateItemFields', 'skipOnEmpty' => false],
             ['imageFile', 'file', 'skipOnEmpty' => true, 'extensions' => BlockImageStorage::ALLOWED, 'checkExtensionByMimeType' => true],
         ];
     }
@@ -142,17 +126,15 @@ class ContentBlockForm extends Model
             'key' => 'Ключ', 'name' => 'Название', 'type' => 'Тип', 'group' => 'Группа', 'hint' => 'Подсказка',
             'is_active' => 'Активен', 'text' => 'Значение', 'linkText' => 'Текст ссылки', 'linkUrl' => 'Адрес',
             'linkTarget' => 'Открывать', 'imageAlt' => 'Alt', 'imageTitle' => 'Title', 'imageFile' => 'Файл',
-            'imageRemove' => 'Удалить картинку', 'items' => 'Пункты', 'itemFields' => 'Поля пункта',
+            'imageRemove' => 'Удалить картинку',
         ];
     }
 
     /**
      * Загрузка из запроса браузера.
      *
-     * - `imageFile` берётся только из `$_FILES`: Html::activeFileInput() шлёт ещё и скрытое
-     *   поле с тем же именем и пустой строкой, которое нельзя присвоить свойству типа UploadedFile;
-     * - `items=""` — sentinel формы: админ удалил все пункты, это пустой список;
-     * - `itemFields=""` — checkboxList без отмеченных полей, это пустой набор (ошибка валидации).
+     * `imageFile` берётся только из `$_FILES`: Html::activeFileInput() шлёт ещё и скрытое
+     * поле с тем же именем и пустой строкой, которое нельзя присвоить свойству типа UploadedFile.
      */
     public function load($data, $formName = null): bool
     {
@@ -161,12 +143,6 @@ class ContentBlockForm extends Model
             unset($data[$scope]['imageFile']);
         }
         $loaded = parent::load($data, $formName);
-        if (!is_array($this->items)) {
-            $this->items = [];
-        }
-        if (!is_array($this->itemFields)) {
-            $this->itemFields = [];
-        }
         $this->imageFile = UploadedFile::getInstance($this, 'imageFile');
         return $loaded || $this->imageFile !== null;
     }
@@ -190,43 +166,6 @@ class ContentBlockForm extends Model
         }
     }
 
-    public function validateItems(string $attribute): void
-    {
-        if (!is_array($this->items)) {
-            $this->addError($attribute, 'Неверный формат пунктов.');
-            return;
-        }
-        $fileValidator = new FileValidator([
-            'extensions' => BlockImageStorage::ALLOWED,
-            'checkExtensionByMimeType' => true,
-        ]);
-        foreach ($this->items as $rowKey => $row) {
-            if (!is_array($row)) {
-                $this->addError($attribute, 'Неверный формат пункта.');
-                return;
-            }
-            $url = is_scalar($row['url'] ?? null) ? trim((string)$row['url']) : '';
-            if ($url !== '' && !LinkValue::isSafeUrl($url)) {
-                $this->addError($attribute, 'Недопустимый адрес в пункте: ' . $url);
-            }
-            // Загрузки пунктов проверяются так же строго, как картинка блока
-            $upload = UploadedFile::getInstance($this, 'items[' . $rowKey . '][imageFile]');
-            if ($upload !== null && !$fileValidator->validate($upload, $error)) {
-                $this->addError($attribute, 'Картинка «' . $upload->name . '»: ' . $error);
-            }
-        }
-    }
-
-    /**
-     * У пункта списка должно остаться хотя бы одно поле, иначе сохранение сотрёт все пункты.
-     */
-    public function validateItemFields(string $attribute): void
-    {
-        if (!is_array($this->itemFields) || $this->itemFields === []) {
-            $this->addError($attribute, 'Отметьте хотя бы одно поле пункта.');
-        }
-    }
-
     public function getBlockType(): BlockType
     {
         return $this->block->isNewRecord && $this->scenario === self::SCENARIO_MANAGE
@@ -235,8 +174,8 @@ class ContentBlockForm extends Model
     }
 
     /**
-     * Сохраняет блок, картинки и запись аудита в одной транзакции.
-     * Загруженные файлы при ошибке удаляются.
+     * Сохраняет блок, картинку и запись аудита в одной транзакции.
+     * Загруженный файл при ошибке удаляется.
      */
     public function save(): bool
     {
@@ -260,21 +199,17 @@ class ContentBlockForm extends Model
                 if ($isNew) {
                     $block->type = $type->value;
                 }
-                if ($type === BlockType::List) {
-                    $block->schema = json_encode(['itemFields' => array_values((array)$this->itemFields)], JSON_UNESCAPED_UNICODE);
-                }
             }
             $block->is_active = (int)(bool)$this->is_active;
             if ($isNew) {
                 $block->value = null;
-                $block->save(false);   // нужен id для item_id картинок
+                $block->save(false);   // нужен id для item_id картинки
             }
 
             $value = match ($type) {
                 BlockType::Text, BlockType::Html => (string)$this->text,
                 BlockType::Link => new LinkValue(trim((string)$this->linkText), trim((string)$this->linkUrl), (string)$this->linkTarget),
                 BlockType::Image => $this->buildImage($oldValue, $stored),
-                BlockType::List => $this->buildItems($oldFileIds, $stored),
             };
             $block->value = BlockValueCodec::encode($type, $value);
             $block->save(false);
@@ -309,44 +244,5 @@ class ContentBlockForm extends Model
             $fileId = null;
         }
         return new ImageValue($fileId, trim((string)$this->imageAlt), trim((string)$this->imageTitle));
-    }
-
-    /**
-     * Пункты в порядке полей формы (порядок задаёт перетаскивание).
-     * Существующая картинка принимается, только если она уже принадлежит блоку.
-     *
-     * @param list<int> $ownFileIds Картинки, которые сейчас есть у блока.
-     * @param list<int> $stored
-     * @return list<ListItem>
-     */
-    private function buildItems(array $ownFileIds, array &$stored): array
-    {
-        $fields = array_values((array)$this->itemFields) ?: ListItem::FIELDS;
-        $out = [];
-        foreach ((array)$this->items as $rowKey => $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            $image = is_numeric($row['image'] ?? null) ? (int)$row['image'] : null;
-            if ($image !== null && !in_array($image, $ownFileIds, true)) {
-                $image = null;
-            }
-            $upload = UploadedFile::getInstance($this, 'items[' . $rowKey . '][imageFile]');
-            if ($upload !== null) {
-                $image = $stored[] = $this->images->store($upload, (int)$this->block->id, 'items');
-            } elseif (!empty($row['imageRemove'])) {
-                $image = null;
-            }
-            $item = ListItem::fromArray([
-                'title' => in_array('title', $fields, true) ? ($row['title'] ?? '') : '',
-                'text' => in_array('text', $fields, true) ? ($row['text'] ?? '') : '',
-                'url' => in_array('url', $fields, true) ? ($row['url'] ?? '') : '',
-                'image' => in_array('image', $fields, true) ? $image : null,
-            ]);
-            if (!$item->isEmpty()) {
-                $out[] = $item;
-            }
-        }
-        return $out;
     }
 }

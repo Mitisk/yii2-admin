@@ -7,7 +7,6 @@ namespace Mitisk\Yii2Admin\models;
 use Mitisk\Yii2Admin\components\content\BlockValueCodec;
 use Mitisk\Yii2Admin\dto\ImageValue;
 use Mitisk\Yii2Admin\dto\LinkValue;
-use Mitisk\Yii2Admin\dto\ListItem;
 use Mitisk\Yii2Admin\enums\BlockType;
 use Mitisk\Yii2Admin\models\query\ContentBlockQuery;
 use Yii;
@@ -26,7 +25,6 @@ use yii\helpers\HtmlPurifier;
  * @property string      $name
  * @property string      $type       Значение {@see BlockType}
  * @property string|null $value      Формат по типу — {@see BlockValueCodec}
- * @property string|null $schema     JSON {"itemFields": [...]} для списка
  * @property string      $group
  * @property string|null $hint
  * @property int|bool    $is_active
@@ -89,7 +87,7 @@ class ContentBlock extends ActiveRecord
             ['type', 'in', 'range' => array_column(BlockType::cases(), 'value')],
             [['name', 'hint'], 'string', 'max' => 255],
             ['group', 'string', 'max' => 64],
-            [['value', 'schema'], 'string'],
+            ['value', 'string'],
             [['is_active', 'from_code'], 'boolean'],
         ];
     }
@@ -115,24 +113,9 @@ class ContentBlock extends ActiveRecord
         return BlockType::tryFrom((string)$this->type) ?? BlockType::Text;
     }
 
-    /**
-     * @return string|LinkValue|ImageValue|list<ListItem>
-     */
-    public function getDecodedValue(): string|LinkValue|ImageValue|array
+    public function getDecodedValue(): string|LinkValue|ImageValue
     {
         return BlockValueCodec::decode($this->getBlockType(), $this->value);
-    }
-
-    /**
-     * Поля пункта списка, заданные кодом (`itemFields` виджета).
-     *
-     * @return list<string>
-     */
-    public function getItemFields(): array
-    {
-        $data = json_decode((string)$this->schema, true);
-        $fields = is_array($data['itemFields'] ?? null) ? $data['itemFields'] : ListItem::FIELDS;
-        return array_values(array_intersect(ListItem::FIELDS, $fields)) ?: ListItem::FIELDS;
     }
 
     /**

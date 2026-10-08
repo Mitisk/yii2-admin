@@ -17,10 +17,8 @@ use yii\helpers\Html;
  * ```php
  * <?= ContentBlock::widget(['key' => 'header.phone', 'default' => '+7 (495) 000-00-00']) ?>
  * <?= ContentBlock::widget(['key' => 'home.intro', 'type' => BlockType::Html, 'default' => '<p>Текст</p>']) ?>
- * <?= ContentBlock::widget([
- *     'key' => 'home.benefits', 'type' => BlockType::List, 'name' => 'Преимущества',
- *     'itemFields' => ['title', 'text', 'image'], 'itemView' => '@app/views/site/_benefit.php',
- * ]) ?>
+ * <?= ContentBlock::widget(['key' => 'home.banner', 'type' => BlockType::Image, 'contentOptions' => ['class' => 'img-fluid']]) ?>
+ * <?= ContentBlock::widget(['key' => 'footer.offer', 'type' => BlockType::Link, 'default' => ['text' => 'Оферта', 'url' => '/offer']]) ?>
  * ```
  * Блока нет в БД — он создаётся со значением `default`. Выключен — пустая строка.
  * Администратору с правом `editContent` вывод оборачивается для правки через Admin Bar.
@@ -31,7 +29,7 @@ class ContentBlock extends Widget
 
     public BlockType|string $type = BlockType::Text;
 
-    /** @var mixed Строка или массив (для link/list) — значение для автосоздания. */
+    /** @var mixed Строка или массив (для link) — значение для автосоздания. */
     public mixed $default = '';
 
     public string $name = '';
@@ -51,15 +49,6 @@ class ContentBlock extends Widget
 
     public bool $nl2br = false;
 
-    /** @var list<string> Поля пункта списка ({@see \Mitisk\Yii2Admin\dto\ListItem::FIELDS}). */
-    public array $itemFields = [];
-
-    /** Шаблон пункта списка: получает `$item` и `$index`. */
-    public ?string $itemView = null;
-
-    /** @var callable|null fn(array $item, int $index): string */
-    public $itemTemplate = null;
-
     public function run(): string
     {
         $type = $this->type instanceof BlockType ? $this->type : (BlockType::tryFrom($this->type) ?? BlockType::Text);
@@ -70,14 +59,8 @@ class ContentBlock extends Widget
             $this->key,
             $type,
             $this->default,
-            [
-                'contentOptions' => $this->contentOptions,
-                'nl2br' => $this->nl2br,
-                'itemView' => $this->itemView,
-                'itemTemplate' => $this->itemTemplate,
-                'view' => $this->getView(),
-            ],
-            ['name' => $this->name, 'hint' => $this->hint, 'group' => $this->group, 'itemFields' => $this->itemFields]
+            ['contentOptions' => $this->contentOptions, 'nl2br' => $this->nl2br],
+            ['name' => $this->name, 'hint' => $this->hint, 'group' => $this->group]
         );
         if ($html === null) {
             return '';

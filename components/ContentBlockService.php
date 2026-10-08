@@ -7,7 +7,6 @@ namespace Mitisk\Yii2Admin\components;
 use Mitisk\Yii2Admin\components\content\BlockRenderer;
 use Mitisk\Yii2Admin\components\content\BlockValueCodec;
 use Mitisk\Yii2Admin\dto\LinkValue;
-use Mitisk\Yii2Admin\dto\ListItem;
 use Mitisk\Yii2Admin\enums\BlockType;
 use Mitisk\Yii2Admin\models\ContentBlock;
 use Mitisk\Yii2Admin\models\File;
@@ -59,21 +58,6 @@ class ContentBlockService extends Component
         return BlockValueCodec::decode(BlockType::tryFrom($row['type']) ?? BlockType::Text, $row['value']);
     }
 
-    /**
-     * Пункты списка для своей разметки; картинки уже URL.
-     *
-     * @return list<array{title: string, text: string, url: string, image: string|null}>
-     */
-    public function items(string $key): array
-    {
-        $items = $this->get($key, []);
-        if (!is_array($items)) {
-            return [];
-        }
-        $this->preloadImages(array_filter(array_map(static fn(ListItem $i): ?int => $i->image, $items)));
-        return array_map(fn(ListItem $i): array => $this->renderer()->itemData($i), $items);
-    }
-
     public function link(string $key): ?LinkValue
     {
         $value = $this->get($key);
@@ -86,37 +70,21 @@ class ContentBlockService extends Component
         return $ids === [] ? null : $this->imageUrlById($ids[0]);
     }
 
+    /**
+     * URL картинки по id записи `file`; запоминается на время запроса.
+     */
     public function imageUrlById(int $id): ?string
     {
         if (!array_key_exists($id, $this->_imageUrls)) {
-            $this->preloadImages([$id]);
+            $this->_imageUrls[$id] = File::findOne($id)?->getUrl();
         }
-        return $this->_imageUrls[$id] ?? null;
-    }
-
-    /**
-     * Загружает URL картинок одним запросом (без N+1 в списках).
-     *
-     * @param array<int> $ids
-     */
-    public function preloadImages(array $ids): void
-    {
-        $missing = array_values(array_diff(array_unique($ids), array_keys($this->_imageUrls)));
-        if ($missing === []) {
-            return;
-        }
-        foreach ($missing as $id) {
-            $this->_imageUrls[$id] = null;
-        }
-        foreach (File::find()->where(['id' => $missing])->all() as $file) {
-            $this->_imageUrls[(int)$file->id] = $file->getUrl();
-        }
+        return $this->_imageUrls[$id];
     }
 
     /**
      * Находит блок или создаёт его из значения по умолчанию.
      *
-     * @param array{name?: string, hint?: string, group?: string, itemFields?: list<string>} $meta
+     * @param array{name?: string, hint?: string, group?: string} $meta
      * @return array{id: int, type: string, value: ?string, name: string, active: bool}|null Null — таблица недоступна.
      * @throws \InvalidArgumentException Ключ не подходит под {@see ContentBlock::KEY_PATTERN}.
      */
@@ -139,9 +107,6 @@ class ContentBlockService extends Component
             'hint' => ($meta['hint'] ?? '') !== '' ? $meta['hint'] : null,
             'is_active' => 1,
             'from_code' => 1,
-            'schema' => $type === BlockType::List && !empty($meta['itemFields'])
-                ? json_encode(['itemFields' => array_values($meta['itemFields'])], JSON_UNESCAPED_UNICODE)
-                : null,
         ]);
         try {
             $block->save(false);
@@ -164,7 +129,7 @@ class ContentBlockService extends Component
      * Null — блок выключен.
      *
      * @param array $opts Опции {@see BlockRenderer::render()}.
-     * @param array{name?: string, hint?: string, group?: string, itemFields?: list<string>} $meta
+     * @param array{name?: string, hint?: string, group?: string} $meta
      */
     public function renderBlock(string $key, BlockType $type, mixed $default, array $opts = [], array $meta = []): ?string
     {
@@ -178,11 +143,7 @@ class ContentBlockService extends Component
         if (!$row['active']) {
             return null;
         }
-        $value = BlockValueCodec::decode($realType, $row['value']);
-        if ($realType === BlockType::List) {
-            $this->preloadImages(array_filter(array_map(static fn(ListItem $i): ?int => $i->image, $value)));
-        }
-        return $this->renderer()->render($realType, $value, $opts);
+        return $this->renderer()->render($realType, BlockValueCodec::decode($realType, $row['value']), $opts);
     }
 
     /**

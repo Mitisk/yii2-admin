@@ -14,7 +14,6 @@ class ContentBlockAsset extends AssetBundle
     public $sourcePath = '@Mitisk/Yii2Admin/assets';
 
     public $js = [
-        'node_modules/sortablejs/Sortable.min.js',
         'js/page/content-block.min.js',
     ];
 

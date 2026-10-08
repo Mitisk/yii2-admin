@@ -1063,12 +1063,12 @@ star, folder, calendar, link, download, upload, info, clock, shield, tool, keybo
 ## 9b. Контент: текстовые блоки
 
 Встроенный раздел админки «Контент» → «Текстовые блоки» (`/admin/content-block/`), секция сайдбара
-видна при праве `viewContent`. Код: `enums/BlockType.php`, `dto/{LinkValue,ImageValue,ListItem}.php`,
+видна при праве `viewContent`. Код: `enums/BlockType.php`, `dto/{LinkValue,ImageValue}.php`,
 `components/content/{BlockValueCodec,BlockRenderer,BlockImageStorage}.php`, `components/ContentBlockService.php`,
 `models/{ContentBlock,ContentBlockSearch}.php`, `models/query/ContentBlockQuery.php`,
 `models/forms/ContentBlockForm.php`, `controllers/ContentBlockController.php`, `widgets/ContentBlock.php`.
 
-**Вывод на сайте** (тип — `BlockType::Text|Html|Image|Link|List`):
+**Вывод на сайте** (тип — `BlockType::Text|Html|Image|Link`):
 
 ```php
 use Mitisk\Yii2Admin\widgets\ContentBlock;
@@ -1078,20 +1078,17 @@ use Mitisk\Yii2Admin\enums\BlockType;
 <?= ContentBlock::widget(['key' => 'home.intro', 'type' => BlockType::Html, 'default' => '<p>Текст</p>']) ?>
 <?= ContentBlock::widget(['key' => 'home.banner', 'type' => BlockType::Image, 'contentOptions' => ['class' => 'img-fluid']]) ?>
 <?= ContentBlock::widget(['key' => 'footer.offer', 'type' => BlockType::Link, 'default' => ['text' => 'Оферта', 'url' => '/offer']]) ?>
-<?= ContentBlock::widget([
-    'key' => 'home.benefits', 'type' => BlockType::List, 'name' => 'Преимущества',
-    'itemFields' => ['title', 'text', 'image'],          // поля пункта: title, text, url, image
-    'itemView' => '@app/views/site/_benefit.php',        // получает $item (картинка уже URL) и $index;
-                                                         // или 'itemTemplate' => fn(array $item, int $i) => '...'
-]) ?>
 ```
 
-Опции виджета: `key` (`[a-z0-9._-]`, до 128), `type`, `default`, `name`, `hint`, `group` (пусто — первая часть
-ключа), `tag` (по умолчанию span для text/link, div для остальных), `options` (атрибуты обёртки),
-`contentOptions` (атрибуты `<a>`/`<img>`), `nl2br`, `itemFields`, `itemView`, `itemTemplate`.
+Типа «Список» нет (удалён миграцией `m261011_120000_remove_content_block_lists`): повторяющиеся
+пункты делайте компонентом админки или несколькими блоками.
 
-**Значения без разметки:** `Yii::$app->blocks->get($key, $default)` (строка или DTO), `->items($key)`
-(массив пунктов), `->link($key)` (`LinkValue|null`), `->imageUrl($key)`.
+Опции виджета: `key` (`[a-z0-9._-]`, до 128), `type`, `default`, `name`, `hint`, `group` (пусто — первая часть
+ключа), `tag` (по умолчанию span для text/link, div для html/image), `options` (атрибуты обёртки),
+`contentOptions` (атрибуты `<a>`/`<img>`), `nl2br`.
+
+**Значения без разметки:** `Yii::$app->blocks->get($key, $default)` (строка или DTO),
+`->link($key)` (`LinkValue|null`), `->imageUrl($key)`.
 
 **Поведение.** Нет блока в БД — создаётся из `default` с `from_code = 1`. Выключенный блок выводит пустую строку.
 Удаление блока = сброс: если ключ ещё в шаблоне, блок вернётся со значением из кода. Все блоки читаются одним
@@ -1109,7 +1106,7 @@ use Mitisk\Yii2Admin\enums\BlockType;
 `/admin/content-block/update/?modal=1&key=…`; после сохранения iframe шлёт `postMessage({type: 'ab-block-saved', key})`,
 панель перечитывает страницу и подменяет блок. Панель «Блоки на странице» и группа палитры `Ctrl+K`.
 
-**Шорткоды (зарезервировано для раздела «Страницы»):** `[block key="home.benefits"]` — вставка блока в текст
+**Шорткоды (зарезервировано для раздела «Страницы»):** `[block key="home.intro"]` — вставка блока в текст
 страницы. Обработчика пока нет.
 
 ---
