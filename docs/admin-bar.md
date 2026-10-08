@@ -1,8 +1,8 @@
 # Панель администратора на сайте (Admin Bar) — план
 
-> Статус: этап 1 реализован в версии 1.7.0 (ветка `admin-bar`). Этап 2 сделан частично
-> (SEO-панель, «Смотреть как гость», «Показывать черновики»); тип `block` ждёт раздела
-> «Текстовые блоки». Этап 3 — в планах.
+> Статус: этап 1 реализован в версии 1.7.0 (ветка `admin-bar`). Этап 2 реализован:
+> SEO-панель, «Смотреть как гость», «Показывать черновики» и правка текстовых блоков
+> раздела «Контент» (ветка `content-blocks`). Этап 3 — в планах.
 
 Плавающая панель для залогиненного администратора поверх страниц сайта:
 быстрый переход в админку, контекст текущей страницы («Редактировать запись»),
@@ -49,9 +49,11 @@ Shadow DOM кастомного элемента `<admin-bar>`; CSS подклю
 {
   "version": "1.7.0",
   "user":     {"id": 1, "name": "Администратор", "avatar": "/web/...", "roles": ["superAdminRole"]},
-  "urls":     {"dashboard": "/admin/", "profile": "/admin/user/update/?id=1", "logout": "/admin/logout/"},
+  "urls":     {"dashboard": "/admin/", "profile": "/admin/user/update/?id=1", "logout": "/admin/logout/",
+               "blocks": "/admin/content-block/", "blockEdit": "/admin/content-block/update/?modal=1&key="},
   "csrf":     {"param": "_csrf", "token": "..."},
-  "endpoints":{"state": "/admin/bar/state/", "action": "/admin/bar/action/", "attribute": "/admin/bar/attribute/"},
+  "endpoints":{"state": "/admin/bar/state/", "action": "/admin/bar/action/", "attribute": "/admin/bar/attribute/",
+               "block": "/admin/bar/block/"},
   "context":  {"url": "/product/x/", "route": "product/view",
                "model": {"class": "app\\models\\Product", "id": 12, "label": "Товар X",
                          "component": {"alias": "product", "name": "Товары"},
@@ -61,9 +63,10 @@ Shadow DOM кастомного элемента `<admin-bar>`; CSS подклю
   "panels":   [{"id": "seo", "label": "SEO", "icon": "search", "items": [], "url": ""}],
   "badges":   {"update": "1.7.1"},
   "impersonation": {"active": false, "returnUrl": "/admin/user/stop-impersonate/"},
-  "features": {"inlineEdit": true, "drafts": false},
+  "features": {"inlineEdit": true, "drafts": false, "blocks": true},
   "prefs":    {"position": "bottom", "theme": "dark", "hotkey": "Alt+Shift+A"},
-  "view":     {"guest": false, "drafts": false, "cookies": {"guest": "ab_guest", "drafts": "ab_drafts"}}
+  "view":     {"guest": false, "drafts": false, "cookies": {"guest": "ab_guest", "drafts": "ab_drafts"}},
+  "assets":   {"js": "...", "css": "...", "blocks": ".../js/admin-bar-blocks.min.js"}
 }
 ```
 
@@ -144,8 +147,12 @@ CSRF; `Cache-Control: private, no-store` при серверном рендер�
     `Yii::$app->adminBar->showDrafts()` в своих выборках; тумблер виден на страницах,
     которые это сделали, в client-режиме — по `draftsToggle`. Во включённом режиме
     в панели горит индикатор «Черновики».
-  - [ ] Тип `block` с Trumbowyg (лениво) — после раздела «Текстовые блоки».
-  - Бюджет JS превышен: 30,5 КБ при плане 30 КБ.
+  - [x] Тип `block`: блоки раздела «Контент» (`ContentBlock::widget`). Текст правится
+    на месте через `POST /admin/bar/block`, остальные типы — в модальном окне с формой
+    админки в iframe (Trumbowyg и кроп живут внутри iframe). Панель «Блоки на странице»
+    и пункты палитры собираются из `[data-ab-block]`. Код правки вынесен в
+    `admin-bar-blocks.min.js` и грузится при первой правке.
+  - Бюджет JS превышен: `admin-bar.min.js` 32,4 КБ при плане 30 КБ.
 - **Этап 3** (после планировщика и медиатеки): техпанель (время, SQL), тип
   `image`, заметки-булавки, бейджи задач и заявок, «создать редирект» на 404.
 

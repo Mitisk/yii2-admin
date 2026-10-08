@@ -332,6 +332,32 @@ if (!Yii::$app->adminBar->showDrafts()) {      // для посетителя в
 
 ---
 
+## 📝 Текстовые блоки (раздел «Контент»)
+
+Именованные фрагменты сайта — телефон, текст на главной, баннер, ссылка, список преимуществ —
+которые разработчик выводит одной строкой, а администратор правит в разделе «Контент» или прямо
+на странице через Admin Bar. Типы: текст, HTML, картинка, ссылка, список.
+
+```php
+use Mitisk\Yii2Admin\widgets\ContentBlock;
+use Mitisk\Yii2Admin\enums\BlockType;
+
+<?= ContentBlock::widget(['key' => 'header.phone', 'name' => 'Телефон в шапке', 'default' => '+7 (495) 000-00-00']) ?>
+<?= ContentBlock::widget(['key' => 'home.intro', 'type' => BlockType::Html, 'default' => '<p>Текст</p>']) ?>
+<?= ContentBlock::widget([
+    'key' => 'home.benefits', 'type' => BlockType::List, 'name' => 'Преимущества',
+    'itemFields' => ['title', 'text', 'image'],
+    'itemView' => '@app/views/site/_benefit.php',   // получает $item: title, text, url, image (URL)
+]) ?>
+```
+
+Блока ещё нет в базе — он создаётся со значением `default` и сразу появляется в админке.
+Удалённый блок, который всё ещё выводится в шаблоне, возвращается со значением из кода.
+Значение без разметки: `Yii::$app->blocks->get('header.phone')`. Права: `viewContent`,
+`editContent`, `manageContent`, роль «Контент-менеджер» (`contentManager`).
+
+---
+
 ## 🔄 Обновление модуля
 
 Обновление делается через composer, напрямую править `vendor/` не нужно.
