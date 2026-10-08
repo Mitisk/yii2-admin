@@ -124,6 +124,8 @@ class AdminBarState extends Component
             'components' => $base . '/admin/components/',
             'update' => $base . '/admin/default/update/',
             'logout' => $base . '/admin/default/logout/',
+            'blocks' => $base . '/admin/content-block/',
+            'blockEdit' => $base . '/admin/content-block/update/?modal=1&key=',
         ];
 
         $state->csrf = [
@@ -135,6 +137,7 @@ class AdminBarState extends Component
             'state' => $base . '/admin/bar/state/',
             'action' => $base . '/admin/bar/action/',
             'attribute' => $base . '/admin/bar/attribute/',
+            'block' => $base . '/admin/bar/block/',
         ];
 
         $state->prefs = [
@@ -215,6 +218,7 @@ class AdminBarState extends Component
         $state->features = [
             'inlineEdit' => true,
             'drafts' => $bar->isDraftsToggleAvailable(),
+            'blocks' => $bar->can('editContent'),
         ];
 
         // Точка расширения

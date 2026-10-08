@@ -7,6 +7,8 @@ namespace Mitisk\Yii2Admin\controllers;
 use Mitisk\Yii2Admin\components\AdminBarComponent;
 use Mitisk\Yii2Admin\components\AdminBarState;
 use Mitisk\Yii2Admin\components\AuditService;
+use Mitisk\Yii2Admin\enums\BlockType;
+use Mitisk\Yii2Admin\models\ContentBlock;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\filters\VerbFilter;
@@ -30,6 +32,7 @@ class BarController extends Controller
                     'state' => ['GET'],
                     'action' => ['POST'],
                     'attribute' => ['POST'],
+                    'block' => ['POST'],
                 ],
             ],
         ];
@@ -146,6 +149,44 @@ class BarController extends Controller
             'value' => $new,
             'html' => Html::encode((string)$new),
         ];
+    }
+
+    /**
+     * Inline-правка текстового блока раздела «Контент».
+     *
+     * POST: `key`, `value`. Только тип `text`; остальные типы правятся в модальном окне.
+     */
+    public function actionBlock(): array
+    {
+        $bar = $this->getBar();
+        if (!$bar->can('editContent')) {
+            Yii::$app->response->statusCode = 403;
+            return ['ok' => false, 'message' => 'Нет права на правку контента'];
+        }
+        $request = Yii::$app->request;
+        $key = (string)$request->post('key', '');
+        $value = $request->post('value');
+        if ($key === '' || !is_string($value)) {
+            return ['ok' => false, 'message' => 'Неполные данные'];
+        }
+        $block = ContentBlock::find()->byKey($key)->one();
+        if ($block === null) {
+            Yii::$app->response->statusCode = 404;
+            return ['ok' => false, 'message' => 'Блок не найден'];
+        }
+        if ($block->getBlockType() !== BlockType::Text) {
+            return ['ok' => false, 'message' => 'Этот блок правится в окне редактирования'];
+        }
+        $old = $block->value;
+        $block->value = trim($value);
+        if (!$block->validate(['value'])) {
+            return ['ok' => false, 'message' => implode(' ', $block->getErrors('value')), 'value' => (string)$old];
+        }
+        $block->save(false, ['value', 'updated_at', 'updated_by']);
+        if ((string)$old !== (string)$block->value) {
+            AuditService::log('update', $block, ['value' => $old]);
+        }
+        return ['ok' => true, 'message' => 'Сохранено', 'value' => (string)$block->value];
     }
 
     private function getBar(): AdminBarComponent

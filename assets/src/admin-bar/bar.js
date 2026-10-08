@@ -194,7 +194,11 @@
         }
 
         // Панели
-        var panels = s.panels || [];
+        var panels = (s.panels || []).slice();
+        var blocks = this.collectBlocks();
+        if (blocks.length) {
+            panels.push({ id: 'blocks', label: 'Блоки на странице', icon: 'file', url: urls.blocks, items: blocks });
+        }
         if (panels.length) {
             bar.appendChild(el('<span class="ab-sep"></span>'));
             panels.forEach(function (p) {
@@ -216,7 +220,7 @@
         }
 
         // Inline-правка
-        if ((s.features || {}).inlineEdit && document.querySelector('[data-ab-attr]')) {
+        if ((s.features || {}).inlineEdit && document.querySelector('[data-ab-attr],[data-ab-block]')) {
             bar.appendChild(el('<span class="ab-sep"></span>'));
             this.editBtn = el('<button type="button" class="ab-btn" data-tip="Править текст на странице">' + icon('edit') + '<span class="ab-label">Править</span></button>');
             this.editBtn.addEventListener('click', this.toggleEditMode.bind(this));
@@ -257,6 +261,31 @@
         var b = el('<button type="button" class="ab-fab is-guest" title="Режим гостя — вернуть панель администратора">' + icon('eye') + '</button>');
         b.addEventListener('click', this.setView.bind(this, 'guest', false));
         this.root.appendChild(b);
+    };
+
+    /* Блоки раздела «Контент», выведенные на странице */
+    AdminBar.prototype.collectBlocks = function () {
+        if (!(this.state.features || {}).blocks) { return []; }
+        return Array.prototype.map.call(document.querySelectorAll('[data-ab-block]'), function (n) {
+            return { label: n.dataset.abLabel || n.dataset.abBlock, value: n.dataset.abType, icon: 'edit', node: n };
+        });
+    };
+
+    /* Модуль правки блоков грузится только при первом обращении */
+    AdminBar.prototype.editBlock = function (node) {
+        var self = this;
+        this.closePop();
+        if (!this._blocks) {
+            this._blocks = new Promise(function (resolve, reject) {
+                if (window.AdminBarBlocks) { resolve(window.AdminBarBlocks.init(self)); return; }
+                var sc = document.createElement('script');
+                sc.src = self.assets.blocks || (self.state.assets || {}).blocks;
+                sc.onload = function () { resolve(window.AdminBarBlocks.init(self)); };
+                sc.onerror = reject;
+                document.head.appendChild(sc);
+            });
+        }
+        this._blocks.then(function (m) { m.edit(node); }, function () { self._blocks = null; self.toast('Не удалось загрузить редактор', 'error'); });
     };
 
     AdminBar.prototype.renderImpersonation = function () {
@@ -378,8 +407,17 @@
 
     AdminBar.prototype.buildPanelPop = function (panel) {
         var pop = el('<div class="ab-pop"><div class="ab-pop-head"><span>' + esc(panel.label) + '</span>' + (panel.url ? '<a class="ab-btn is-icon" style="height:26px;width:26px" href="' + esc(panel.url) + '" title="Открыть">' + icon('external', 14) + '</a>' : '') + '</div></div>');
+        var self = this;
         (panel.items || []).forEach(function (it) {
             var inner = icon(it.icon || 'info') + '<span class="ab-item-text">' + esc(it.label) + '</span>' + (it.value != null ? '<span class="ab-item-val">' + esc(it.value) + '</span>' : '');
+            if (it.node) {
+                var b = el('<button type="button" class="ab-item">' + inner + '</button>');
+                b.addEventListener('click', function () { self.editBlock(it.node); });
+                b.addEventListener('mouseenter', function () { it.node.style.outline = '2px solid #3b82f6'; it.node.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+                b.addEventListener('mouseleave', function () { it.node.style.outline = ''; });
+                pop.appendChild(b);
+                return;
+            }
             pop.appendChild(it.url
                 ? el('<a class="ab-item" href="' + esc(it.url) + '">' + inner + '</a>')
                 : el('<div class="ab-item">' + inner + '</div>'));
@@ -491,6 +529,9 @@
         };
         walk(s.menu, []);
         (s.actions || []).forEach(function (a) { out.push({ group: 'Действия', label: a.label, icon: a.icon || 'zap', action: a }); });
+        this.collectBlocks().forEach(function (b) {
+            out.push({ group: 'Блоки на странице', label: b.label, sub: b.value, icon: 'edit', block: b.node });
+        });
         out.push({ group: 'Админка', label: 'Панель управления', icon: 'home', href: urls.dashboard });
         out.push({ group: 'Админка', label: 'Настройки сайта', icon: 'settings', href: urls.settings });
         out.push({ group: 'Админка', label: 'Компоненты', icon: 'grid', href: urls.components });
@@ -524,6 +565,7 @@
         };
         var choose = function (it) {
             self.hideOverlay();
+            if (it.block) { self.editBlock(it.block); return; }
             if (it.action) { self.runAction(it.action, self.bar); return; }
             if (it.href) { window.open(it.href, it.target || '_self'); }
         };
@@ -549,10 +591,10 @@
             if (!style) {
                 style = document.createElement('style');
                 style.id = id;
-                style.textContent = '[data-ab-attr]{outline:2px dashed #3b82f6;outline-offset:3px;border-radius:3px;cursor:text;transition:background .15s}'
-                    + '[data-ab-attr]:hover{background:rgba(59,130,246,.12)}'
-                    + '[data-ab-attr][contenteditable="true"]{outline:2px solid #3b82f6;background:rgba(59,130,246,.08)}'
-                    + '[data-ab-attr].ab-saving{opacity:.6}';
+                style.textContent = '[data-ab-attr],[data-ab-block]{outline:2px dashed #3b82f6;outline-offset:3px;border-radius:3px;cursor:text;transition:background .15s}'
+                    + '[data-ab-attr]:hover,[data-ab-block]:hover{background:rgba(59,130,246,.12)}'
+                    + '[data-ab-attr][contenteditable="true"],[data-ab-block][contenteditable="true"]{outline:2px solid #3b82f6;background:rgba(59,130,246,.08)}'
+                    + '[data-ab-attr].ab-saving,[data-ab-block].ab-saving{opacity:.6}';
                 document.head.appendChild(style);
             }
             this.bindEditables();
@@ -566,11 +608,11 @@
     AdminBar.prototype.bindEditables = function () {
         var self = this;
         this._editHandler = function (e) {
-            var node = e.target.closest('[data-ab-attr]');
+            var node = e.target.closest('[data-ab-attr],[data-ab-block]');
             if (!node || node.isContentEditable) { return; }
             e.preventDefault();
             e.stopPropagation();
-            self.startEdit(node);
+            if (node.dataset.abBlock) { self.editBlock(node); } else { self.startEdit(node); }
         };
         document.addEventListener('click', this._editHandler, true);
     };

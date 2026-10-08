@@ -17,7 +17,7 @@
             if (s.dataset.position) { state.prefs = state.prefs || {}; state.prefs.position = s.dataset.position; }
             var sc = document.createElement('script');
             sc.src = s.dataset.js;
-            sc.onload = function () { window.AdminBar.boot(state, { css: s.dataset.css }); };
+            sc.onload = function () { window.AdminBar.boot(state, { css: s.dataset.css, blocks: s.dataset.blocks }); };
             document.head.appendChild(sc);
         })
         .catch(function () { /* панель не обязательна */ });

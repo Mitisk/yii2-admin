@@ -26,6 +26,7 @@ class AdminBarAsset extends AssetBundle
         'only' => [
             'js/admin-bar.min.js',
             'js/admin-bar-loader.min.js',
+            'js/admin-bar-blocks.min.js',
             'css/admin-bar.min.css',
         ],
     ];

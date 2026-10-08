@@ -133,6 +133,7 @@ final class Module extends \yii\base\Module implements BootstrapInterface
                 'admin/bar/state',
                 'admin/bar/action',
                 'admin/bar/attribute',
+                'admin/bar/block',
             ];
 
             if (Yii::$app->user->isGuest && !in_array($route, $skipRoutes, true)) {

@@ -75,6 +75,7 @@ class AdminBar extends Widget
         $assets = [
             'js' => $bundle->baseUrl . '/js/admin-bar.min.js',
             'css' => $bundle->baseUrl . '/css/admin-bar.min.css',
+            'blocks' => $bundle->baseUrl . '/js/admin-bar-blocks.min.js',
         ];
 
         if ($mode === self::MODE_CLIENT) {
@@ -117,6 +118,7 @@ class AdminBar extends Widget
                 'state' => rtrim((string)Yii::$app->request->baseUrl, '/') . '/admin/bar/state/',
                 'js' => $assets['js'],
                 'css' => $assets['css'],
+                'blocks' => $assets['blocks'],
             ],
         ];
         $model = $bar->getModel();
