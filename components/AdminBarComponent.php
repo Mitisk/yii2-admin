@@ -87,7 +87,8 @@ class AdminBarComponent extends Component
 
     /**
      * Встроенные модели бара: разделы, которых нет в `admin_model` (страницы, свои модели сайта).
-     * class => [alias, name, label (атрибут подписи), permissions[view|update|create], routes[index|update|create]].
+     * class => [alias, name, label (атрибут подписи), attributes (что можно править на месте),
+     * permissions[view|update|create], routes[index|update|create]].
      *
      * @var array<class-string, array<string, mixed>>
      */
@@ -102,6 +103,8 @@ class AdminBarComponent extends Component
                 'alias' => 'page',
                 'name' => 'Страницы',
                 'label' => 'title',
+                // Слаг и родитель меняют адреса всей ветки — только через форму
+                'attributes' => ['title'],
                 'permissions' => ['view' => 'viewContent', 'update' => 'editContent', 'create' => 'manageContent'],
                 'routes' => ['index' => '/admin/page/index', 'update' => '/admin/page/update', 'create' => '/admin/page/create'],
             ],
@@ -176,6 +179,22 @@ class AdminBarComponent extends Component
             return $this->can($this->models[$class]['permissions']['update']) || $this->can('admin');
         }
         return $this->can($class . '\update') || $this->can('admin');
+    }
+
+    /**
+     * Атрибуты, которые эндпоинт `attribute` разрешает править на месте.
+     *
+     * Встроенная модель — только её список `attributes` (нет списка — ничего): правило
+     * `safeAttributes()` у таких моделей шире, чем можно доверить правке из бара.
+     *
+     * @return list<string>|null null — компонент `admin_model`, действует `safeAttributes()`
+     */
+    public function editableAttributes(string $class): ?array
+    {
+        if (!isset($this->models[$class])) {
+            return null;
+        }
+        return array_values(array_map('strval', (array)($this->models[$class]['attributes'] ?? [])));
     }
 
     /** Модель управляется баром: встроенная или компонент admin_model с view = 1. */

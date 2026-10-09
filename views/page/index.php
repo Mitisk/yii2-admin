@@ -59,7 +59,8 @@ $this->registerCss('.page-row .text-tiny code { background:#f1f5f9; padding:2px 
                     <?php if ($p->updater): ?><div class="text-tiny"><?= Html::encode($p->updater->name ?: $p->updater->username) ?></div><?php endif; ?>
                 </div>
                 <div class="list-icon-function" style="width:200px">
-                    <?= Html::a('<i class="icon-external-link"></i>', $live ? Yii::$app->pages->url($p) : Yii::$app->pages->previewUrl($p), ['class' => 'item', 'target' => '_blank', 'title' => 'Открыть на сайте']) ?>
+                    <?php // Ссылка с токеном — право editContent; остальным черновик откроется по сессии админки ?>
+                    <?= Html::a('<i class="icon-external-link"></i>', $live || !$canEdit ? Yii::$app->pages->url($p) : Yii::$app->pages->previewUrl($p), ['class' => 'item', 'target' => '_blank', 'title' => 'Открыть на сайте']) ?>
                     <?php if ($canEdit): ?>
                         <?= Html::a('<i class="icon-edit-3"></i>', ['update', 'id' => $p->id], ['class' => 'item edit', 'title' => 'Редактировать']) ?>
                         <?= $status === PageStatus::Published
@@ -69,7 +70,7 @@ $this->registerCss('.page-row .text-tiny code { background:#f1f5f9; padding:2px 
                     <?php if ($canManage): ?>
                         <?= Html::a('<i class="icon-copy"></i>', ['duplicate', 'id' => $p->id], ['class' => 'item', 'title' => 'Дублировать', 'data-method' => 'post']) ?>
                         <?= Html::a('<i class="icon-plus"></i>', ['create', 'parent' => $p->id], ['class' => 'item', 'title' => 'Создать вложенную']) ?>
-                        <?= Html::a('<i class="icon-trash-2"></i>', ['delete', 'id' => $p->id], ['class' => 'item text-delete', 'title' => 'Удалить', 'data-method' => 'post', 'data-confirm' => 'Удалить страницу «' . Html::encode($p->title) . '» и все вложенные в неё?']) ?>
+                        <?= Html::a('<i class="icon-trash-2"></i>', ['delete', 'id' => $p->id], ['class' => 'item text-delete', 'title' => 'Удалить', 'data-method' => 'post', 'data-confirm' => 'Удалить страницу «' . $p->title . '» и все вложенные в неё?']) ?>
                     <?php endif; ?>
                 </div>
             </li>

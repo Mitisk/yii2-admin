@@ -15,8 +15,8 @@ use yii\base\Model;
 use yii\web\UploadedFile;
 
 /**
- * Форма страницы. SCENARIO_EDIT (`editContent`): текст, анонс, SEO, статус и дата.
- * SCENARIO_MANAGE (`manageContent`): ещё заголовок, слаг, родитель, шаблон, порядок.
+ * Форма страницы. SCENARIO_EDIT (`editContent`): заголовок, текст, анонс, SEO, статус и дата.
+ * SCENARIO_MANAGE (`manageContent`): ещё слаг, родитель, шаблон, порядок — всё, что меняет адреса и вид.
  *
  * Свойства без типов: load() пишет сырые данные запроса, приведение делают правила.
  */
@@ -91,25 +91,26 @@ class PageForm extends Model
 
     public function scenarios(): array
     {
-        $edit = ['body', 'excerpt', 'status', 'published_at', 'seo_title', 'seo_description', 'seo_keywords', 'canonical', 'noindex', 'og_image', 'og_image_remove'];
+        $edit = ['title', 'body', 'excerpt', 'status', 'published_at', 'seo_title', 'seo_description', 'seo_keywords', 'canonical', 'noindex', 'og_image', 'og_image_remove'];
         return [
             self::SCENARIO_EDIT => $edit,
-            self::SCENARIO_MANAGE => array_merge($edit, ['title', 'slug', 'slug_auto', 'parent_id', 'template', 'sort']),
+            self::SCENARIO_MANAGE => array_merge($edit, ['slug', 'slug_auto', 'parent_id', 'template', 'sort']),
         ];
     }
 
     public function rules(): array
     {
         return [
-            ['title', 'required', 'on' => self::SCENARIO_MANAGE],
+            // Родитель — первым: от него зависят проверки слага
+            ['parent_id', 'filter', 'filter' => static fn($v): ?int => self::toParentId($v)],
+            ['parent_id', 'validateParent'],
+            ['title', 'required'],
             [['title', 'seo_title', 'seo_keywords'], 'string', 'max' => 255],
             ['slug', 'filter', 'filter' => fn($v): string => $this->normalizeSlug((string)$v)],
             ['slug', 'required', 'on' => self::SCENARIO_MANAGE],
             ['slug', 'match', 'pattern' => PagePath::SLUG_PATTERN, 'message' => 'Слаг: латиница в нижнем регистре, цифры и дефис.'],
             ['slug', 'validateReservedSlug'],
             ['slug', 'validateSiblingSlug'],
-            ['parent_id', 'filter', 'filter' => static fn($v): ?int => $v === '' || $v === null ? null : (int)$v],
-            ['parent_id', 'validateParent'],
             ['template', 'string', 'max' => 64],
             ['template', 'in', 'range' => array_keys($this->getTemplateOptions()), 'on' => self::SCENARIO_MANAGE],
             ['sort', 'integer'],
@@ -153,9 +154,23 @@ class PageForm extends Model
         return $slug;
     }
 
+    /**
+     * id родителя из запроса: пусто, 0 и не число — корень (null).
+     *
+     * Проверки слага вызываются и по отдельности (`validate(['slug'])`), до фильтра `parent_id`,
+     * поэтому читают родителя через этот метод, а не из свойства как есть.
+     */
+    private static function toParentId(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+        return is_string($value) && ctype_digit($value) && (int)$value > 0 ? (int)$value : null;
+    }
+
     public function validateReservedSlug(string $attribute): void
     {
-        if ($this->parent_id !== null && $this->parent_id !== '') {
+        if (self::toParentId($this->parent_id) !== null) {
             return;
         }
         $reserved = $this->reservedSegments ?? Yii::$app->pages->reservedSegments();
@@ -167,7 +182,7 @@ class PageForm extends Model
     /** Слаг уникален среди соседей (та же проверка есть в модели; здесь — ради сообщения у поля формы). */
     public function validateSiblingSlug(string $attribute): void
     {
-        $parentId = $this->parent_id === null || $this->parent_id === '' ? null : (int)$this->parent_id;
+        $parentId = self::toParentId($this->parent_id);
         $exceptId = $this->page->isNewRecord ? null : (int)$this->page->id;
         $exists = $this->siblingExists ?? static function (?int $parentId, string $slug, ?int $exceptId): bool {
             $query = Page::find()->children($parentId)->andWhere(['slug' => $slug]);
@@ -181,13 +196,22 @@ class PageForm extends Model
         }
     }
 
-    /** Родитель не может быть самой страницей или её потомком. */
+    /** Родитель существует и не является самой страницей или её потомком. */
     public function validateParent(string $attribute): void
     {
-        if ($this->parent_id === null || $this->page->isNewRecord) {
+        if ($this->parent_id === null) {
             return;
         }
-        $forbidden = PageTree::descendantIds(Page::find()->light()->all(), (int)$this->page->id);
+        $all = Page::find()->light()->all();
+        $ids = array_map(static fn(Page $p): int => (int)$p->id, $all);
+        if (!in_array((int)$this->parent_id, $ids, true)) {
+            $this->addError($attribute, 'Родительская страница не найдена: возможно, её удалили.');
+            return;
+        }
+        if ($this->page->isNewRecord) {
+            return;
+        }
+        $forbidden = PageTree::descendantIds($all, (int)$this->page->id);
         $forbidden[] = (int)$this->page->id;
         if (in_array((int)$this->parent_id, $forbidden, true)) {
             $this->addError($attribute, 'Нельзя вложить страницу в саму себя или в её потомка.');
@@ -236,8 +260,8 @@ class PageForm extends Model
 
         $transaction = Yii::$app->db->beginTransaction();
         try {
+            $page->title = (string)$this->title;
             if ($this->scenario === self::SCENARIO_MANAGE) {
-                $page->title = (string)$this->title;
                 $page->slug = (string)$this->slug;
                 $page->parent_id = $this->parent_id === null ? null : (int)$this->parent_id;
                 $page->template = (string)$this->template;
@@ -254,8 +278,8 @@ class PageForm extends Model
                 $page->$attr = (string)$this->$attr !== '' ? (string)$this->$attr : null;
             }
             $page->noindex = (int)(bool)$this->noindex;
-            if ($isNew) {
-                $page->save(false);   // id для item_id картинки
+            if ($isNew && !$page->save(false)) {   // id для item_id картинки
+                throw new \RuntimeException('save() вернул false');
             }
             if ($this->og_image !== null) {
                 $stored = $this->images->store($this->og_image, (int)$page->id, 'og_image');
@@ -276,7 +300,12 @@ class PageForm extends Model
                 $this->images->delete($stored);
             }
             Yii::error('PageForm: ' . $e->getMessage(), __METHOD__);
-            $this->addError('body', 'Не удалось сохранить страницу.');
+            // Отказ из Page::beforeSave (цикл, зарезервированный адрес) — с причиной
+            $this->addError('body', trim('Не удалось сохранить страницу. ' . implode(' ', $page->getFirstErrors())));
+            if ($isNew) {
+                $page->setIsNewRecord(true);
+                $page->id = null;
+            }
             return false;
         }
 

@@ -34,6 +34,7 @@ class PageUrlRule extends BaseObject implements UrlRuleInterface
             return false;
         }
         $service = $this->service();
+        $controller = $service->controllerId;
         // Регистр не различаем: /About найдёт about, а контроллер сделает 301 на каноничный адрес
         $row = $service->resolve($path) ?? $service->resolve(mb_strtolower($path));
         if ($row !== null) {
@@ -41,25 +42,26 @@ class PageUrlRule extends BaseObject implements UrlRuleInterface
                 return false;
             }
             if ($service->isLive($row, $this->now)) {
-                return ['page/view', ['id' => $row['id']]];
+                return [$controller . '/view', ['id' => $row['id']]];
             }
             $token = $request->getQueryParam('preview');
             $token = is_string($token) ? $token : null;
             $allowed = $this->previewCheck !== null
                 ? ($this->previewCheck)($row['id'], $token)
                 : $service->canPreview($row['id'], $token);
-            return $allowed ? ['page/view', ['id' => $row['id']]] : false;
+            return $allowed ? [$controller . '/view', ['id' => $row['id']]] : false;
         }
         $redirect = $service->redirects()[$path] ?? null;
         if ($redirect !== null) {
-            return ['page/redirect', ['to' => $redirect['to'], 'code' => $redirect['code']]];
+            return [$controller . '/redirect', ['to' => $redirect['to'], 'code' => $redirect['code']]];
         }
         return false;
     }
 
     public function createUrl($manager, $route, $params): string|false
     {
-        if ($route !== 'page/view') {
+        // Дешёвая проверка первой: createUrl зовут на каждую ссылку сайта
+        if (!str_ends_with($route, '/view') || $route !== $this->service()->controllerId . '/view') {
             return false;
         }
         $path = isset($params['path']) ? trim((string)$params['path'], '/') : null;

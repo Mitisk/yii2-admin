@@ -32,13 +32,19 @@ class PageSearch extends Page
     public function search(array $params): array
     {
         $this->load($params, '');
+        // ?status[]=x и прочий мусор в фильтре — просто дерево без фильтра, а не 500
+        if (!$this->validate()) {
+            $this->q = $this->status = $this->template = '';
+        }
         $query = Page::find()->light()->with('updater')->ordered();
         $filtered = (string)$this->q !== '' || (string)$this->status !== '' || (string)$this->template !== '';
         if (!$filtered) {
             return PageTree::flatten(PageTree::build($query->all()));
         }
+        // В PostgreSQL LIKE различает регистр
+        $like = Page::getDb()->driverName === 'pgsql' ? 'ilike' : 'like';
         $query->andFilterWhere(['status' => $this->status, 'template' => $this->template])
-            ->andFilterWhere(['or', ['like', 'title', $this->q], ['like', 'path', $this->q]]);
+            ->andFilterWhere(['or', [$like, 'title', $this->q], [$like, 'path', $this->q]]);
         return array_map(static fn(Page $p): array => ['item' => $p, 'depth' => 0], $query->orderBy(['path' => SORT_ASC])->all());
     }
 }

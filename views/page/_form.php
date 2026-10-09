@@ -57,7 +57,8 @@ CSS);
                     </div>
                 </div>
             <?php else: ?>
-                <div class="body-title mb-10" style="font-size:16px"><?= Html::encode($page->title) ?></div>
+                <?php // Редактор правит заголовок, но не адрес: слаг не пересобирается ?>
+                <fieldset class="name mb-24"><?= $af->field($form, 'title')->textInput(['maxlength' => true]) ?></fieldset>
             <?php endif; ?>
             <?php if (!$page->isNewRecord): ?>
                 <div class="page-url mb-24">

@@ -101,6 +101,7 @@ Shadow DOM кастомного элемента `<admin-bar>`; CSS подклю
        'models' => [
            \app\models\Product::class => [
                'alias' => 'product', 'name' => 'Товары', 'label' => 'name',
+               'attributes' => ['name', 'price'],   // что можно править на месте; нет списка — ничего
                'permissions' => ['view' => 'viewProducts', 'update' => 'editProducts', 'create' => 'editProducts'],
                'routes' => ['index' => '/catalog/admin/index', 'update' => '/catalog/admin/update', 'create' => '/catalog/admin/create'],
            ],
@@ -122,7 +123,8 @@ Shadow DOM кастомного элемента `<admin-bar>`; CSS подклю
 - `POST attribute` — inline-правка: модель должна быть компонентом админки
   (`admin_model.view = 1`) или встроенной моделью из реестра, право `{FQCN}\update`
   (у встроенной — её `permissions.update`) или `admin`, атрибут из
-  `safeAttributes()`, `validate([$attr])`, сохранение, `AuditService::log`.
+  `safeAttributes()` (у встроенной — только из её `attributes`, `AdminBarComponent::editableAttributes()`),
+  `validate([$attr])`, сохранение, `AuditService::log`.
 
 ### Inline-правка (задел)
 

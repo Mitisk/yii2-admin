@@ -131,7 +131,8 @@ class PageController extends BaseController
         $copy->status = PageStatus::Draft->value;
         $copy->published_at = null;
         $copy->title = $source->title . ' (копия)';
-        $base = $source->slug . '-copy';
+        // Слаг не длиннее 128: место под «-copy-NNNN»
+        $base = rtrim(substr((string)$source->slug, 0, 128 - strlen('-copy-9999')), '-') . '-copy';
         $copy->slug = $base;
         for ($i = 2; Page::find()->children($copy->parent_id === null ? null : (int)$copy->parent_id)->andWhere(['slug' => $copy->slug])->exists(); $i++) {
             $copy->slug = $base . '-' . $i;

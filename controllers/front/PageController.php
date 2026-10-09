@@ -65,7 +65,10 @@ class PageController extends Controller
 
     public function actionSitemap(): Response
     {
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        if (!$this->pages()->getEnabled()) {
+            throw new NotFoundHttpException('Страница не найдена.');
+        }
+        $xml ='<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         foreach ($this->pages()->sitemapEntries() as $entry) {
             $xml .= '  <url><loc>' . Html::encode(Url::to($entry['loc'], true)) . '</loc>'
                 . (!empty($entry['lastmod']) ? '<lastmod>' . date('Y-m-d', (int)$entry['lastmod']) . '</lastmod>' : '')

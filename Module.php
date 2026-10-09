@@ -101,15 +101,9 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             'admin/<controller:\w+>/<action:\w+>' => 'admin/<controller>/<action>',
         ], false);
 
-        // 1a) Страницы раздела «Контент»: правило первым (совпадает только с известными адресами),
-        // sitemap и фронтовый контроллер, если сайт не задал свой
-        $app->getUrlManager()->addRules([
-            ['class' => \Mitisk\Yii2Admin\components\PageUrlRule::class],
-            'sitemap.xml' => 'page/sitemap',
-        ], false);
-        if (!isset($app->controllerMap['page'])) {
-            $app->controllerMap['page'] = \Mitisk\Yii2Admin\controllers\front\PageController::class;
-        }
+        // 1a) Страницы раздела «Контент»: фронтовый контроллер, правило первым (совпадает только
+        // с известными адресами) и sitemap.xml, если у сайта нет своих
+        $this->bootstrapPages($app);
 
         // 2) Динамическая карта контроллеров из БД
         try {
@@ -225,6 +219,42 @@ final class Module extends \yii\base\Module implements BootstrapInterface
         );
 
         return $version ?: null;
+    }
+
+    /**
+     * Страницы на сайте: контроллер, правило URL и sitemap.xml.
+     *
+     * Свой `controllerMap['page']` сайта модуль не трогает (так подменяют контроллер страниц).
+     * Если у сайта есть обычный `app\controllers\PageController`, страницы живут под id
+     * `content-page`: в адресах он не виден, а маршруты сайта `page/*` остаются его.
+     * `sitemap.xml` модуль отдаёт, только если у сайта нет своего правила для этого адреса.
+     *
+     * @param \yii\web\Application $app
+     */
+    private function bootstrapPages($app): void
+    {
+        $pages = $app->get('pages');
+        $controllerId = $pages instanceof \Mitisk\Yii2Admin\components\PageService ? $pages->controllerId : 'page';
+        if (!isset($app->controllerMap[$controllerId])) {
+            $siteController = rtrim($app->controllerNamespace, '\\') . '\\' . \yii\helpers\Inflector::id2camel($controllerId) . 'Controller';
+            if ($pages instanceof \Mitisk\Yii2Admin\components\PageService && class_exists($siteController)) {
+                $controllerId = $pages->controllerId = 'content-page';
+            }
+            $app->controllerMap[$controllerId] = \Mitisk\Yii2Admin\controllers\front\PageController::class;
+        }
+
+        $rules = [['class' => \Mitisk\Yii2Admin\components\PageUrlRule::class]];
+        $hasSitemap = false;
+        foreach ($app->getUrlManager()->rules as $rule) {
+            if ($rule instanceof \yii\web\UrlRule && trim((string)$rule->name, '/') === 'sitemap.xml') {
+                $hasSitemap = true;
+                break;
+            }
+        }
+        if (!$hasSitemap) {
+            $rules['sitemap.xml'] = $controllerId . '/sitemap';
+        }
+        $app->getUrlManager()->addRules($rules, false);
     }
 
     private function buildControllerMapFromDb(): array

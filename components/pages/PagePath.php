@@ -41,6 +41,43 @@ final class PagePath
     }
 
     /**
+     * Первые сегменты адреса, которые занимает правило urlManager сайта.
+     *
+     * Правило страниц стоит первым, поэтому корневая страница с таким слагом перекрыла бы
+     * правило сайта: `'login' => 'site/login'` занимает `login`, `<module:(partner|cabinet)>` —
+     * `partner` и `cabinet`. Параметр с регулярным выражением (`<action:\w+>`) не занимает
+     * ничего: иначе нельзя было бы создать ни одной корневой страницы.
+     *
+     * @param string $pattern Шаблон правила (`UrlRule::$name`).
+     * @return list<string>
+     */
+    public static function ruleSegments(string $pattern): array
+    {
+        // Правило с хостом: //shop.example.com/promo, https://example.com/news
+        if (preg_match('~^(?:[a-z][a-z0-9+.-]*:)?//[^/]*/?(.*)$~i', $pattern, $m)) {
+            $pattern = $m[1];
+        }
+        $first = explode('/', trim($pattern, '/'))[0];
+        if ($first === '') {
+            return [];
+        }
+        if (!str_contains($first, '<')) {
+            return [strtolower($first)];
+        }
+        // Весь сегмент — параметр с перечислением литералов: <name:(a|b|c)> или <name:a|b>
+        if (!preg_match('~^<\w+:\(?([^<>()]+?)\)?>$~', $first, $m)) {
+            return [];
+        }
+        $variants = explode('|', $m[1]);
+        foreach ($variants as $variant) {
+            if (!preg_match('~^[\w.-]+$~', $variant)) {
+                return [];
+            }
+        }
+        return array_map('strtolower', $variants);
+    }
+
+    /**
      * @param list<string> $extra Дополнительные зарезервированные сегменты (контроллеры и модули сайта).
      */
     public static function isReservedSegment(string $segment, array $extra = []): bool

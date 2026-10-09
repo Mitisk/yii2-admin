@@ -120,7 +120,8 @@ class BarController extends Controller
             Yii::$app->response->statusCode = 404;
             return ['ok' => false, 'message' => 'Запись не найдена'];
         }
-        if (!$model->hasAttribute($attr) || !in_array($attr, $model->safeAttributes(), true)) {
+        $allowed = $bar->editableAttributes($class) ?? $model->safeAttributes();
+        if (!$model->hasAttribute($attr) || !in_array($attr, $allowed, true)) {
             return ['ok' => false, 'message' => 'Атрибут недоступен для правки'];
         }
 

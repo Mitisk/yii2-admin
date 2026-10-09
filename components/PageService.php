@@ -40,6 +40,12 @@ class PageService extends Component
     /** Срок ссылки предпросмотра, секунд. */
     public int $previewTtl = 86400;
 
+    /**
+     * id фронтового контроллера страниц в `controllerMap` приложения. В адресах не виден.
+     * Модуль меняет его на `content-page`, если у сайта есть свой `PageController`.
+     */
+    public string $controllerId = 'page';
+
     /** @var \Closure|null Источник карты адресов вместо БД (тесты). */
     public ?\Closure $mapLoader = null;
 
@@ -75,20 +81,19 @@ class PageService extends Component
         if ($this->_map !== null) {
             return $this->_map;
         }
-        if ($this->mapLoader !== null) {
-            return $this->_map = ($this->mapLoader)();
-        }
-        return $this->_map = $this->cached(['page', 'map'], static function (): array {
-            $out = [];
-            foreach (Page::find()->select(['id', 'path', 'status', 'published_at'])->asArray()->all() as $row) {
-                $out[$row['path']] = [
-                    'id' => (int)$row['id'],
-                    'status' => (string)$row['status'],
-                    'published_at' => $row['published_at'] === null ? null : (int)$row['published_at'],
-                ];
-            }
-            return $out;
-        });
+        return $this->_map = $this->safely(fn(): array => $this->mapLoader !== null
+            ? ($this->mapLoader)()
+            : $this->cached(['page', 'map'], static function (): array {
+                $out = [];
+                foreach (Page::find()->select(['id', 'path', 'status', 'published_at'])->asArray()->all() as $row) {
+                    $out[$row['path']] = [
+                        'id' => (int)$row['id'],
+                        'status' => (string)$row['status'],
+                        'published_at' => $row['published_at'] === null ? null : (int)$row['published_at'],
+                    ];
+                }
+                return $out;
+            }));
     }
 
     /** @return array<string, array{to: string, code: int}> */
@@ -97,16 +102,32 @@ class PageService extends Component
         if ($this->_redirects !== null) {
             return $this->_redirects;
         }
-        if ($this->redirectLoader !== null) {
-            return $this->_redirects = ($this->redirectLoader)();
+        return $this->_redirects = $this->safely(fn(): array => $this->redirectLoader !== null
+            ? ($this->redirectLoader)()
+            : $this->cached(['page', 'redirects'], static function (): array {
+                $out = [];
+                foreach (PageRedirect::find()->select(['from_path', 'to_path', 'code'])->asArray()->all() as $row) {
+                    $out[$row['from_path']] = ['to' => (string)$row['to_path'], 'code' => (int)$row['code']];
+                }
+                return $out;
+            }));
+    }
+
+    /**
+     * Правило страниц стоит первым на каждом запросе. Код модуля обновили, а миграции ещё
+     * не прошли (нет таблиц) — сайт и страница обновления админки должны открываться,
+     * поэтому ошибка БД даёт пустую карту, а не 500. Пустой результат не кэшируется.
+     *
+     * @param \Closure(): array $load
+     */
+    private function safely(\Closure $load): array
+    {
+        try {
+            return $load();
+        } catch (\yii\db\Exception $e) {
+            Yii::warning('Pages: ' . $e->getMessage() . ' (миграции модуля применены?)', __METHOD__);
+            return [];
         }
-        return $this->_redirects = $this->cached(['page', 'redirects'], static function (): array {
-            $out = [];
-            foreach (PageRedirect::find()->select(['from_path', 'to_path', 'code'])->asArray()->all() as $row) {
-                $out[$row['from_path']] = ['to' => (string)$row['to_path'], 'code' => (int)$row['code']];
-            }
-            return $out;
-        });
     }
 
     /** @return array{id: int, status: string, published_at: ?int}|null */
@@ -122,13 +143,21 @@ class PageService extends Component
             && ($row['published_at'] === null || $row['published_at'] <= ($now ?? time()));
     }
 
-    /** Черновик видит администратор с `viewContent` или владелец ссылки предпросмотра. */
+    /**
+     * Черновик видит администратор с `viewContent` или владелец ссылки предпросмотра.
+     * В режиме бара «Смотреть как гость» администратор видит сайт как гость — без черновиков.
+     */
     public function canPreview(int $pageId, ?string $token): bool
     {
-        if ($token !== null && PreviewToken::verify($pageId, $token, $this->previewKey())) {
+        $key = $this->previewKey();
+        if ($token !== null && $key !== '' && PreviewToken::verify($pageId, $token, $key)) {
             return true;
         }
-        return Yii::$app->has('adminBar') && Yii::$app->get('adminBar')->can('viewContent');
+        if (!Yii::$app->has('adminBar')) {
+            return false;
+        }
+        $bar = Yii::$app->get('adminBar');
+        return $bar->can('viewContent') && !$bar->isGuestView();
     }
 
     public function pathById(int $id): ?string
@@ -166,7 +195,7 @@ class PageService extends Component
     public function url(string|Page $pathOrPage, array $params = []): string
     {
         $path = $pathOrPage instanceof Page ? $pathOrPage->path : trim($pathOrPage, '/');
-        return Url::to(['/page/view', 'path' => $path] + $params);
+        return Url::to(['/' . $this->controllerId . '/view', 'path' => $path] + $params);
     }
 
     /**
@@ -183,7 +212,12 @@ class PageService extends Component
         return PageTree::build($query->all());
     }
 
-    /** @return list<array{label: string, url?: string}> для yii\widgets\Breadcrumbs */
+    /**
+     * Ссылки для `yii\widgets\Breadcrumbs`. Неопубликованный родитель опубликованной страницы
+     * в крошки гостя не попадает: ни его заголовка, ни ссылки на 404.
+     *
+     * @return list<array{label: string, url?: string}>
+     */
     public function breadcrumbs(Page $page): array
     {
         $chain = [];
@@ -194,8 +228,13 @@ class PageService extends Component
             $current = $current->parent_id ? $this->get((int)$current->parent_id) : null;
         }
         $out = [];
+        $last = count($chain) - 1;
         foreach ($chain as $i => $item) {
-            $out[] = $i === count($chain) - 1 ? ['label' => $item->title] : ['label' => $item->title, 'url' => $this->url($item)];
+            if ($i === $last) {
+                $out[] = ['label' => $item->title];
+            } elseif ($item->isLive() || ($item->getStatus() !== PageStatus::Archived && $this->canPreview((int)$item->id, null))) {
+                $out[] = ['label' => $item->title, 'url' => $this->url($item)];
+            }
         }
         return $out;
     }
@@ -270,7 +309,8 @@ class PageService extends Component
         }
         $items = [];
         foreach ($m as $i => $h) {
-            $text = trim(strip_tags($h[2]));
+            // Сущности из редактора (&amp;, &nbsp;) — в символы, иначе Html::encode закодирует их второй раз
+            $text = trim(html_entity_decode(strip_tags($h[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
             $items[] = Html::tag('li', Html::a(Html::encode($text), '#h-' . ($i + 1)), ['class' => 'toc-level-' . $h[1]]);
         }
         return Html::tag('nav', Html::tag('ul', implode('', $items)), ['class' => 'page-toc']);
@@ -290,9 +330,15 @@ class PageService extends Component
     // Предпросмотр, sitemap, настройки
     // ------------------------------------------------------------------
 
+    /** Ссылка с токеном предпросмотра; без ключа подписи — обычный адрес (черновик откроет только админ). */
     public function previewUrl(Page $page): string
     {
-        return $this->url($page, ['preview' => PreviewToken::create((int)$page->id, $this->previewKey(), $this->previewTtl)]);
+        $key = $this->previewKey();
+        if ($key === '') {
+            Yii::warning('Pages: нет request.cookieValidationKey — ссылки предпросмотра отключены', __METHOD__);
+            return $this->url($page);
+        }
+        return $this->url($page, ['preview' => PreviewToken::create((int)$page->id, $key, $this->previewTtl)]);
     }
 
     /** @return list<array{loc: string, lastmod: int|null}> */
@@ -314,8 +360,10 @@ class PageService extends Component
     }
 
     /**
-     * Сегменты, которые корневая страница не может занять: модули, карта контроллеров
-     * и файлы контроллеров сайта (в kebab-case).
+     * Сегменты, которые корневая страница не может занять: модули, карта контроллеров,
+     * файлы контроллеров сайта (в kebab-case) и первые сегменты правил urlManager
+     * (`'login' => 'site/login'`, `<module:(partner|cabinet)>`) — правило страниц стоит
+     * первым и перекрыло бы их.
      *
      * @return list<string>
      */
@@ -325,6 +373,11 @@ class PageService extends Component
         $dir = Yii::getAlias('@app/controllers');
         foreach (glob($dir . '/*Controller.php') ?: [] as $file) {
             $out[] = strtolower((string)preg_replace('/(?<!^)[A-Z]/', '-$0', basename($file, 'Controller.php')));
+        }
+        foreach (Yii::$app->getUrlManager()->rules as $rule) {
+            if ($rule instanceof \yii\web\UrlRule) {
+                array_push($out, ...PagePath::ruleSegments((string)$rule->name));
+            }
         }
         return array_values(array_unique(array_merge(PagePath::RESERVED, array_map('strval', $out))));
     }
@@ -337,11 +390,14 @@ class PageService extends Component
         Page::invalidateCache();
     }
 
+    /**
+     * Ключ подписи ссылок предпросмотра. Пустой — ссылки отключены: подставлять что-то
+     * публичное (id приложения) нельзя, иначе токен подделает кто угодно.
+     */
     private function previewKey(): string
     {
         $request = Yii::$app->getRequest();
-        $key = $request instanceof \yii\web\Request ? $request->cookieValidationKey : '';
-        return $key !== '' ? $key : (string)Yii::$app->id;
+        return $request instanceof \yii\web\Request ? (string)$request->cookieValidationKey : '';
     }
 
     private function cached(array $key, \Closure $loader): array

@@ -97,6 +97,16 @@ class Page extends ActiveRecord
         ];
     }
 
+    /**
+     * Сохранение и удаление — в транзакции: пересчёт путей ветки, редиректы и удаление
+     * потомков либо проходят целиком, либо не проходят вовсе. Внутри внешней транзакции
+     * (форма, удаление из списка) Yii делает точку сохранения.
+     */
+    public function transactions(): array
+    {
+        return [self::SCENARIO_DEFAULT => self::OP_ALL];
+    }
+
     public function attributeLabels(): array
     {
         return [
@@ -157,14 +167,46 @@ class Page extends ActiveRecord
         return $this->og_image_id ? File::findOne((int)$this->og_image_id)?->getUrl() : null;
     }
 
+    /**
+     * Пересчёт адреса и последняя линия защиты дерева: любой путь записи (форма, бар,
+     * код сайта, `save(false)`) не может зациклить дерево, повесить страницу на
+     * несуществующего родителя или занять корневой адрес раздела сайта.
+     * Причина отказа — в `getErrors()`, `save()` вернёт false.
+     */
     public function beforeSave($insert): bool
     {
         if (!parent::beforeSave($insert)) {
             return false;
         }
         $this->_oldPath = $insert ? null : (string)$this->getOldAttribute('path');
-        $parentPath = $this->parent_id ? (string)static::find()->select('path')->where(['id' => $this->parent_id])->scalar() : null;
+        if ($this->parent_id !== null && (int)$this->parent_id <= 0) {
+            $this->parent_id = null;
+        }
+
+        $parentPath = null;
+        if ($this->parent_id !== null) {
+            $found = static::find()->select('path')->where(['id' => (int)$this->parent_id])->scalar();
+            if ($found === false || $found === null) {
+                $this->addError('parent_id', 'Родительская страница не найдена.');
+                return false;
+            }
+            $parentPath = (string)$found;
+            $isSelfOrDescendant = (int)$this->parent_id === (int)$this->id
+                || ($this->_oldPath !== null && ($parentPath === $this->_oldPath || str_starts_with($parentPath, $this->_oldPath . '/')));
+            if (!$insert && $isSelfOrDescendant) {
+                $this->addError('parent_id', 'Нельзя вложить страницу в саму себя или в её потомка.');
+                return false;
+            }
+        }
+
         $this->path = PagePath::join($parentPath, (string)$this->slug);
+        if ($parentPath === null && $this->path !== $this->_oldPath && Yii::$app->has('pages')
+            && PagePath::isReservedSegment((string)$this->slug, Yii::$app->get('pages')->reservedSegments())
+        ) {
+            $this->addError('slug', 'Этот адрес занят разделом сайта.');
+            return false;
+        }
+
         if ($this->body !== null) {
             $this->body = PageHtmlPurifier::process($this->body, Yii::$app->pages->iframeHosts());
         }
@@ -174,6 +216,11 @@ class Page extends ActiveRecord
     public function afterSave($insert, $changedAttributes): void
     {
         parent::afterSave($insert, $changedAttributes);
+        // Сохранили списком атрибутов без path (save(false, ['slug'])): путь всё равно должен попасть в БД
+        if (!$insert && $this->getOldAttribute('path') !== $this->path) {
+            static::updateAll(['path' => $this->path], ['id' => $this->id]);
+            $this->setOldAttribute('path', $this->path);
+        }
         if ($this->_oldPath !== null && $this->_oldPath !== $this->path) {
             $this->moveSubtree($this->_oldPath, $this->path);
         }
