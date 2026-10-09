@@ -47,7 +47,7 @@ class PageController extends BaseController
         $search = new PageSearch();
         return $this->render('index', [
             'searchModel' => $search,
-            'rows' => $search->search(Yii::$app->request->queryParams),
+            'dataProvider' => $search->search(Yii::$app->request->queryParams),
             'canManage' => Yii::$app->user->can('manageContent'),
             'canEdit' => Yii::$app->user->can('editContent'),
         ]);
