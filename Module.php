@@ -10,7 +10,7 @@ use Mitisk\Yii2Admin\components\ExtAdminController;
 
 final class Module extends \yii\base\Module implements BootstrapInterface
 {
-    public const VERSION = '1.6.0';
+    public const VERSION = '1.7.0';
 
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
@@ -35,6 +35,21 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             'identityCookie' => ['name' => '_admin_identity', 'httpOnly' => true],
             'loginUrl' => ['/admin/default/login'],
         ]);
+
+        // Панель администратора на сайте
+        if (!\Yii::$app->has('adminBar')) {
+            \Yii::$app->set('adminBar', ['class' => 'Mitisk\\Yii2Admin\\components\\AdminBarComponent']);
+        }
+
+        // Текстовые блоки раздела «Контент»
+        if (!\Yii::$app->has('blocks')) {
+            \Yii::$app->set('blocks', ['class' => 'Mitisk\\Yii2Admin\\components\\ContentBlockService']);
+        }
+
+        // Страницы раздела «Контент»
+        if (!\Yii::$app->has('pages')) {
+            \Yii::$app->set('pages', ['class' => 'Mitisk\\Yii2Admin\\components\\PageService']);
+        }
 
         // Настройка authManager (RBAC)
         if (!\Yii::$app->has('authManager')) {
@@ -86,6 +101,10 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             'admin/<controller:\w+>/<action:\w+>' => 'admin/<controller>/<action>',
         ], false);
 
+        // 1a) Страницы раздела «Контент»: фронтовый контроллер, правило первым (совпадает только
+        // с известными адресами) и sitemap.xml, если у сайта нет своих
+        $this->bootstrapPages($app);
+
         // 2) Динамическая карта контроллеров из БД
         try {
             $dbMap = $this->buildControllerMapFromDb();
@@ -119,6 +138,11 @@ final class Module extends \yii\base\Module implements BootstrapInterface
                 'admin/default/update',
                 'admin/default/update-start',
                 'admin/default/update-status',
+                // Панель на сайте: сама отвечает 401 вместо редиректа на логин
+                'admin/bar/state',
+                'admin/bar/action',
+                'admin/bar/attribute',
+                'admin/bar/block',
             ];
 
             if (Yii::$app->user->isGuest && !in_array($route, $skipRoutes, true)) {
@@ -195,6 +219,42 @@ final class Module extends \yii\base\Module implements BootstrapInterface
         );
 
         return $version ?: null;
+    }
+
+    /**
+     * Страницы на сайте: контроллер, правило URL и sitemap.xml.
+     *
+     * Свой `controllerMap['page']` сайта модуль не трогает (так подменяют контроллер страниц).
+     * Если у сайта есть обычный `app\controllers\PageController`, страницы живут под id
+     * `content-page`: в адресах он не виден, а маршруты сайта `page/*` остаются его.
+     * `sitemap.xml` модуль отдаёт, только если у сайта нет своего правила для этого адреса.
+     *
+     * @param \yii\web\Application $app
+     */
+    private function bootstrapPages($app): void
+    {
+        $pages = $app->get('pages');
+        $controllerId = $pages instanceof \Mitisk\Yii2Admin\components\PageService ? $pages->controllerId : 'page';
+        if (!isset($app->controllerMap[$controllerId])) {
+            $siteController = rtrim($app->controllerNamespace, '\\') . '\\' . \yii\helpers\Inflector::id2camel($controllerId) . 'Controller';
+            if ($pages instanceof \Mitisk\Yii2Admin\components\PageService && class_exists($siteController)) {
+                $controllerId = $pages->controllerId = 'content-page';
+            }
+            $app->controllerMap[$controllerId] = \Mitisk\Yii2Admin\controllers\front\PageController::class;
+        }
+
+        $rules = [['class' => \Mitisk\Yii2Admin\components\PageUrlRule::class]];
+        $hasSitemap = false;
+        foreach ($app->getUrlManager()->rules as $rule) {
+            if ($rule instanceof \yii\web\UrlRule && trim((string)$rule->name, '/') === 'sitemap.xml') {
+                $hasSitemap = true;
+                break;
+            }
+        }
+        if (!$hasSitemap) {
+            $rules['sitemap.xml'] = $controllerId . '/sitemap';
+        }
+        $app->getUrlManager()->addRules($rules, false);
     }
 
     private function buildControllerMapFromDb(): array

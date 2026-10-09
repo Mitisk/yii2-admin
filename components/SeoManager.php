@@ -53,11 +53,17 @@ class SeoManager extends Component
     /**
      * Регистрация мета-тегов в представлении на основе текущего URL
      */
-    public function register(): void
+    /**
+     * Активное правило с наивысшим приоритетом, паттерн которого совпал с URL.
+     *
+     * Используется в {@see register()} и в SEO-панели Admin Bar.
+     *
+     * @param string $url URL страницы с query string, например `/news?id=5`.
+     *
+     * @return array<string, mixed>|null Строка таблицы `seo_rules` или null.
+     */
+    public function findRule(string $url): ?array
     {
-        $view = Yii::$app->getView();
-        $url = Yii::$app->request->url; // URL включает path_info и query string (например: /news?id=5)
-
         // Получаем все активные правила, отсортированные по приоритету
         // В продакшене рекомендуется реализовать кэширование этого запроса
         $rules = (new Query())
@@ -66,28 +72,38 @@ class SeoManager extends Component
             ->orderBy(['priority' => SORT_DESC])
             ->all();
 
-        $matchedRule = null;
-        
         foreach ($rules as $rule) {
-            $pattern = trim($rule['pattern']);
-            if (empty($pattern)) {
+            $pattern = trim((string)$rule['pattern']);
+            if ($pattern === '') {
                 continue;
             }
 
             // Добавляем разделители regex, если их нет (упрощение ввода для админа)
             $delimiter = mb_substr($pattern, 0, 1);
-            if (!in_array($delimiter, ['/', '#', '~', '@'])) {
+            if (!in_array($delimiter, ['/', '#', '~', '@'], true)) {
                 // Если нет разделителя, экранируем и оборачиваем
                 $pattern = '#' . str_replace('#', '\#', $pattern) . '#iu';
             }
 
-            // Проверяем совпадение паттерна с текущим URL
+            // Проверяем совпадение паттерна с URL
             // Используем @ для подавления ошибок при некорректном синтаксисе в БД
-            if (@preg_match($pattern, $url) === 1) { 
-                $matchedRule = $rule;
-                break;
+            if (@preg_match($pattern, $url) === 1) {
+                return $rule;
             }
         }
+
+        return null;
+    }
+
+    /**
+     * Регистрация мета-тегов в представлении на основе текущего URL
+     */
+    public function register(): void
+    {
+        $view = Yii::$app->getView();
+        $url = Yii::$app->request->url; // URL включает path_info и query string (например: /news?id=5)
+
+        $matchedRule = $this->findRule($url);
 
         if (!$matchedRule) {
             return; // Правило для данного URL не найдено

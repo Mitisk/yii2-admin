@@ -693,7 +693,7 @@ $menu->save(false);
 | Ключ `model_name` | Где показывается |
 |---|---|
 | `GENERAL` | Вкладка «Основные» (`site_name`, `admin_email`, `timezone`, `api_key`, `composer_path`, `php_path`, служебный `version`). |
-| `ADMIN` | Вкладка «Панель администратора» (`logo`, тип `file`). |
+| `ADMIN` | Вкладка «Панель администратора» (`logo`, тип `file`; `bar_enabled`, `bar_mode`, `bar_position` — панель на сайте). |
 | `HIDDEN` | Не показывается (`mail_layout`, `admin_update_state`). |
 | `Mitisk\Yii2Admin\models\File` | Вкладка «Файлы» (storage_type, s3_*, ftp_*). |
 | `Mitisk\Yii2Admin\models\MailTemplate` | SMTP: `mailserver_host`, `mailserver_port`, `mailserver_login`, `mailserver_password`, `mailserver_from_name`. |
@@ -972,6 +972,271 @@ $this->insert('{{%admin_controller_map}}', [
 
 ---
 
+## 9a. Панель администратора на сайте (Admin Bar)
+
+Плавающая панель для залогиненного администратора на страницах сайта. Код: `widgets/AdminBar.php`,
+`components/AdminBarComponent.php`, `components/AdminBarState.php`, `controllers/BarController.php`,
+`assets/src/admin-bar/` (сборка: `sh assets/src/build.sh`, нужен node). План и архитектура — `docs/admin-bar.md`.
+
+**Подключение** — в лейауте сайта перед `</body>`: `<?= \Mitisk\Yii2Admin\widgets\AdminBar::widget() ?>`.
+Требуется модуль `admin` в `bootstrap` (он регистрирует `adminUser` и `adminBar`). Для неадмина
+виджет возвращает пустую строку. Внутри `/admin/` не выводится.
+
+**Контекст из контроллера сайта** (`Yii::$app->adminBar`):
+
+```php
+Yii::$app->adminBar->setModel($product);   // чип записи: «Редактировать», «Все», «Добавить» (по правам и admin_model)
+Yii::$app->adminBar->addAction('export', 'Экспорт', ['url' => '...', 'icon' => 'download', 'target' => '_blank', 'confirm' => '...', 'permission' => 'viewReports']);
+Yii::$app->adminBar->addPanel('stats', 'Статистика', [['label' => 'Просмотров', 'value' => 128, 'icon' => 'eye', 'url' => '...']], ['icon' => 'layers', 'url' => '...']);
+Yii::$app->adminBar->setContext('key', $value);   // произвольные данные в state.context
+```
+
+**Серверные действия** (кнопка → `POST /admin/bar/action/`), конфиг компонента:
+
+```php
+'adminBar' => [
+    'class' => \Mitisk\Yii2Admin\components\AdminBarComponent::class,
+    'serverActions' => [
+        'warm-cache' => ['label' => 'Прогреть кэш', 'icon' => 'zap', 'permission' => 'manageSystem',
+                         'confirm' => 'Запустить?', 'handler' => fn() => 'Готово'],
+    ],
+],
+```
+Встроенное действие `clear-cache` (право `manageSystem`).
+
+**Правка текста на странице:** `AdminBar::editable($model, 'name', $html = null, ['tag' => 'span', 'type' => 'text'])`.
+Для посетителя — просто значение; для админа с правом `{FQCN}\update` и компонентом в `admin_model` —
+обёртка `<span data-ab-model data-ab-id data-ab-attr data-ab-type data-ab-label>`. Сохранение:
+`POST /admin/bar/attribute/` (`model`, `id`, `attr`, `value`) → атрибут должен быть в `safeAttributes()`,
+`validate([$attr])`, `AuditService::log`. Типы `html|block|image` зарезервированы под будущие этапы.
+В client-режиме обёртка выводится всегда (страница одинакова для всех).
+
+**SEO-панель** добавляется сама для ролей `admin`/`superAdminRole`: правило `seo_rules`, сработавшее
+для URL (`SeoManager::findRule()`), его title/description/keywords/robots/OG с длиной в символах и
+ссылка на правку; нет правила — ссылка «Создать правило для этой страницы»
+(`/admin/seo-rule/create/?pattern=^/path$`). В server-режиме ещё и фактический `View::$title`.
+Своя панель с `id = 'seo'` (через `addPanel` или `EVENT_BUILD`) заменяет встроенную.
+
+**Режимы просмотра** (пункты в меню аккаунта; JS ставит cookie `ab_guest` / `ab_drafts` и перезагружает
+страницу; флаги действуют только вместе с `isAdmin()`):
+
+```php
+// Черновики: сайт сам решает, что считать черновиком. Для посетителя — false без запросов к БД.
+public function published(): static   // в ActiveQuery модели сайта
+{
+    return Yii::$app->adminBar->showDrafts() ? $this : $this->andWhere(['status' => Status::Published->value]);
+}
+Yii::$app->adminBar->isGuestView();   // «Смотреть как гость»: панель свёрнута в кнопку выхода, editable() отдаёт чистое значение
+```
+
+Тумблер «Черновики» появляется на страницах, вызвавших `showDrafts()`; в client-режиме (состояние
+собирается отдельным запросом) — только при `'draftsToggle' => true` в конфиге компонента `adminBar`.
+С полностраничным кэшем черновики работать не могут: кэш не различает cookie.
+
+**Расширение состояния** (панели, бейджи, действия из любого кода, напр. в `bootstrap`):
+
+```php
+\yii\base\Event::on(\Mitisk\Yii2Admin\components\AdminBarState::class,
+    \Mitisk\Yii2Admin\components\AdminBarState::EVENT_BUILD,
+    function (\Mitisk\Yii2Admin\components\AdminBarBuildEvent $e) {
+        $e->state->badges['orders'] = 3;
+        $e->state->panels[] = ['id' => 'seo', 'label' => 'SEO', 'icon' => 'search', 'items' => [['label' => 'Title', 'value' => '...']]];
+    });
+```
+
+**Иконки** (имена для `icon`): home, edit, plus, list, refresh, search, menu, x, chevron, user, logout, sun, moon,
+minus, update, check, alert, external, settings, layers, eye, command, grid, zap, trash, mail, file, users, bell,
+star, folder, calendar, link, download, upload, info, clock, shield, tool, keyboard. Неизвестное имя → zap.
+
+**Эндпоинты** `/admin/bar/state/` (GET, client-режим; гостю 401), `/admin/bar/action/` (POST), `/admin/bar/attribute/` (POST).
+Маршруты исключены из редиректа на логин. Алиас `bar` зарезервирован.
+
+**Настройки** (раздел `ADMIN`): `bar_enabled` (boolean), `bar_mode` (`server`|`client`), `bar_position` (`bottom`|`top`).
+Личные предпочтения (тема, свёрнута, позиция) — в `localStorage` браузера.
+
+**JS-API:** `window.AdminBar.boot(state, {css})`, событие `admin-bar:ready` на `document`, экземпляр
+`window.AdminBar.instance` (`toast(text, type)`, `openPalette()`). Панель живёт в Shadow DOM элемента `<admin-bar>`,
+стили сайта на неё не влияют. Горячие клавиши: `Ctrl+K`, `Alt+Shift+A`.
+
+---
+
+## 9b. Контент: текстовые блоки
+
+Встроенный раздел админки «Контент» → «Текстовые блоки» (`/admin/content-block/`), секция сайдбара
+видна при праве `viewContent`. Код: `enums/BlockType.php`, `dto/{LinkValue,ImageValue}.php`,
+`components/content/{BlockValueCodec,BlockRenderer,BlockImageStorage}.php`, `components/ContentBlockService.php`,
+`models/{ContentBlock,ContentBlockSearch}.php`, `models/query/ContentBlockQuery.php`,
+`models/forms/ContentBlockForm.php`, `controllers/ContentBlockController.php`, `widgets/ContentBlock.php`.
+
+**Вывод на сайте** (тип — `BlockType::Text|Html|Image|Link`):
+
+```php
+use Mitisk\Yii2Admin\widgets\ContentBlock;
+use Mitisk\Yii2Admin\enums\BlockType;
+
+<?= ContentBlock::widget(['key' => 'header.phone', 'name' => 'Телефон в шапке', 'default' => '+7 (495) 000-00-00']) ?>
+<?= ContentBlock::widget(['key' => 'home.intro', 'type' => BlockType::Html, 'default' => '<p>Текст</p>']) ?>
+<?= ContentBlock::widget(['key' => 'home.banner', 'type' => BlockType::Image, 'contentOptions' => ['class' => 'img-fluid']]) ?>
+<?= ContentBlock::widget(['key' => 'footer.offer', 'type' => BlockType::Link, 'default' => ['text' => 'Оферта', 'url' => '/offer']]) ?>
+```
+
+Типа «Список» нет (удалён миграцией `m261011_120000_remove_content_block_lists`): повторяющиеся
+пункты делайте компонентом админки или несколькими блоками.
+
+Опции виджета: `key` (`[a-z0-9._-]`, до 128), `type`, `default`, `name`, `hint`, `group` (пусто — первая часть
+ключа), `tag` (по умолчанию span для text/link, div для html/image), `options` (атрибуты обёртки),
+`contentOptions` (атрибуты `<a>`/`<img>`), `nl2br`.
+
+**Значения без разметки:** `Yii::$app->blocks->get($key, $default)` (строка или DTO),
+`->link($key)` (`LinkValue|null`), `->imageUrl($key)`.
+
+**Поведение.** Нет блока в БД — создаётся из `default` с `from_code = 1`. Выключенный блок выводит пустую строку.
+Удаление блока = сброс: если ключ ещё в шаблоне, блок вернётся со значением из кода. Все блоки читаются одним
+запросом и кэшируются с `TagDependency('content-block')`, любое изменение сбрасывает тег. Нет таблицы
+(миграции не применены) — выводится `default`, warning в лог. HTML-блоки чистит `HtmlPurifier`, URL ссылок
+проверяет `LinkValue::isSafeUrl()` (запрещены `javascript:`, `data:`, `//host`). Картинки — в таблице `file`
+(`class_name = ContentBlock`, `item_id = id блока`).
+
+**Права и роль** (миграция `m261010_120100_add_content_rbac`): `viewContent` (раздел и список), `editContent`
+(значения, правка через Admin Bar), `manageContent` (создание, удаление, ключ, группа, поля списка). Роль
+`contentManager` = `accessAdmin` + три права; роль `admin` получает три права.
+
+**Admin Bar.** Администратору с `editContent` блок оборачивается в `data-ab-block|data-ab-type|data-ab-label`.
+Текст правится на месте (`POST /admin/bar/block`, `key`, `value`), остальные типы — модальное окно
+`/admin/content-block/update/?modal=1&key=…`; после сохранения iframe шлёт `postMessage({type: 'ab-block-saved', key})`,
+панель перечитывает страницу и подменяет блок. Панель «Блоки на странице» и группа палитры `Ctrl+K`.
+
+**Шорткоды:** `[block key="home.intro"]` вставляет блок в текст страницы (§9c). Несуществующий ключ даёт
+пустую строку, а не создаёт блок (`ContentBlockService::renderIfExists()`).
+
+---
+
+## 9c. Контент: страницы
+
+Раздел «Контент → Страницы» (`/admin/page`): дерево страниц с иерархическими адресами
+(`about/team`), статусами, отложенной публикацией, шаблонами, SEO-полями и автоматическими
+редиректами при смене адреса. Подключать ничего не нужно: модуль в `bootstrap` сам регистрирует
+компонент `pages`, URL-правило и фронтовый контроллер `page`.
+
+**Файлы:** `models/{Page,PageRedirect}.php`, `models/query/PageQuery.php`, `models/forms/PageForm.php`,
+`models/PageSearch.php`, `enums/PageStatus.php`, `components/PageService.php`, `components/PageUrlRule.php`,
+`components/pages/{PagePath,PageTree,PageHtmlPurifier,PreviewToken,TemplateFinder,PageSitemapEvent}.php`,
+`components/content/ShortcodeService.php`, `controllers/PageController.php` (админка),
+`controllers/front/PageController.php` (сайт), `views/page/*`, `views/front/page/default.php`,
+`assets/PageAsset.php`, `assets/js/page/page.min.js`. Миграция `m261012_120000_create_page_tables`.
+
+**Таблицы:** `page` (`parent_id`, `slug`, `path` — полный адрес без слешей по краям, уникальный; `title`,
+`excerpt`, `body`, `template`, `status`, `published_at`, `sort`, SEO-поля `seo_title|seo_description|seo_keywords|
+canonical|noindex`, `og_image_id`) и `page_redirect` (`from_path` → `to_path`, `code`, `page_id`, `hits`,
+`last_hit_at`).
+
+**Как открывается страница.** `PageUrlRule` стоит первым в `urlManager` и совпадает только с адресами из карты
+страниц (один запрос, кэш по тегу `page`). Остальные адреса уходят дальше по правилам сайта. Регистр и слеш
+на конце дают 301 на каноничный адрес. Старый адрес из `page_redirect` даёт 301 на новый. Карта сайта —
+`/sitemap.xml`: опубликованные страницы без `noindex` плюс записи из события `PageService::EVENT_SITEMAP`.
+Если у сайта уже есть правило `sitemap.xml`, модуль своё не добавляет. Нет таблиц (код обновили, миграции
+ещё не прошли) — карта пустая и пишется warning, сайт и страница обновления админки открываются.
+
+**Статусы** (`enums/PageStatus`): `draft`, `published`, `archived`. Опубликованная страница с `published_at`
+в будущем видна с этого момента без сброса кэша: время проверяется на каждом запросе. Черновик и
+запланированная страница отдают гостю 404. Администратор с `viewContent` видит их с `Cache-Control: private,
+no-store`; в режиме бара «Смотреть как гость» — 404, как гость. Ссылка предпросмотра для внешних людей —
+HMAC-токен со сроком `PageService::$previewTtl` (сутки), в БД не хранится. Ключ подписи —
+`request.cookieValidationKey`; если он пуст, ссылки предпросмотра отключены. Архивная страница отдаёт 404 всем.
+
+**Адреса и редиректы.** `slug` — `a-z0-9-`, кириллица транслитерируется (`PagePath::slugify`). Корневая
+страница не может занять сегмент модуля, контроллера сайта, `controllerMap`, правила `urlManager` сайта
+(`'login' => ...`, `<module:(partner|cabinet)>`) или служебный (`admin`, `sitemap`, `assets`, ... —
+`PagePath::RESERVED`, `PageService::reservedSegments()`). Смена `slug` или родителя пересчитывает `path`
+у всей ветки и пишет редиректы со старых адресов; цепочки схлопываются, петли удаляются. Удаление страницы
+удаляет её ветку и редиректы на неё. Сохранение и удаление идут в транзакции (`Page::transactions()`).
+
+`Page::beforeSave()` — последняя линия защиты для любого пути записи, включая `save(false)` из кода сайта:
+родитель должен существовать и не быть самой страницей или её потомком, корневой адрес не должен быть
+зарезервирован. При нарушении `save()` возвращает false, причина — в `getErrors()`.
+
+**Шаблоны** — файлы `@app/views/page/<имя>.php` с докблоком `/** @title Название */`. Файлы на `_` — частичные,
+в список не попадают. Нет папки или файла — шаблон модуля `views/front/page/default.php`. В шаблон приходят
+`$page` (`Page`) и `$content` (готовый HTML тела: шорткоды выполнены, у `h2/h3` проставлены `id="h-N"`).
+Лейаут — лейаут сайта.
+
+```php
+<?php
+/** @title Обычная страница */
+/** @var Mitisk\Yii2Admin\models\Page $page */
+/** @var string $content */
+use Mitisk\Yii2Admin\widgets\AdminBar;
+use yii\widgets\Breadcrumbs;
+?>
+<div class="container py-4">
+    <?= Breadcrumbs::widget(['links' => Yii::$app->pages->breadcrumbs($page)]) ?>
+    <h1><?= AdminBar::editable($page, 'title') ?></h1>
+    <?= AdminBar::editable($page, 'body', $content, ['tag' => 'div', 'type' => 'html']) ?>
+</div>
+```
+
+**API** `Yii::$app->pages` (`components/PageService`):
+
+| Метод | Что делает |
+|---|---|
+| `find($path, $onlyLive = true)` | страница по адресу (`about/team`) или `null` |
+| `get($id)` | страница по id с кэшем на запрос |
+| `url($pathOrPage, $params = [])` | адрес страницы через `Url::to(['/page/view', 'path' => ...])` (id контроллера — `$controllerId`) |
+| `tree($onlyLive = true)` | дерево `[{item, children, depth}]` для меню |
+| `breadcrumbs($page)` | ссылки для `yii\widgets\Breadcrumbs` |
+| `templates()` | `['имя' => 'Название']` из папки шаблонов |
+| `shortcodes()` | `ShortcodeService` для регистрации своих шорткодов |
+| `previewUrl($page)` | ссылка предпросмотра с токеном |
+| `sitemapEntries()` | записи карты сайта |
+| `invalidate()` | сбросить кэш карты адресов и редиректов |
+
+Для выборок в коде сайта — `Page::find()->published()->children($id)->ordered()->all()`; `published()`
+учитывает `published_at`, `light()` не тянет `body`.
+
+**Шорткоды** в тексте страницы: `[block key="..."]` — текстовый блок; `[page slug="about" text="..."]` — ссылка
+на страницу (неопубликованная — просто текст); `[children]` или `[children of="about"]` — список дочерних
+страниц; `[toc]` — оглавление по `h2/h3`. Содержимое `<pre>` и `<code>` не обрабатывается, ошибка обработчика
+даёт пустую строку и warning в лог. Свой шорткод регистрируют до рендера, например в `bootstrap` сайта:
+
+```php
+Yii::$app->pages->shortcodes()->register('phone', fn(array $a): string =>
+    Html::a(Html::encode($a['text'] ?? '+7 495 000-00-00'), 'tel:+74950000000'));
+```
+
+**Безопасность HTML.** Тело страницы чистится `HtmlPurifier` при сохранении (`PageHtmlPurifier`). `iframe`
+разрешён только с хостов из настройки `pages_iframe_hosts` (по умолчанию `youtube.com, youtu.be, vk.com,
+vkvideo.ru, rutube.ru, yandex.ru, google.com`, поддомены тоже); остальные вырезаются.
+
+**Права:** `viewContent` — список и черновики на сайте; `editContent` — заголовок, текст, SEO, статус,
+публикация, ссылка предпросмотра, правка через Admin Bar; `manageContent` — ещё создание, удаление,
+копирование, слаг, родитель, шаблон и порядок. Те же права, что у текстовых блоков (§9b), отдельной роли нет.
+
+**Настройки** (раздел `ADMIN`): `pages_enabled` — выключает правило и раздел в баре (данные остаются);
+`pages_iframe_hosts` — хосты для `iframe` через запятую.
+
+**Admin Bar.** `Page` зарегистрирована в `AdminBarComponent::$models` (§9a), поэтому на странице бар
+показывает чип со статусом, кнопки «Опубликовать» / «Снять с публикации» и «Редактировать». Заголовок
+правится на месте (в реестре `'attributes' => ['title']`: слаг, родитель и статус через эндпоинт
+`attribute` не меняются), текст — в модалке с формой. В палитре `Ctrl+K` есть поиск по страницам. На 404 у
+`manageContent` есть действие «Создать страницу /адрес»: форма откроется с заполненными родителем и `slug`.
+
+**SEO.** Сначала срабатывают правила `SeoManager`, затем поля страницы перекрывают их под теми же ключами:
+`title`, `description` (пусто — анонс, затем начало текста), `keywords`, `robots`, `canonical`, `og:*`.
+Лейаут сайта должен регистрировать свои `description` и `keywords` с ключами, иначе мета-теги задвоятся:
+
+```php
+$this->registerMetaTag(['name' => 'description', 'content' => '...'], 'description');
+```
+
+**Контроллер страниц.** Фронтовый контроллер регистрируется в `controllerMap` под id
+`PageService::$controllerId` (`page`). В адресах этот id не виден. Если у сайта есть обычный
+`app\controllers\PageController`, модуль его не перекрывает и регистрирует свой под id `content-page`.
+Подменить контроллер страниц — задать `controllerMap['page']` в конфиге сайта; он должен принимать
+`actionView(int $id)`, `actionRedirect(string $to, int $code)` и `actionSitemap()` — их маршруты отдают
+`PageUrlRule` и правило `sitemap.xml`.
+
+---
+
 ## 10. Подводные камни
 
 1. **Таблица `user` и RBAC-таблицы `auth_*` создаются миграцией модуля.** Если в проекте
@@ -985,9 +1250,7 @@ $this->insert('{{%admin_controller_map}}', [
 7. **`authManager` и `settings` нужны в консольном конфиге**, иначе миграции с `AdminModel`
    не создадут разрешения.
 8. **Имя разрешения содержит `\`:** в PHP пишите `Product::class . '\\view'`.
-9. **Alias уникален, транслитерируется и не может быть зарезервированным** (§11); UrlRule
-   не проверяет имена встроенных контроллеров модуля, поэтому alias `log` или `seo-rule`
-   перекроет соответствующий раздел админки.
+9. **Alias уникален, транслитерируется и не может быть зарезервированным** (§11).
 10. **URL файлов начинаются с `/web/`** — убедитесь, что они отдаются веб-сервером.
 11. **`set()` настроек не задаёт label/description** — для видимых настроек используйте AR `Settings`.
 12. **`MailService::send()` не бросает исключений** — проверяйте возвращаемое значение.
@@ -1021,8 +1284,8 @@ $this->insert('{{%admin_controller_map}}', [
 ### Зарезервированные alias / controller_id
 Технические: `index`, `error`, `captcha`, `contact`, `login`, `logout`, `default`, `auth`,
 `user`, `settings`, `role`, `menu`, `components`, `ajax`, `ajax-widget`, `ajax-note`.
-Встроенные контроллеры модуля (тоже не используйте): `core`, `email-template`, `seo-rule`,
-`log`, `model-info`. Плюс все существующие alias компонентов и controller_id.
+Встроенные контроллеры модуля (с версии 1.7.0 тоже в списке технических): `bar`, `core`, `email-template`,
+`seo-rule`, `log`, `model-info`. Плюс все существующие alias компонентов и controller_id.
 
 ### Основные классы
 | Класс | Назначение |
@@ -1044,6 +1307,9 @@ $this->insert('{{%admin_controller_map}}', [
 | `Mitisk\Yii2Admin\components\AuditService`, `models\AuditLog` | аудит |
 | `Mitisk\Yii2Admin\components\SelfUpdateService`, `commands\UpdateController` | самообновление через composer |
 | `Mitisk\Yii2Admin\components\SeoManager`, `models\SeoRule` | SEO |
+| `Mitisk\Yii2Admin\widgets\AdminBar`, `components\AdminBarComponent`, `components\AdminBarState`, `controllers\BarController` | панель администратора на сайте (§9a) |
+| `Mitisk\Yii2Admin\widgets\ContentBlock`, `components\ContentBlockService` (`Yii::$app->blocks`), `models\ContentBlock`, `enums\BlockType` | текстовые блоки раздела «Контент» (§9b) |
+| `Mitisk\Yii2Admin\models\Page`, `components\PageService` (`Yii::$app->pages`), `components\PageUrlRule`, `enums\PageStatus`, `components\content\ShortcodeService` | страницы раздела «Контент», шорткоды (§9c) |
 | `Mitisk\Yii2Admin\models\AdminUser` | пользователь админки, RBAC-трейт (`assignRole`, `revokeRole`, `can`) |
 
 ### URL-схема компонента

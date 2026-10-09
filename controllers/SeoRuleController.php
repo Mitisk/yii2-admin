@@ -57,10 +57,18 @@ class SeoRuleController extends BaseController
 
     /**
      * Создание нового правила.
+     *
+     * GET-параметр `pattern` предзаполняет паттерн: так Admin Bar открывает
+     * форму «Создать правило для этой страницы».
      */
     public function actionCreate(): string|Response
     {
         $model = new SeoRule();
+
+        $pattern = Yii::$app->request->get('pattern');
+        if (is_string($pattern) && !Yii::$app->request->isPost) {
+            $model->pattern = mb_substr($pattern, 0, 255);
+        }
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             Yii::$app->session->setFlash('success', 'SEO-правило создано');

@@ -67,6 +67,30 @@ use Mitisk\Yii2Admin\components\MenuHelper;
             </ul>
         </div>
 
+        <?php if (Yii::$app->user->can('viewContent')): ?>
+            <div class="center-item">
+                <div class="center-heading">Контент</div>
+                <ul class="menu-list">
+                    <li class="menu-item <?= MenuHelper::build([
+                        ['href' => \yii\helpers\Url::to(['/admin/content-block/index']), 'text' => 'Текстовые блоки']
+                    ])[0]['_active'] ? 'active' : '' ?>">
+                        <a href="<?= \yii\helpers\Url::to(['/admin/content-block/index']) ?>">
+                            <div class="icon"><i class="icon-file-text"></i></div>
+                            <div class="text">Текстовые блоки</div>
+                        </a>
+                    </li>
+                    <li class="menu-item <?= MenuHelper::build([
+                        ['href' => \yii\helpers\Url::to(['/admin/page/index']), 'text' => 'Страницы']
+                    ])[0]['_active'] ? 'active' : '' ?>">
+                        <a href="<?= \yii\helpers\Url::to(['/admin/page/index']) ?>">
+                            <div class="icon"><i class="icon-file"></i></div>
+                            <div class="text">Страницы</div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        <?php endif; ?>
+
         <?php if (Yii::$app->user->can('admin')): ?>
             <div class="center-item">
                 <div class="center-heading">Настройки</div>
