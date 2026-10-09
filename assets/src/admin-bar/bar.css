@@ -115,6 +115,10 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .ab-ctx-text { display: inline-flex; flex-direction: column; line-height: 1.15; max-width: 220px; margin-right: 6px; }
 .ab-ctx-name { font-size: 11px; color: var(--ab-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ab-ctx-label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ab-ctx-status { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; padding: 2px 6px; border-radius: 6px; background: var(--ab-hover); color: var(--ab-muted); white-space: nowrap; }
+.ab-ctx-status.is-draft { background: #f59e0b; color: #111; }
+.ab-ctx-status.is-published { background: #3b82f6; color: #fff; }
+.ab-ctx-status.is-archived { background: #475569; color: #fff; }
 .ab-ctx .ab-btn { height: 30px; border-radius: 10px; }
 .ab-ctx .ab-btn.is-icon { width: 30px; }
 

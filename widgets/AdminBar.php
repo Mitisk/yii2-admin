@@ -160,7 +160,7 @@ class AdminBar extends Widget
         // В client-режиме страница должна быть одинаковой для всех (полностраничный кэш):
         // обёртка выводится всегда, права проверяются на сервере при сохранении.
         $clientMode = (string)Yii::$app->settings->get('ADMIN', 'bar_mode', self::MODE_SERVER) === self::MODE_CLIENT;
-        if (!$clientMode && (!$bar->isAdmin() || !$bar->canUpdate($model) || $bar->findComponent(get_class($model)) === null)) {
+        if (!$clientMode && (!$bar->isAdmin() || !$bar->canUpdate($model) || !$bar->isManaged(get_class($model)))) {
             return $content;
         }
         // «Смотреть как гость» — страница без служебной разметки
@@ -180,6 +180,12 @@ class AdminBar extends Widget
             'ab-type' => $type,
             'ab-label' => $model->getAttributeLabel($attribute),
         ]);
+        // Встроенные модели: не-текстовые атрибуты правятся в модалке с формой админки
+        $described = $clientMode ? null : $bar->describe($model);
+        if (!empty($described['editUrl'])) {
+            $options['data']['ab-edit'] = $described['editUrl'];
+            $options['data']['ab-key'] = $described['key'];
+        }
 
         return Html::tag($tag, $content, $options);
     }

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Mitisk\Yii2Admin\components;
 
+use Mitisk\Yii2Admin\enums\PageStatus;
 use Mitisk\Yii2Admin\models\AdminModel;
+use Mitisk\Yii2Admin\models\Page;
 use Yii;
 use yii\base\Component;
 use yii\db\ActiveRecord;
+use yii\helpers\Url;
 use yii\web\User;
 
 /**
@@ -82,9 +85,27 @@ class AdminBarComponent extends Component
 
     private ?bool $_isAdmin = null;
 
+    /**
+     * Встроенные модели бара: разделы, которых нет в `admin_model` (страницы, свои модели сайта).
+     * class => [alias, name, label (атрибут подписи), permissions[view|update|create], routes[index|update|create]].
+     *
+     * @var array<class-string, array<string, mixed>>
+     */
+    public array $models = [];
+
     public function init(): void
     {
         parent::init();
+
+        $this->models += [
+            Page::class => [
+                'alias' => 'page',
+                'name' => 'Страницы',
+                'label' => 'title',
+                'permissions' => ['view' => 'viewContent', 'update' => 'editContent', 'create' => 'manageContent'],
+                'routes' => ['index' => '/admin/page/index', 'update' => '/admin/page/update', 'create' => '/admin/page/create'],
+            ],
+        ];
 
         if (!isset($this->serverActions['clear-cache'])) {
             $this->serverActions = ['clear-cache' => [
@@ -151,7 +172,87 @@ class AdminBarComponent extends Component
     public function canUpdate(ActiveRecord|string $model): bool
     {
         $class = is_object($model) ? get_class($model) : $model;
+        if (isset($this->models[$class])) {
+            return $this->can($this->models[$class]['permissions']['update']) || $this->can('admin');
+        }
         return $this->can($class . '\update') || $this->can('admin');
+    }
+
+    /** Модель управляется баром: встроенная или компонент admin_model с view = 1. */
+    public function isManaged(string $class): bool
+    {
+        return isset($this->models[$class]) || $this->findComponent($class) !== null;
+    }
+
+    /**
+     * Описание контекстной модели для state: встроенная — из реестра; для компонентов
+     * `admin_model` возвращает null, их описывает {@see AdminBarState::describeModel()}.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function describe(ActiveRecord $model): ?array
+    {
+        $class = get_class($model);
+        if (!isset($this->models[$class])) {
+            return null;
+        }
+        $cfg = $this->models[$class];
+        if (!$this->can($cfg['permissions']['view']) && !$this->can('admin')) {
+            return null;
+        }
+        $pk = $model->getPrimaryKey();
+        $id = is_array($pk) ? implode('-', $pk) : $pk;
+        $canUpdate = $this->canUpdate($class);
+        $urls = ['index' => Url::to([$cfg['routes']['index']])];
+        if ($canUpdate) {
+            $urls['update'] = Url::to([$cfg['routes']['update'], 'id' => $id]);
+        }
+        if (isset($cfg['routes']['create']) && ($this->can($cfg['permissions']['create']) || $this->can('admin'))) {
+            $urls['create'] = Url::to([$cfg['routes']['create']]);
+        }
+        $label = $model->hasAttribute($cfg['label']) ? (string)$model->getAttribute($cfg['label']) : '';
+        $out = [
+            'class' => $class,
+            'id' => $id,
+            'label' => $label !== '' ? $label : '#' . $id,
+            'canUpdate' => $canUpdate,
+            'component' => ['alias' => $cfg['alias'], 'name' => $cfg['name']],
+            'urls' => $urls,
+            'editUrl' => $canUpdate ? Url::to([$cfg['routes']['update'], 'id' => $id, 'modal' => 1]) : null,
+            'key' => $cfg['alias'] . ':' . $id,
+        ];
+        return $model instanceof Page ? $this->describePage($model, $out) : $out;
+    }
+
+    /**
+     * Статус и действия публикации для страницы.
+     *
+     * @param array<string, mixed> $out
+     * @return array<string, mixed>
+     */
+    private function describePage(Page $page, array $out): array
+    {
+        $status = $page->getStatus();
+        $live = $page->isLive();
+        $out['status'] = [
+            'label' => $status === PageStatus::Published && !$live
+                ? 'Публикация ' . date('d.m H:i', (int)$page->published_at)
+                : $status->label(),
+            'kind' => $live ? 'live' : $status->value,
+        ];
+        if ($out['canUpdate']) {
+            $out['actions'] = $status === PageStatus::Published
+                ? [[
+                    'id' => 'page-unpublish', 'label' => 'Снять с публикации', 'icon' => 'eye',
+                    'url' => Url::to(['/admin/page/unpublish', 'id' => $page->id]), 'post' => true, 'reload' => true,
+                    'confirm' => 'Снять страницу с публикации?',
+                ]]
+                : [[
+                    'id' => 'page-publish', 'label' => 'Опубликовать', 'icon' => 'check',
+                    'url' => Url::to(['/admin/page/publish', 'id' => $page->id]), 'post' => true, 'reload' => true,
+                ]];
+        }
+        return $out;
     }
 
     // ------------------------------------------------------------------

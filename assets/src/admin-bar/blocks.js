@@ -69,7 +69,8 @@
     };
 
     Blocks.prototype.modal = function (node) {
-        var bar = this.bar, key = node.dataset.abBlock;
+        // Блок: ключ блока и общая форма; встроенная модель (страница): свой ключ и адрес формы
+        var bar = this.bar, key = node.dataset.abKey || node.dataset.abBlock;
         var box = document.createElement('div');
         box.className = 'ab-palette';
         box.style.cssText = 'width:min(920px,calc(100vw - 32px));height:min(80vh,760px);display:flex;flex-direction:column;padding:0;overflow:hidden';
@@ -77,7 +78,7 @@
             + '<b></b><button type="button" class="ab-btn is-icon" data-close title="Закрыть">✕</button></div>'
             + '<iframe style="flex:1;border:0;background:#fff" title="Редактирование блока"></iframe>';
         box.querySelector('b').textContent = node.dataset.abLabel || key;
-        box.querySelector('iframe').src = this.state.urls.blockEdit + encodeURIComponent(key);
+        box.querySelector('iframe').src = node.dataset.abEdit || (this.state.urls.blockEdit + encodeURIComponent(key));
         box.querySelector('[data-close]').addEventListener('click', function () { bar.hideOverlay(); });
 
         this.current = { key: key, node: node, box: box };
@@ -86,7 +87,8 @@
 
     /* Перечитать страницу и подменить блоки с этим ключом; разметку блока задаёт сайт */
     Blocks.prototype.refresh = function (key) {
-        var sel = '[data-ab-block="' + (window.CSS && CSS.escape ? CSS.escape(key) : key) + '"]';
+        var escaped = window.CSS && CSS.escape ? CSS.escape(key) : key;
+        var sel = key.indexOf(':') > -1 ? '[data-ab-key="' + escaped + '"]' : '[data-ab-block="' + escaped + '"]';
         fetch(window.location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'AdminBar' } })
             .then(function (r) { return r.text(); })
             .then(function (html) {

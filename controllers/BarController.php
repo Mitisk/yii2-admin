@@ -106,7 +106,7 @@ class BarController extends Controller
         }
 
         $bar = $this->getBar();
-        if ($bar->findComponent($class) === null) {
+        if (!$bar->isManaged($class)) {
             return ['ok' => false, 'message' => 'Модель не управляется админкой'];
         }
         if (!$bar->canUpdate($class)) {
@@ -134,7 +134,9 @@ class BarController extends Controller
                 'value' => $old,
             ];
         }
-        if (!$model->save(false, [$attr])) {
+        // Вместе с атрибутом — служебные поля даты и автора, если они есть у модели
+        $attrs = array_values(array_filter([$attr, 'updated_at', 'updated_by'], static fn(string $a): bool => $model->hasAttribute($a)));
+        if (!$model->save(false, array_unique($attrs))) {
             return ['ok' => false, 'message' => 'Не удалось сохранить', 'value' => $old];
         }
 

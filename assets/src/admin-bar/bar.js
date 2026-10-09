@@ -174,6 +174,14 @@
             bar.appendChild(el('<span class="ab-sep"></span>'));
             var chip = el('<div class="ab-ctx"></div>');
             chip.appendChild(el('<span class="ab-ctx-text"><span class="ab-ctx-name">' + esc(ctx.component.name) + '</span><span class="ab-ctx-label" title="' + esc(ctx.label) + '">' + esc(ctx.label) + '</span></span>'));
+            if (ctx.status) {
+                chip.appendChild(el('<span class="ab-ctx-status is-' + esc(ctx.status.kind) + '">' + esc(ctx.status.label) + '</span>'));
+            }
+            (ctx.actions || []).forEach(function (a) {
+                var b = el('<button type="button" class="ab-btn is-icon" data-tip="' + esc(a.label) + '">' + icon(a.icon || 'zap') + '</button>');
+                b.addEventListener('click', this.runAction.bind(this, a, b));
+                chip.appendChild(b);
+            }, this);
             if (ctx.urls.update) {
                 chip.appendChild(el('<a class="ab-btn is-accent" href="' + esc(ctx.urls.update) + '" data-tip="Редактировать запись">' + icon('edit', 16) + '<span class="ab-label">Редактировать</span></a>'));
             } else if (ctx.urls.view) {
@@ -432,6 +440,15 @@
     AdminBar.prototype.runAction = function (action, btn) {
         var self = this;
         var go = function () {
+            if (action.post) {
+                btn.disabled = true;
+                self.post(action.url, action.data || {}).then(function (res) {
+                    btn.disabled = false;
+                    self.toast(res.message || (res.ok ? 'Готово' : 'Ошибка'), res.ok ? 'success' : 'error');
+                    if (res.ok && action.reload) { setTimeout(function () { window.location.reload(); }, 600); }
+                }).catch(function () { btn.disabled = false; self.toast('Ошибка запроса', 'error'); });
+                return;
+            }
             if (!action.server) {
                 if (action.url) { window.open(action.url, action.target || '_self'); }
                 return;
@@ -532,6 +549,9 @@
         this.collectBlocks().forEach(function (b) {
             out.push({ group: 'Блоки на странице', label: b.label, sub: b.value, icon: 'edit', block: b.node });
         });
+        (s.pages || []).forEach(function (p) {
+            out.push({ group: 'Страницы', label: p.title, sub: p.path + ' · ' + p.status, icon: 'file', href: p.url });
+        });
         out.push({ group: 'Админка', label: 'Панель управления', icon: 'home', href: urls.dashboard });
         out.push({ group: 'Админка', label: 'Настройки сайта', icon: 'settings', href: urls.settings });
         out.push({ group: 'Админка', label: 'Компоненты', icon: 'grid', href: urls.components });
@@ -624,7 +644,11 @@
     AdminBar.prototype.startEdit = function (node) {
         var self = this;
         var type = node.dataset.abType || 'text';
-        if (type !== 'text') { this.toast('Этот тип (' + type + ') пока редактируется только в админке', 'error'); return; }
+        if (type !== 'text') {
+            // Встроенные модели дают адрес формы — открываем её в модалке
+            if (node.dataset.abEdit) { this.editBlock(node); } else { this.toast('Этот тип (' + type + ') пока редактируется только в админке', 'error'); }
+            return;
+        }
         var original = node.textContent;
         node.setAttribute('contenteditable', 'true');
         node.focus();

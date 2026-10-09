@@ -7,6 +7,7 @@ namespace Mitisk\Yii2Admin\components;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Mitisk\Yii2Admin\models\AdminUser;
 use Mitisk\Yii2Admin\models\Menu;
+use Mitisk\Yii2Admin\models\Page;
 use Mitisk\Yii2Admin\Module;
 use Yii;
 use yii\base\Component;
@@ -75,6 +76,9 @@ class AdminBarState extends Component
 
     /** @var array<string, string> URL ассетов панели (css). */
     public array $assets = [];
+
+    /** @var list<array{title: string, path: string, status: string, url: string}> Страницы для палитры. */
+    public array $pages = [];
 
     /**
      * Режимы просмотра: включены ли «гость» и «черновики», имена их cookie.
@@ -218,11 +222,29 @@ class AdminBarState extends Component
             ];
         }
 
+        $pagesOn = Yii::$app->has('pages') && Yii::$app->get('pages')->getEnabled() && $bar->can('viewContent');
         $state->features = [
             'inlineEdit' => true,
             'drafts' => $bar->isDraftsToggleAvailable(),
             'blocks' => $bar->can('editContent'),
+            'pages' => $pagesOn,
         ];
+
+        if ($pagesOn) {
+            // Страницы для палитры Ctrl+K
+            $state->pages = self::pagesForPalette();
+            // 404: предложить создать страницу по этому адресу
+            $exception = Yii::$app->errorHandler->exception ?? null;
+            if ($exception instanceof \yii\web\NotFoundHttpException && $bar->can('manageContent')) {
+                $path = trim((string)$request->getPathInfo(), '/');
+                if ($path !== '' && preg_match('~^[a-z0-9][a-z0-9/\-]*$~i', $path)) {
+                    $state->actions[] = [
+                        'id' => 'create-page', 'label' => 'Создать страницу /' . $path, 'icon' => 'plus',
+                        'url' => Url::to(['/admin/page/create', 'path' => $path]),
+                    ];
+                }
+            }
+        }
 
         // Точка расширения
         $state->trigger(self::EVENT_BUILD, new AdminBarBuildEvent(['state' => $state]));
@@ -249,6 +271,7 @@ class AdminBarState extends Component
             'impersonation' => $this->impersonation,
             'features' => $this->features,
             'prefs' => $this->prefs,
+            'pages' => $this->pages,
             'view' => $this->view,
             'assets' => $this->assets,
         ];
@@ -360,12 +383,39 @@ class AdminBarState extends Component
     // ------------------------------------------------------------------
 
     /**
+     * Все страницы раздела «Контент» для палитры: заголовок, адрес, статус.
+     *
+     * @return list<array{title: string, path: string, status: string, url: string}>
+     */
+    private static function pagesForPalette(): array
+    {
+        $out = [];
+        try {
+            foreach (Page::find()->light()->ordered()->all() as $page) {
+                $out[] = [
+                    'title' => (string)$page->title,
+                    'path' => '/' . $page->path,
+                    'status' => $page->getStatus()->label(),
+                    'url' => Yii::$app->pages->url($page),
+                ];
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('AdminBar pages: ' . $e->getMessage(), __METHOD__);
+        }
+        return $out;
+    }
+
+    /**
      * Описание контекстной модели для панели.
      *
      * @return array<string, mixed>|null
      */
     private static function describeModel(AdminBarComponent $bar, ActiveRecord $model, string $base): ?array
     {
+        // Встроенные модели (страницы, модели сайта из реестра) описывает компонент
+        if ($bar->isManaged(get_class($model)) && ($described = $bar->describe($model)) !== null) {
+            return $described;
+        }
         $class = get_class($model);
         $component = $bar->findComponent($class);
         if ($component === null || !$component->alias) {
