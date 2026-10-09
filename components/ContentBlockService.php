@@ -147,6 +147,21 @@ class ContentBlockService extends Component
     }
 
     /**
+     * HTML существующего активного блока; нет блока — пустая строка, ничего не создаётся
+     * (для шорткода `[block key="…"]` в тексте страницы).
+     */
+    public function renderIfExists(string $key, array $opts = []): string
+    {
+        $row = $this->row($key);
+        if ($row === null || !$row['active']) {
+            return '';
+        }
+        $type = BlockType::tryFrom($row['type']) ?? BlockType::Text;
+        $this->_used[$key] = ['name' => $row['name'], 'type' => $type->value];
+        return $this->renderer()->render($type, BlockValueCodec::decode($type, $row['value']), $opts);
+    }
+
+    /**
      * Блоки, выведенные в этом запросе: key => [name, type].
      *
      * @return array<string, array{name: string, type: string}>
