@@ -1106,8 +1106,122 @@ use Mitisk\Yii2Admin\enums\BlockType;
 `/admin/content-block/update/?modal=1&key=…`; после сохранения iframe шлёт `postMessage({type: 'ab-block-saved', key})`,
 панель перечитывает страницу и подменяет блок. Панель «Блоки на странице» и группа палитры `Ctrl+K`.
 
-**Шорткоды (зарезервировано для раздела «Страницы»):** `[block key="home.intro"]` — вставка блока в текст
-страницы. Обработчика пока нет.
+**Шорткоды:** `[block key="home.intro"]` вставляет блок в текст страницы (§9c). Несуществующий ключ даёт
+пустую строку, а не создаёт блок (`ContentBlockService::renderIfExists()`).
+
+---
+
+## 9c. Контент: страницы
+
+Раздел «Контент → Страницы» (`/admin/page`): дерево страниц с иерархическими адресами
+(`about/team`), статусами, отложенной публикацией, шаблонами, SEO-полями и автоматическими
+редиректами при смене адреса. Подключать ничего не нужно: модуль в `bootstrap` сам регистрирует
+компонент `pages`, URL-правило и фронтовый контроллер `page`.
+
+**Файлы:** `models/{Page,PageRedirect}.php`, `models/query/PageQuery.php`, `models/forms/PageForm.php`,
+`models/PageSearch.php`, `enums/PageStatus.php`, `components/PageService.php`, `components/PageUrlRule.php`,
+`components/pages/{PagePath,PageTree,PageHtmlPurifier,PreviewToken,TemplateFinder,PageSitemapEvent}.php`,
+`components/content/ShortcodeService.php`, `controllers/PageController.php` (админка),
+`controllers/front/PageController.php` (сайт), `views/page/*`, `views/front/page/default.php`,
+`assets/PageAsset.php`, `assets/js/page/page.min.js`. Миграция `m261012_120000_create_page_tables`.
+
+**Таблицы:** `page` (`parent_id`, `slug`, `path` — полный адрес без слешей по краям, уникальный; `title`,
+`excerpt`, `body`, `template`, `status`, `published_at`, `sort`, SEO-поля `seo_title|seo_description|seo_keywords|
+canonical|noindex`, `og_image_id`) и `page_redirect` (`from_path` → `to_path`, `code`, `page_id`, `hits`,
+`last_hit_at`).
+
+**Как открывается страница.** `PageUrlRule` стоит первым в `urlManager` и совпадает только с адресами из карты
+страниц (один запрос, кэш по тегу `page`). Остальные адреса уходят дальше по правилам сайта. Регистр и слеш
+на конце дают 301 на каноничный адрес. Старый адрес из `page_redirect` даёт 301 на новый. Карта сайта —
+`/sitemap.xml`: опубликованные страницы без `noindex` плюс записи из события `PageService::EVENT_SITEMAP`.
+
+**Статусы** (`enums/PageStatus`): `draft`, `published`, `archived`. Опубликованная страница с `published_at`
+в будущем видна с этого момента без сброса кэша: время проверяется на каждом запросе. Черновик и
+запланированная страница отдают гостю 404. Администратор с `viewContent` видит их с `Cache-Control: private,
+no-store`. Ссылка предпросмотра для внешних людей — HMAC-токен со сроком `PageService::$previewTtl`
+(сутки), в БД не хранится. Архивная страница отдаёт 404 всем.
+
+**Адреса и редиректы.** `slug` — `a-z0-9-`, кириллица транслитерируется (`PagePath::slugify`). Корневая
+страница не может занять сегмент модуля, контроллера сайта, `controllerMap` или служебный (`admin`, `sitemap`,
+`assets`, ... — `PagePath::RESERVED`, `PageService::reservedSegments()`). Смена `slug` или родителя
+пересчитывает `path` у всей ветки и пишет редиректы со старых адресов; цепочки схлопываются, петли
+удаляются. Удаление страницы удаляет её ветку и редиректы на неё.
+
+**Шаблоны** — файлы `@app/views/page/<имя>.php` с докблоком `/** @title Название */`. Файлы на `_` — частичные,
+в список не попадают. Нет папки или файла — шаблон модуля `views/front/page/default.php`. В шаблон приходят
+`$page` (`Page`) и `$content` (готовый HTML тела: шорткоды выполнены, у `h2/h3` проставлены `id="h-N"`).
+Лейаут — лейаут сайта.
+
+```php
+<?php
+/** @title Обычная страница */
+/** @var Mitisk\Yii2Admin\models\Page $page */
+/** @var string $content */
+use Mitisk\Yii2Admin\widgets\AdminBar;
+use yii\widgets\Breadcrumbs;
+?>
+<div class="container py-4">
+    <?= Breadcrumbs::widget(['links' => Yii::$app->pages->breadcrumbs($page)]) ?>
+    <h1><?= AdminBar::editable($page, 'title') ?></h1>
+    <?= AdminBar::editable($page, 'body', $content, ['tag' => 'div', 'type' => 'html']) ?>
+</div>
+```
+
+**API** `Yii::$app->pages` (`components/PageService`):
+
+| Метод | Что делает |
+|---|---|
+| `find($path, $onlyLive = true)` | страница по адресу (`about/team`) или `null` |
+| `get($id)` | страница по id с кэшем на запрос |
+| `url($pathOrPage, $params = [])` | адрес страницы через `Url::to(['/page/view', 'path' => ...])` |
+| `tree($onlyLive = true)` | дерево `[{item, children, depth}]` для меню |
+| `breadcrumbs($page)` | ссылки для `yii\widgets\Breadcrumbs` |
+| `templates()` | `['имя' => 'Название']` из папки шаблонов |
+| `shortcodes()` | `ShortcodeService` для регистрации своих шорткодов |
+| `previewUrl($page)` | ссылка предпросмотра с токеном |
+| `sitemapEntries()` | записи карты сайта |
+| `invalidate()` | сбросить кэш карты адресов и редиректов |
+
+Для выборок в коде сайта — `Page::find()->published()->children($id)->ordered()->all()`; `published()`
+учитывает `published_at`, `light()` не тянет `body`.
+
+**Шорткоды** в тексте страницы: `[block key="..."]` — текстовый блок; `[page slug="about" text="..."]` — ссылка
+на страницу (неопубликованная — просто текст); `[children]` или `[children of="about"]` — список дочерних
+страниц; `[toc]` — оглавление по `h2/h3`. Содержимое `<pre>` и `<code>` не обрабатывается, ошибка обработчика
+даёт пустую строку и warning в лог. Свой шорткод регистрируют до рендера, например в `bootstrap` сайта:
+
+```php
+Yii::$app->pages->shortcodes()->register('phone', fn(array $a): string =>
+    Html::a(Html::encode($a['text'] ?? '+7 495 000-00-00'), 'tel:+74950000000'));
+```
+
+**Безопасность HTML.** Тело страницы чистится `HtmlPurifier` при сохранении (`PageHtmlPurifier`). `iframe`
+разрешён только с хостов из настройки `pages_iframe_hosts` (по умолчанию `youtube.com, youtu.be, vk.com,
+vkvideo.ru, rutube.ru, yandex.ru, google.com`, поддомены тоже); остальные вырезаются.
+
+**Права:** `viewContent` — список и черновики на сайте; `editContent` — правка, публикация, ссылка
+предпросмотра, правка через Admin Bar; `manageContent` — создание, удаление, копирование. Те же права,
+что у текстовых блоков (§9b), отдельной роли нет.
+
+**Настройки** (раздел `ADMIN`): `pages_enabled` — выключает правило и раздел в баре (данные остаются);
+`pages_iframe_hosts` — хосты для `iframe` через запятую.
+
+**Admin Bar.** `Page` зарегистрирована в `AdminBarComponent::$models` (§9a), поэтому на странице бар
+показывает чип со статусом, кнопки «Опубликовать» / «Снять с публикации» и «Редактировать». Заголовок
+правится на месте, текст — в модалке с формой. В палитре `Ctrl+K` есть поиск по страницам. На 404 у
+`manageContent` есть действие «Создать страницу /адрес»: форма откроется с заполненными родителем и `slug`.
+
+**SEO.** Сначала срабатывают правила `SeoManager`, затем поля страницы перекрывают их под теми же ключами:
+`title`, `description` (пусто — анонс, затем начало текста), `keywords`, `robots`, `canonical`, `og:*`.
+Лейаут сайта должен регистрировать свои `description` и `keywords` с ключами, иначе мета-теги задвоятся:
+
+```php
+$this->registerMetaTag(['name' => 'description', 'content' => '...'], 'description');
+```
+
+**Свой контроллер.** Если в `controllerMap` сайта уже есть `page`, модуль его не трогает. Свой контроллер
+должен принимать `actionView(int $id)` и `actionRedirect(string $to, int $code)` — их маршруты отдаёт
+`PageUrlRule`.
 
 ---
 
@@ -1183,6 +1297,7 @@ use Mitisk\Yii2Admin\enums\BlockType;
 | `Mitisk\Yii2Admin\components\SeoManager`, `models\SeoRule` | SEO |
 | `Mitisk\Yii2Admin\widgets\AdminBar`, `components\AdminBarComponent`, `components\AdminBarState`, `controllers\BarController` | панель администратора на сайте (§9a) |
 | `Mitisk\Yii2Admin\widgets\ContentBlock`, `components\ContentBlockService` (`Yii::$app->blocks`), `models\ContentBlock`, `enums\BlockType` | текстовые блоки раздела «Контент» (§9b) |
+| `Mitisk\Yii2Admin\models\Page`, `components\PageService` (`Yii::$app->pages`), `components\PageUrlRule`, `enums\PageStatus`, `components\content\ShortcodeService` | страницы раздела «Контент», шорткоды (§9c) |
 | `Mitisk\Yii2Admin\models\AdminUser` | пользователь админки, RBAC-трейт (`assignRole`, `revokeRole`, `can`) |
 
 ### URL-схема компонента

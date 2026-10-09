@@ -49,26 +49,36 @@ Shadow DOM кастомного элемента `<admin-bar>`; CSS подклю
 {
   "version": "1.7.0",
   "user":     {"id": 1, "name": "Администратор", "avatar": "/web/...", "roles": ["superAdminRole"]},
-  "urls":     {"dashboard": "/admin/", "profile": "/admin/user/update/?id=1", "logout": "/admin/logout/",
-               "blocks": "/admin/content-block/", "blockEdit": "/admin/content-block/update/?modal=1&key="},
+  "urls":     {"dashboard": "/admin", "profile": "/admin/user/update?id=1", "logout": "/admin/logout",
+               "blocks": "/admin/content-block", "blockEdit": "/admin/content-block/update?modal=1&key="},
   "csrf":     {"param": "_csrf", "token": "..."},
-  "endpoints":{"state": "/admin/bar/state/", "action": "/admin/bar/action/", "attribute": "/admin/bar/attribute/",
-               "block": "/admin/bar/block/"},
-  "context":  {"url": "/product/x/", "route": "product/view",
-               "model": {"class": "app\\models\\Product", "id": 12, "label": "Товар X",
-                         "component": {"alias": "product", "name": "Товары"},
-                         "urls": {"index": "...", "update": "...", "create": "..."}}},
+  "endpoints":{"state": "/admin/bar/state", "action": "/admin/bar/action", "attribute": "/admin/bar/attribute",
+               "block": "/admin/bar/block"},
+  "context":  {"url": "/about", "route": "page/view",
+               "model": {"class": "Mitisk\\Yii2Admin\\models\\Page", "id": 12, "label": "О компании",
+                         "component": {"alias": "page", "name": "Страницы"},
+                         "urls": {"index": "...", "update": "...", "create": "..."},
+                         "editUrl": "/admin/page/update?id=12&modal=1", "key": "page:12",
+                         "status": {"label": "Черновик", "kind": "draft"},
+                         "actions": [{"id": "page-publish", "label": "Опубликовать", "icon": "check",
+                                      "url": "/admin/page/publish?id=12", "post": true, "reload": true}]}},
   "menu":     [],
   "actions":  [{"id": "clear-cache", "label": "Очистить кэш", "icon": "refresh", "confirm": "Очистить кэш сайта?"}],
   "panels":   [{"id": "seo", "label": "SEO", "icon": "search", "items": [], "url": ""}],
   "badges":   {"update": "1.7.1"},
   "impersonation": {"active": false, "returnUrl": "/admin/user/stop-impersonate/"},
-  "features": {"inlineEdit": true, "drafts": false, "blocks": true},
+  "features": {"inlineEdit": true, "drafts": false, "blocks": true, "pages": true},
   "prefs":    {"position": "bottom", "theme": "dark", "hotkey": "Alt+Shift+A"},
+  "pages":    [{"title": "О компании", "path": "/about", "status": "Опубликована", "url": "/about"}],
   "view":     {"guest": false, "drafts": false, "cookies": {"guest": "ab_guest", "drafts": "ab_drafts"}},
   "assets":   {"js": "...", "css": "...", "blocks": ".../js/admin-bar-blocks.min.js"}
 }
 ```
+
+Все адреса строит `Url::to()`, поэтому они совпадают с правилами `urlManager` сайта
+(со слешем на конце адреса давали 301, и POST превращался в GET). Действие с `post: true`
+панель отправляет POST-запросом на `url` и при `reload: true` перезагружает страницу.
+На странице 404 в `actions` появляется `create-page` с адресом формы новой страницы.
 
 ### Расширяемость
 
@@ -81,6 +91,27 @@ Shadow DOM кастомного элемента `<admin-bar>`; CSS подклю
 3. **Регистр серверных действий** `AdminBarComponent::$serverActions`:
    `id => [label, icon, permission, confirm, handler]`. Панель шлёт
    `POST /admin/bar/action/ {id}`. Первое действие — `clear-cache` (`manageSystem`).
+4. **Реестр встроенных моделей** `AdminBarComponent::$models` — модели, которых нет в
+   `admin_model`, но с которыми бар должен работать: чип контекста, правка на месте,
+   модалка с формой. Модуль регистрирует `Page`; сайт дописывает свои через конфиг:
+
+   ```php
+   'adminBar' => [
+       'class' => \Mitisk\Yii2Admin\components\AdminBarComponent::class,
+       'models' => [
+           \app\models\Product::class => [
+               'alias' => 'product', 'name' => 'Товары', 'label' => 'name',
+               'permissions' => ['view' => 'viewProducts', 'update' => 'editProducts', 'create' => 'editProducts'],
+               'routes' => ['index' => '/catalog/admin/index', 'update' => '/catalog/admin/update', 'create' => '/catalog/admin/create'],
+           ],
+       ],
+   ],
+   ```
+
+   `describe()`, `isManaged()`, `canUpdate()`, эндпоинт `attribute` и `AdminBar::editable()`
+   сначала смотрят в реестр, потом в `admin_model`. Форма по `routes.update` с параметром
+   `modal=1` открывается в модалке бара, если по `postMessage({type: 'ab-block-saved', key})`
+   сообщит о сохранении.
 
 ### Сервер
 
@@ -89,7 +120,8 @@ Shadow DOM кастомного элемента `<admin-bar>`; CSS подклю
 - `GET state` — JSON состояния; гостю 401 (маршрут исключён из редиректа на логин).
 - `POST action` — выполнить серверное действие из регистра с проверкой права.
 - `POST attribute` — inline-правка: модель должна быть компонентом админки
-  (`admin_model.view = 1`), право `{FQCN}\update` или `admin`, атрибут из
+  (`admin_model.view = 1`) или встроенной моделью из реестра, право `{FQCN}\update`
+  (у встроенной — её `permissions.update`) или `admin`, атрибут из
   `safeAttributes()`, `validate([$attr])`, сохранение, `AuditService::log`.
 
 ### Inline-правка (задел)
@@ -155,6 +187,10 @@ CSRF; `Cache-Control: private, no-store` при серверном рендер�
   - Бюджет JS превышен: `admin-bar.min.js` 32,4 КБ при плане 30 КБ.
 - **Этап 3** (после планировщика и медиатеки): техпанель (время, SQL), тип
   `image`, заметки-булавки, бейджи задач и заявок, «создать редирект» на 404.
+  - [x] «Создать страницу по этому адресу» на 404 и страницы раздела «Контент» в баре:
+    чип со статусом, «Опубликовать» / «Снять с публикации», правка заголовка на месте и
+    текста в модалке, поиск страниц в палитре (ветка `pages`, см. `docs/pages.md` приложения).
+  - Бюджет: `admin-bar.min.js` 34,1 КБ, `admin-bar.min.css` 10,0 КБ при плане 30 и 10 КБ.
 
 Каждый этап только добавляет действия, панели и типы в существующие точки
 расширения; разметка сайта и API контроллеров не меняются.
