@@ -26,10 +26,30 @@ class FieldsHelper extends BaseObject
                 break;
             case 'text':
             case 'data':
-            case 'json':
             case 'html':
             case 'textarea':
                 return 'textarea';
+                break;
+            case 'json':
+                return 'json';
+                break;
+            case 'email':
+                return 'email';
+                break;
+            case 'phone':
+            case 'tel':
+            case 'telephone':
+                return 'phone';
+                break;
+            case 'url':
+            case 'website':
+                return 'url';
+                break;
+            case 'slug':
+                return 'slug';
+                break;
+            case 'icon':
+                return 'icon';
                 break;
             case 'file':
             case 'image':

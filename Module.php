@@ -12,6 +12,15 @@ final class Module extends \yii\base\Module implements BootstrapInterface
 {
     public const VERSION = '1.7.0';
 
+    /**
+     * Карта «неймспейс => путь/алиас» директорий с моделями приложения.
+     * Используется для автоподстановки класса модели по таблице при
+     * создании компонента. Расширяется в конфигурации модуля (web.php).
+     *
+     * @var array<string, string>
+     */
+    public array $modelNamespaces = ['app\models' => '@app/models'];
+
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
 
