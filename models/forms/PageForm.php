@@ -61,11 +61,13 @@ class PageForm extends Model
 
     /**
      * @param list<string>|null $reservedSegments Зарезервированные первые сегменты; null — из `Yii::$app->pages`.
+     * @param \Closure|null     $siblingExists    `fn(?int $parentId, string $slug, ?int $exceptId): bool`; null — запрос к БД.
      */
     public function __construct(
         public readonly Page $page,
         private readonly BlockImageStorage $images = new BlockImageStorage(ownerClass: Page::class),
         private readonly ?array $reservedSegments = null,
+        private readonly ?\Closure $siblingExists = null,
         array $config = [],
     ) {
         parent::__construct($config);
@@ -162,17 +164,19 @@ class PageForm extends Model
         }
     }
 
-    /** Проверяет базу; в unit-тестах страница — мок, и проверка пропускается. */
+    /** Слаг уникален среди соседей (та же проверка есть в модели; здесь — ради сообщения у поля формы). */
     public function validateSiblingSlug(string $attribute): void
     {
-        if ($this->page instanceof \PHPUnit\Framework\MockObject\MockObject) {
-            return;
-        }
-        $query = Page::find()->children($this->parent_id === null ? null : (int)$this->parent_id)->andWhere(['slug' => $this->slug]);
-        if (!$this->page->isNewRecord) {
-            $query->andWhere(['<>', 'id', $this->page->id]);
-        }
-        if ($query->exists()) {
+        $parentId = $this->parent_id === null || $this->parent_id === '' ? null : (int)$this->parent_id;
+        $exceptId = $this->page->isNewRecord ? null : (int)$this->page->id;
+        $exists = $this->siblingExists ?? static function (?int $parentId, string $slug, ?int $exceptId): bool {
+            $query = Page::find()->children($parentId)->andWhere(['slug' => $slug]);
+            if ($exceptId !== null) {
+                $query->andWhere(['<>', 'id', $exceptId]);
+            }
+            return $query->exists();
+        };
+        if ($exists($parentId, (string)$this->slug, $exceptId)) {
             $this->addError($attribute, 'У соседней страницы уже такой адрес.');
         }
     }
