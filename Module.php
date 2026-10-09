@@ -101,6 +101,16 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             'admin/<controller:\w+>/<action:\w+>' => 'admin/<controller>/<action>',
         ], false);
 
+        // 1a) Страницы раздела «Контент»: правило первым (совпадает только с известными адресами),
+        // sitemap и фронтовый контроллер, если сайт не задал свой
+        $app->getUrlManager()->addRules([
+            ['class' => \Mitisk\Yii2Admin\components\PageUrlRule::class],
+            'sitemap.xml' => 'page/sitemap',
+        ], false);
+        if (!isset($app->controllerMap['page'])) {
+            $app->controllerMap['page'] = \Mitisk\Yii2Admin\controllers\front\PageController::class;
+        }
+
         // 2) Динамическая карта контроллеров из БД
         try {
             $dbMap = $this->buildControllerMapFromDb();

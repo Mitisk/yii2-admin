@@ -211,10 +211,15 @@ class PageService extends Component
         return $found + [TemplateFinder::DEFAULT => 'Обычная страница'];
     }
 
+    /**
+     * Представление шаблона для `Controller::render()` — в виде алиаса, а не абсолютного пути:
+     * абсолютный путь Windows Yii считает относительным и ищет его в папке контроллера.
+     */
     public function templateView(string $template): string
     {
-        $file = Yii::getAlias($this->templateDir) . '/' . basename($template) . '.php';
-        return is_file($file) ? $file : Yii::getAlias($this->fallbackTemplate);
+        $name = basename($template);
+        $file = Yii::getAlias($this->templateDir) . '/' . $name . '.php';
+        return is_file($file) ? rtrim($this->templateDir, '/') . '/' . $name : $this->fallbackTemplate;
     }
 
     public function shortcodes(): ShortcodeService
