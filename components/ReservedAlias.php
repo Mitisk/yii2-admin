@@ -52,6 +52,8 @@ final class ReservedAlias
         'content',
         'content-block',
         'page',
+        'pages',
+        'sitemap',
         'log',
         'model-info',
     ];

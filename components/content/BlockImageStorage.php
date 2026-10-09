@@ -10,15 +10,17 @@ use Mitisk\Yii2Admin\models\File;
 use yii\web\UploadedFile;
 
 /**
- * Картинки блоков в общей таблице `file` (как у поля ImageField):
- * class_name = ContentBlock, item_id = id блока, field_name = image|items.
+ * Картинки блоков и страниц в общей таблице `file` (как у поля ImageField):
+ * class_name = класс-владелец, item_id = id записи, field_name = поле.
  */
 final class BlockImageStorage
 {
     public const ALLOWED = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
-    public function __construct(private readonly FileStorage $storage = new FileStorage())
-    {
+    public function __construct(
+        private readonly FileStorage $storage = new FileStorage(),
+        private readonly string $ownerClass = ContentBlock::class,
+    ) {
     }
 
     /**
@@ -45,7 +47,7 @@ final class BlockImageStorage
         }
 
         $model = new File();
-        $model->class_name = ContentBlock::class;
+        $model->class_name = $this->ownerClass;
         $model->item_id = $blockId;
         $model->field_name = $field;
         $model->filename = $file->name;
@@ -65,7 +67,7 @@ final class BlockImageStorage
      */
     public function delete(int $fileId): void
     {
-        $file = File::find()->where(['id' => $fileId, 'class_name' => ContentBlock::class])->one();
+        $file = File::find()->where(['id' => $fileId, 'class_name' => $this->ownerClass])->one();
         $file?->delete();
     }
 }

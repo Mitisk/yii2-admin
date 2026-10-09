@@ -79,6 +79,14 @@ use Mitisk\Yii2Admin\components\MenuHelper;
                             <div class="text">Текстовые блоки</div>
                         </a>
                     </li>
+                    <li class="menu-item <?= MenuHelper::build([
+                        ['href' => \yii\helpers\Url::to(['/admin/page/index']), 'text' => 'Страницы']
+                    ])[0]['_active'] ? 'active' : '' ?>">
+                        <a href="<?= \yii\helpers\Url::to(['/admin/page/index']) ?>">
+                            <div class="icon"><i class="icon-file"></i></div>
+                            <div class="text">Страницы</div>
+                        </a>
+                    </li>
                 </ul>
             </div>
         <?php endif; ?>
