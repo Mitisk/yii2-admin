@@ -42,6 +42,25 @@ final class TestApp
         Yii::$app->errorHandler->unregister();
     }
 
+    /**
+     * Консоль с минимумом компонентов — db и authManager (как конфиг миграций тестовой БД проекта).
+     */
+    public static function consoleMinimal(): void
+    {
+        $components = self::components();
+        new \yii\console\Application([
+            'id' => 'yii2admin-test-console-minimal',
+            'basePath' => __DIR__ . '/_app',
+            'vendorPath' => self::vendorPath(),
+            'runtimePath' => self::runtimePath(),
+            'components' => [
+                'db' => $components['db'],
+                'authManager' => $components['authManager'],
+            ],
+        ]);
+        Yii::$app->errorHandler->unregister();
+    }
+
     public static function web(): void
     {
         $_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/_app/index.php';

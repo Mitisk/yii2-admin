@@ -613,6 +613,43 @@ class m260101_000100_register_product_admin_component extends Migration
 Если нужно обновить уже существующий компонент (добавили колонку) — та же миграция:
 `findOne(['table_name' => ...])`, правка `list`/`data`, `save()`.
 
+### 3.9a Короче: `AdminRegistry`
+
+`Mitisk\Yii2Admin\components\AdminRegistry` делает то же, что пример выше, одной строкой и
+идемпотентно (повторный запуск обновляет, а не дублирует); при ошибке бросает `\RuntimeException`
+с ошибками AR. Работает в консоли с одними `db` и `authManager` (без settings, cache, user, session).
+
+```php
+use Mitisk\Yii2Admin\components\AdminRegistry;
+
+public function safeUp(): void
+{
+    AdminRegistry::registerComponent([
+        'table_name' => 'product', 'model_class' => Product::class, 'name' => 'Товары', 'alias' => 'products',
+        'admin_label' => 'name', 'can_create' => true,
+        'list' => [...], 'data' => [...], 'links' => [...],   // массивы, кодирует сам
+    ]);                                                       // in_menu по умолчанию false — меню ниже
+    AdminRegistry::upsertMenuGroup('Каталог', 'fas fa-box', [
+        ['text' => 'Товары', 'href' => '/admin/products/', 'rule' => Product::class . '\view'],
+    ]);
+    AdminRegistry::grantModelPermissions(Product::class, 'manager', ['view', 'update']);
+    AdminRegistry::registerController('reports', ReportsController::class, ['access' => 'viewReports']);
+    AdminRegistry::registerDashboardWidget('OrdersTodayWidget', OrdersTodayWidget::class, 3);
+}
+
+public function safeDown(): void
+{
+    AdminRegistry::removeMenuItems(['/admin/products/']);   // пустая группа уходит сама
+    AdminRegistry::unregisterComponent('product');
+    AdminRegistry::unregisterController('reports');
+    AdminRegistry::unregisterDashboardWidget('OrdersTodayWidget');
+}
+```
+
+Ещё: `upsertMenuRoot($text, $href, $icon, $rule)`, `prependMenuChild($group, $child)`,
+`renameMenuItem($href, $text)`. Право пункта меню по умолчанию — `admin`. Меню пишется без
+`Menu::afterSave` (тот пересинхронизирует `admin_model.in_menu`).
+
 ### 3.10 Права и меню для сущности
 
 - Проверки в универсальном контроллере: `index/view` → `{FQCN}\view`,

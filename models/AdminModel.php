@@ -135,18 +135,19 @@ class AdminModel extends \yii\db\ActiveRecord
             }
         }
 
-        if($this->list && is_array($this->list)) {
+        // Пустой массив тоже кодируем: иначе в колонку уходит строка «Array»
+        if (is_array($this->list)) {
             $this->list = json_encode($this->list, JSON_UNESCAPED_UNICODE);
         }
 
-        if ($this->attribute_labels && is_array($this->attribute_labels)) {
+        if (is_array($this->attribute_labels)) {
             $this->attribute_labels = json_encode(
                 $this->attribute_labels,
                 JSON_UNESCAPED_UNICODE
             );
         }
 
-        if ($this->links && is_array($this->links)) {
+        if (is_array($this->links)) {
             $this->links = json_encode(
                 array_values($this->links),
                 JSON_UNESCAPED_UNICODE

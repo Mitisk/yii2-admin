@@ -26,6 +26,21 @@ final class AdminModelRecordTest extends TestCase
         self::assertSame('Файлы в C:\new\uploads', $data[1]['hint']);
     }
 
+    public function testEmptyArraysAreStoredAsJson(): void
+    {
+        $component = $this->registerNoteComponent();
+        $component->list = [];
+        $component->links = [];
+        $component->attribute_labels = [];
+        self::assertTrue($component->save());
+
+        $stored = AdminModel::findOne($component->id);
+
+        self::assertSame([], json_decode((string) $stored->list, true));
+        self::assertSame([], $stored->links);
+        self::assertSame([], $stored->attribute_labels);
+    }
+
     public function testArrayDataIsStoredAsJson(): void
     {
         $component = $this->registerNoteComponent();
