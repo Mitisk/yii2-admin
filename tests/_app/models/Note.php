@@ -14,6 +14,7 @@ use yii\db\ActiveRecord;
  * @property int $published
  * @property int $archived
  * @property array|null $tags JSON-колонка: Yii отдаёт и принимает массив
+ * @property int|null $author_id пользователь админки (поле типа user)
  */
 final class Note extends ActiveRecord
 {
@@ -27,7 +28,7 @@ final class Note extends ActiveRecord
         return [
             [['title'], 'required'],
             [['title'], 'string', 'max' => 255],
-            [['published', 'archived'], 'integer'],
+            [['published', 'archived', 'author_id'], 'integer'],
             [['published', 'archived'], 'in', 'range' => [0, 1]],
             [['tags'], 'safe'],
         ];

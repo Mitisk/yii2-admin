@@ -36,6 +36,25 @@ if ($userId) {
 
     <?= Html::activeHiddenInput($model->getModel(), $field->name, ['id' => $fieldId]) ?>
 
+    <?php if ($field->readonly) : ?>
+    <?php /* Без поиска и «Убрать»; свой класс обёртки — скрипт ниже берёт только .user-field-wrap */ ?>
+    <div class="user-field-wrap-readonly">
+        <div class="user-field-selected">
+            <?php if ($userId && $displayName) : ?>
+                <img src="<?= Html::encode($currentAvatar) ?>" class="user-field-avatar"
+                     alt="<?= Html::encode($displayName) ?>">
+                <div class="user-field-info">
+                    <div class="user-field-name"><?= Html::encode($displayName) ?></div>
+                    <?php if ($currentRoles) : ?>
+                        <div class="user-field-role"><?= Html::encode($currentRoles) ?></div>
+                    <?php endif; ?>
+                </div>
+            <?php else : ?>
+                <div class="user-field-info"><div class="user-field-name">—</div></div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php else : ?>
     <div class="user-field-wrap"
          data-field-id="<?= Html::encode($fieldId) ?>"
          data-search-url="<?= Html::encode($searchUrl) ?>">
@@ -61,6 +80,7 @@ if ($userId) {
             <div class="user-field-dropdown"></div>
         </div>
     </div>
+    <?php endif; ?>
 
     <div class="col-lg-7 invalid-feedback"></div>
 </div>

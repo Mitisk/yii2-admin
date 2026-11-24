@@ -7,6 +7,7 @@ namespace Mitisk\Yii2Admin\tests;
 use Mitisk\Yii2Admin\components\SettingsComponent;
 use Mitisk\Yii2Admin\Module;
 use Mitisk\Yii2Admin\tests\_app\ArraySession;
+use Mitisk\Yii2Admin\tests\_app\NullAssetManager;
 use Yii;
 use yii\caching\ArrayCache;
 use yii\console\controllers\MigrateController;
@@ -46,6 +47,10 @@ final class TestApp
             'vendorPath' => self::vendorPath(),
             'runtimePath' => self::runtimePath(),
             'language' => 'ru-RU',
+            'aliases' => [
+                '@bower' => '@vendor/bower-asset',
+                '@npm' => '@vendor/npm-asset',
+            ],
             'bootstrap' => ['admin'],
             'modules' => [
                 'admin' => ['class' => Module::class],
@@ -60,6 +65,11 @@ final class TestApp
                     'hostInfo' => 'http://localhost',
                 ],
                 'session' => ['class' => ArraySession::class],
+                'assetManager' => [
+                    'class' => NullAssetManager::class,
+                    'basePath' => self::runtimePath(),
+                    'baseUrl' => '/assets',
+                ],
                 'urlManager' => [
                     'enablePrettyUrl' => true,
                     'showScriptName' => false,

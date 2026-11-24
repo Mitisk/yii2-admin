@@ -431,10 +431,16 @@ class AdminModel extends BaseObject
     }
 
     /**
-     * UserField: поиск по имени/логину/email пользователя.
+     * UserField: число — id пользователя (ссылки вида ?Model[user_id]=5),
+     * текст — поиск по имени/логину/email.
      */
     protected function applyUserFilter($query, string $attribute, $value): void
     {
+        if (is_scalar($value) && ctype_digit((string)$value)) {
+            $query->andWhere([$attribute => (int)$value]);
+            return;
+        }
+
         $userTable = \Mitisk\Yii2Admin\models\AdminUser::tableName();
         $userIds = (new \yii\db\Query())
             ->select('id')
