@@ -31,6 +31,19 @@ final class UpdateAttributeTest extends TestCase
         self::assertSame(1, (int) Note::findOne($note->id)->published);
     }
 
+    public function testAcceptsModelClassAsListMarkupSendsIt(): void
+    {
+        $this->registerNoteComponent();
+        $note = $this->createNote(['published' => 0]);
+        $this->loginAs(self::ADMIN_ID);
+
+        // PostedField кладёт класс в data-model через addslashes: «Mitisk\\Yii2Admin\\...»
+        $result = $this->toggle(addslashes(Note::class), $note->id, 'published', '1');
+
+        self::assertSame(1, $result['count']);
+        self::assertSame(1, (int) Note::findOne($note->id)->published);
+    }
+
     public function testManagerCannotChangeRecordOfAnotherModel(): void
     {
         $this->registerNoteComponent();
