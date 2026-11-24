@@ -124,8 +124,15 @@ class AdminModel extends \yii\db\ActiveRecord
     }
 
     public function beforeSave($insert) {
-        if($this->data) {
-            $this->data = str_replace('\n', '', $this->data);
+        // data — JSON холста формы: массив кодируем, валидный JSON приводим к компактному виду.
+        // Экранированные \n и \\ внутри строк (подсказки, пути) сохраняются как есть.
+        if (is_array($this->data)) {
+            $this->data = json_encode($this->data, JSON_UNESCAPED_UNICODE);
+        } elseif (is_string($this->data) && $this->data !== '') {
+            $decoded = json_decode($this->data, true);
+            if (is_array($decoded)) {
+                $this->data = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+            }
         }
 
         if($this->list && is_array($this->list)) {
