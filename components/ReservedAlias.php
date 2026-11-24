@@ -125,9 +125,11 @@ final class ReservedAlias
      *
      * @param Model $model Экземпляр модели (желательно ActiveRecord для определения PK).
      * @param string $attribute Имя проверяемого атрибута (например, 'alias').
-     * @param int|null $cacheTtl TTL кэша для справочников (сек), null — без кэша.
+     * @param int|null $cacheTtl TTL кэша для справочников (сек), null — без кэша. По умолчанию без кэша:
+     *                           проверка идёт только при сохранении, а устаревший список не даёт заново
+     *                           зарегистрировать раздел сразу после его удаления (migrate/down → up).
      */
-    public static function validateForModel(Model $model, string $attribute, ?int $cacheTtl = 300): void
+    public static function validateForModel(Model $model, string $attribute, ?int $cacheTtl = null): void
     {
         $raw = (string)$model->$attribute;
         $value = strtolower(trim($raw));
@@ -183,9 +185,10 @@ final class ReservedAlias
      *
      * @param Model $model Экземпляр модели (желательно ActiveRecord для определения PK).
      * @param string $attribute Имя проверяемого атрибута (например, 'controller_id').
-     * @param int|null $cacheTtl TTL кэша для справочников (сек), null — без кэша.
+     * @param int|null $cacheTtl TTL кэша для справочников (сек), null — без кэша (по умолчанию,
+     *                           как и у validateForModel()).
      */
-    public static function validateForControllerMap(Model $model, string $attribute, ?int $cacheTtl = 300): void
+    public static function validateForControllerMap(Model $model, string $attribute, ?int $cacheTtl = null): void
     {
         $raw = (string)$model->$attribute;
         $value = strtolower(trim($raw));
