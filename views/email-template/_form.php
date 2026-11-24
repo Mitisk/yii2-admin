@@ -137,15 +137,17 @@ $(document).ready(function() {
         
         vars.forEach(function(v) {
             var isRequired = (savedParams[v] && savedParams[v].required == 1) ? 'checked' : '';
+            var isHtml = (savedParams[v] && savedParams[v].html == 1) ? 'checked' : '';
             var desc = (savedParams[v] && savedParams[v].desc) ? savedParams[v].desc : '';
-            
+
             var existingRow = container.find('.var-row[data-key="'+v+'"]');
             if (existingRow.length > 0) {
                  isRequired = existingRow.find('.var-req').is(':checked') ? 'checked' : '';
+                 isHtml = existingRow.find('.var-html').is(':checked') ? 'checked' : '';
                  desc = existingRow.find('.var-desc').val();
             }
             currentHtml += `
-            <li class="attribute-item flex items-center justify-between gap20" data-key="\${v}">
+            <li class="attribute-item var-row flex items-center justify-between gap20" data-key="\${v}">
                 <div class="body-title-2 email-template-name">
                     {{\${v}}}
                     <i class="icon-copy js-copy-settings" title="Получить переменную" data-copy="{{\${v}}}"></i>
@@ -164,6 +166,13 @@ $(document).ready(function() {
                                name="EmailTemplate[params][\${v}][required]" 
                                value="1" 
                                class="var-req" \${isRequired}> Обязательно
+                    </label>
+                    <label title="Значение вставляется в письмо как HTML (ссылка, кнопка). Без отметки — как текст: теги экранируются.">
+                        <input type="hidden" name="EmailTemplate[params][\${v}][html]" value="0">
+                        <input type="checkbox"
+                               name="EmailTemplate[params][\${v}][html]"
+                               value="1"
+                               class="var-html" \${isHtml}> HTML
                     </label>
                 </div>
             </li>`;

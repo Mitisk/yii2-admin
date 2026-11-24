@@ -214,7 +214,8 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
                     $tplId = Yii::$app->settings->get(self::class, 'mail_template_new_password');
 
                     if ($tplId) {
-                        $mailService = new \Mitisk\Yii2Admin\components\MailService();
+                        // Через контейнер: настройка MailService проекта (например, mailer вне прода) действует и здесь
+                        $mailService = Yii::createObject(\Mitisk\Yii2Admin\components\MailService::class);
                         $mailService->send($tplId, $this->email, [
                             'PASSWORD' => $this->password
                         ]);
