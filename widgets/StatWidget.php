@@ -28,6 +28,9 @@ use yii\base\Widget;
  */
 abstract class StatWidget extends Widget
 {
+    /** Цвета карточки (ключ tone): иконка, плашка тренда и график */
+    public const TONES = ['blue', 'green', 'red', 'orange', 'gray'];
+
     /** Окно «за период» по умолчанию для since(), секунд (7 дней). */
     protected const PERIOD = 7 * 86400;
 
@@ -41,8 +44,11 @@ abstract class StatWidget extends Widget
     /**
      * Данные карточки: title, icon (класс иконки темы, например icon-users), value (число —
      * с разделителем тысяч), необязательные note (строка под числом) и url (вся карточка — ссылка).
+     * Ещё необязательные: trend — короткая плашка рядом с числом («+3 за неделю»), spark — числа
+     * по дням для графика-столбиков (от старого к новому), tone — цвет из TONES (по умолчанию blue).
      *
-     * @return array{title: string, icon: string, value: int|float|string, note?: string, url?: string}
+     * @return array{title: string, icon: string, value: int|float|string, note?: string, url?: string,
+     *     trend?: string, spark?: array<int, int|float>, tone?: string}
      */
     abstract protected function stat(): array;
 
@@ -71,7 +77,29 @@ abstract class StatWidget extends Widget
             'value' => (string)$value,
             'note' => (string)($stat['note'] ?? ''),
             'url' => (string)($stat['url'] ?? ''),
+            'tone' => in_array($stat['tone'] ?? null, self::TONES, true) ? $stat['tone'] : 'blue',
+            'trend' => (string)($stat['trend'] ?? ''),
+            'spark' => $this->sparkPoints($stat['spark'] ?? []),
         ], $this);
+    }
+
+    /**
+     * Значения графика: только неотрицательные числа, не больше 31 точки (месяц по дням).
+     *
+     * @param mixed $spark
+     * @return float[]
+     */
+    private function sparkPoints($spark): array
+    {
+        if (!is_array($spark)) {
+            return [];
+        }
+        $points = [];
+        foreach (array_slice(array_values($spark), -31) as $point) {
+            $points[] = is_numeric($point) ? max(0.0, (float) $point) : 0.0;
+        }
+
+        return $points;
     }
 
     private function isVisible(): bool

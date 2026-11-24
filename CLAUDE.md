@@ -973,32 +973,37 @@ final class OrdersTodayWidget extends Widget
 }
 ```
 
-Вью `app/widgets/admin/views/orders-today.php` — обязательная обёртка и меню
-«Переместить/Скрыть» (скопируйте разметку из
-`vendor/mitisk/yii2-admin/widgets/views/index/user.php`); `data-name` = короткое имя класса:
+Проще всего унаследовать `Mitisk\Yii2Admin\widgets\StatWidget`: он сам рисует карточку и меню
+«Переместить / Скрыть», а подкласс отдаёт данные в `stat()`:
 
 ```php
-<div class="wg-chart-default dashboard-top-widget-item" data-name="OrdersTodayWidget">
-    <div class="dropdown default">
-        <button class="btn btn-secondary dropdown-toggle" data-bs-offset="0,-16" type="button" data-bs-toggle="dropdown">
-            <span class="icon-more"><i class="icon-more-horizontal"></i></span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dashboard-top-widget-item-move" href="javascript:void(0);">Переместить</a></li>
-            <li><a class="dashboard-top-widget-item-hide" href="javascript:void(0);">Скрыть</a></li>
-        </ul>
-    </div>
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap14">
-            <div class="image"><i class="icon-shopping-bag"></i></div>
-            <div>
-                <div class="body-text mb-2">Заказов сегодня</div>
-                <h4><?= (int)$count ?></h4>
-            </div>
-        </div>
-    </div>
-</div>
+final class OrdersTodayWidget extends \Mitisk\Yii2Admin\widgets\StatWidget
+{
+    public $permission = 'viewReports';   // роль или право; null — любой вошедший
+
+    public static function dashboardTitle(): string
+    {
+        return 'Заказы за сегодня';        // название в списке «Добавить виджет»
+    }
+
+    protected function stat(): array
+    {
+        return [
+            'title' => 'Заказов сегодня', 'icon' => 'icon-shopping-bag', 'value' => 12,
+            'trend' => '+3 к вчера',        // плашка рядом с числом
+            'note'  => 'на сумму 48 000 ₽', // строка под числом
+            'spark' => [4, 7, 5, 9, 6, 9, 12], // столбики по дням, от старого к новому
+            'tone'  => 'green',             // blue | green | red | orange | gray
+            'url'   => '/admin/orders/',    // вся карточка — ссылка
+        ];
+    }
+}
 ```
+
+Обязательны `title`, `icon`, `value`; остальное можно не задавать. Встроенные карточки «Пользователи» и
+«Защита» сделаны так же. Свою разметку (обычный `yii\base\Widget`) тоже можно: обёртка
+`<div class="wg-chart-default dashboard-top-widget-item" data-name="КороткоеИмяКласса">` и меню — как в
+`vendor/mitisk/yii2-admin/widgets/views/index/stat.php`.
 
 Регистрация шаблона виджета (миграция):
 

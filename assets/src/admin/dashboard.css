@@ -83,20 +83,127 @@
     opacity: .4;
 }
 
-.db-icon {
+/* --- Карточка: иконка, подпись, число с плашкой, строка пояснения, график по дням --- */
+
+.db-top > .db-card {
+    padding: 18px 20px;
+    justify-content: flex-start;
+}
+
+.db-stat {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
+    padding-right: 22px;
+    color: inherit;
+    text-decoration: none;
+}
+
+a.db-stat:hover .db-stat__title,
+a.db-stat:focus-visible .db-stat__title {
+    color: var(--Main, #2275fc);
+}
+
+.db-stat__icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 48px;
-    width: 48px;
-    height: 48px;
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
     border-radius: 14px;
-    font-size: 22px;
+    font-size: 20px;
 }
 
-.db-icon--red {
-    background: rgba(239, 68, 68, .1);
-    color: #dc2626;
+.db-stat__icon--blue { background: rgba(34, 117, 252, .1); color: #2275fc; }
+.db-stat__icon--green { background: rgba(34, 197, 94, .13); color: #15803d; }
+.db-stat__icon--red { background: rgba(239, 68, 68, .1); color: #dc2626; }
+.db-stat__icon--orange { background: rgba(245, 158, 11, .14); color: #b45309; }
+.db-stat__icon--gray { background: rgba(100, 116, 139, .12); color: #64748b; }
+
+.db-stat__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.db-stat__title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    color: var(--Body-Text, #575864);
+    transition: color .15s;
+}
+
+.db-stat__line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    margin-top: 2px;
+}
+
+.db-stat__value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 34px;
+    color: var(--Heading, #111);
+    font-variant-numeric: tabular-nums;
+}
+
+.db-stat__trend {
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    white-space: nowrap;
+}
+
+.db-stat__trend--blue { background: rgba(34, 117, 252, .1); color: #1d5fd0; }
+.db-stat__trend--green { background: rgba(34, 197, 94, .13); color: #15803d; }
+.db-stat__trend--red { background: rgba(239, 68, 68, .1); color: #b91c1c; }
+.db-stat__trend--orange { background: rgba(245, 158, 11, .14); color: #b45309; }
+.db-stat__trend--gray { background: rgba(100, 116, 139, .12); color: #475569; }
+
+.db-stat__note {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--Body-Text, #575864);
+}
+
+.db-stat__note--lead {
+    margin: 2px 0 10px;
+}
+
+.db-stat .db-action {
+    align-self: flex-start;
+}
+
+.db-stat__chart {
+    display: flex;
+    flex: 0 0 auto;
+    align-self: flex-end;
+    padding-bottom: 2px;
+}
+
+.db-stat__spark {
+    display: block;
+    overflow: visible;
+}
+
+.db-stat__chart--blue rect { fill: #2275fc; }
+.db-stat__chart--green rect { fill: #22c55e; }
+.db-stat__chart--red rect { fill: #ef4444; }
+.db-stat__chart--orange rect { fill: #f59e0b; }
+.db-stat__chart--gray rect { fill: #94a3b8; }
+
+.db-stat__spark rect.is-empty {
+    fill: #d5dbe5;
 }
 
 .db-action {

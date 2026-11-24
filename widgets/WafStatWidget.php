@@ -33,14 +33,18 @@ final class WafStatWidget extends StatWidget
         } elseif ($config->observeOnly) {
             $note = 'режим наблюдения';
         } else {
-            $note = 'сейчас под блокировкой: ' . number_format($stats['active'], 0, '.', ' ');
+            $note = 'под блокировкой сейчас: ' . number_format($stats['active'], 0, '.', ' ');
         }
 
         return [
-            'title' => 'Сканеров заблокировано за 7 дней',
+            'title' => 'Сканеров заблокировано',
+            'trend' => 'за 7 дней',
             'icon' => 'icon-shield',
             'value' => $stats['bans'],
             'note' => $note,
+            'spark' => array_values($stats['byDay'] ?? []),
+            // Защита выключена — серая карточка; были блокировки — красная; тихо — зелёная
+            'tone' => !$config->enabled ? 'gray' : ($stats['bans'] > 0 ? 'red' : 'green'),
             'url' => Url::to(['/admin/waf/index']),
         ];
     }
