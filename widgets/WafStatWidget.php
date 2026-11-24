@@ -13,6 +13,12 @@ use yii\helpers\Url;
  */
 final class WafStatWidget extends StatWidget
 {
+    /** Название в списке «Добавить виджет» на главной. */
+    public static function dashboardTitle(): string
+    {
+        return 'Защита: заблокированные сканеры';
+    }
+
     public function run(): string
     {
         return WafBridge::isSupported() ? parent::run() : '';

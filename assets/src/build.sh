@@ -16,4 +16,7 @@ npx --yes esbuild src/admin/login.css     --minify --outfile=css/login-steps.min
 # библиотека из src/lib (MIT), она встраивается в сборку
 npx --yes esbuild src/admin/user-form.js  --bundle --minify --target=es2017 --legal-comments=none --banner:js="/*! QR Code Generator for JavaScript (c) 2009 Kazuhiko Arase, MIT license. 'QR Code' is a registered trademark of DENSO WAVE INCORPORATED */" --outfile=js/custom.user.form.min.js
 npx --yes esbuild src/admin/user-form.css --minify --outfile=css/user-form.min.css
-ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css js/login.min.js css/login-steps.min.css js/custom.user.form.min.js css/user-form.min.css
+# Главная админки: виджеты, заметки, очистка кэша (IndexAsset)
+npx --yes esbuild src/admin/dashboard.js  --minify --target=es2017 --legal-comments=none --outfile=js/page/index.min.js
+npx --yes esbuild src/admin/dashboard.css --minify --outfile=css/dashboard.min.css
+ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css js/login.min.js css/login-steps.min.css js/custom.user.form.min.js css/user-form.min.css js/page/index.min.js css/dashboard.min.css

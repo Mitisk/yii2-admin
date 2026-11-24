@@ -10,6 +10,12 @@ final class IndexUserWidget extends Widget
     /**
      * {@inheritdoc}
      */
+    /** Название в списке «Добавить виджет» на главной. */
+    public static function dashboardTitle(): string
+    {
+        return 'Пользователи';
+    }
+
     public function run()
     {
         if (!\Yii::$app->user->can('viewUsers')) {

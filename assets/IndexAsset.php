@@ -8,6 +8,10 @@ class IndexAsset extends AssetBundle
 {
     public $sourcePath = '@Mitisk/Yii2Admin/assets';
 
+    public $css = [
+        'css/dashboard.min.css',
+    ];
+
     public $js = [
         'node_modules/sortablejs/Sortable.min.js',
         'js/page/index.min.js',

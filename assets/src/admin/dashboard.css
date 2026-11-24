@@ -1,0 +1,448 @@
+/*
+ * Главная админки: приветствие, ровная сетка виджетов, выбор виджета, заметки, пустые состояния.
+ * Исходник; в пакет попадает css/dashboard.min.css (sh assets/src/build.sh).
+ * Размеры в px: корневой шрифт темы — 10px.
+ */
+
+/* --- Приветствие --- */
+
+.db-hello {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin: -6px 0 24px;
+}
+
+.db-hello__title {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    color: var(--Heading, #111);
+}
+
+.db-hello__date {
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--Body-Text, #575864);
+}
+
+.db-hello__date::first-letter {
+    text-transform: uppercase;
+}
+
+/* --- Верхний ряд: карточки одной высоты, сколько помещается в строку --- */
+
+.dashboard-top-widget-section.db-top {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+/* Тема растягивает карточки на две колонки своей сетки — здесь каждая занимает одну */
+.dashboard-top-widget-section.db-top > * {
+    grid-column: auto !important;
+}
+
+.db-top > .wg-chart-default {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    min-height: 104px;
+    margin: 0;
+}
+
+/* Меню карточки («Переместить», «Скрыть») — в углу, не поверх заголовка */
+.db-top > .wg-chart-default > .dropdown {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    z-index: 2;
+}
+
+.db-top > .wg-chart-default > .flex {
+    padding-right: 28px;
+    min-width: 0;
+}
+
+.db-top .wg-chart-default .body-text {
+    overflow-wrap: break-word;
+}
+
+.db-top .dashboard-top-widget-item.is-leaving {
+    opacity: 0;
+    transform: scale(.96);
+    transition: opacity .2s, transform .2s;
+}
+
+.db-top .sortable-ghost {
+    opacity: .4;
+}
+
+.db-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 22px;
+}
+
+.db-icon--red {
+    background: rgba(239, 68, 68, .1);
+    color: #dc2626;
+}
+
+.db-action {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border: 1px solid var(--Main, #2275fc);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--Main, #2275fc);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    cursor: pointer;
+    transition: background-color .15s, color .15s;
+}
+
+.db-action:hover,
+.db-action:focus-visible {
+    background: var(--Main, #2275fc);
+    color: #fff;
+}
+
+.db-action.is-busy,
+.db-action:disabled {
+    opacity: .6;
+    cursor: progress;
+}
+
+/* «Добавить виджет»: тихая карточка-кнопка */
+.db-add {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 104px;
+    padding: 20px;
+    border: 1px dashed #c3ccda;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--Body-Text, #575864);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s, color .15s, background-color .15s;
+}
+
+.db-add:hover,
+.db-add:focus-visible {
+    border-color: var(--Main, #2275fc);
+    background: rgba(34, 117, 252, .04);
+    color: var(--Main, #2275fc);
+}
+
+.db-add__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(34, 117, 252, .1);
+    color: var(--Main, #2275fc);
+    font-size: 20px;
+}
+
+/* --- Окно «Добавить виджет» --- */
+
+.db-modal .modal-content {
+    border: 0;
+    border-radius: 16px;
+}
+
+.db-modal .modal-header {
+    padding: 20px 24px 12px;
+    border-bottom: 0;
+}
+
+.db-modal .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 26px;
+    color: var(--Heading, #111);
+}
+
+.db-modal .modal-body {
+    padding: 4px 24px 24px;
+}
+
+.db-modal [hidden] {
+    display: none !important;
+}
+
+.db-modal__error {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 13px;
+    line-height: 19px;
+}
+
+.db-pick {
+    display: grid;
+    gap: 8px;
+}
+
+.db-pick__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--Stroke, #e6e9ee);
+    border-radius: 12px;
+}
+
+.db-pick__body {
+    min-width: 0;
+}
+
+.db-pick__title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--Heading, #111);
+}
+
+.db-pick__code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 16px;
+    color: var(--Body-Text, #575864);
+    overflow-wrap: anywhere;
+}
+
+.db-pick__add.tf-button {
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
+.db-modal__empty,
+.db-modal__hint {
+    margin: 0;
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--Body-Text, #575864);
+}
+
+.db-modal__dev {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--Stroke, #e6e9ee);
+}
+
+.db-modal__dev summary {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--Body-Text, #575864);
+    cursor: pointer;
+}
+
+.db-modal__dev[open] summary {
+    margin-bottom: 8px;
+}
+
+.db-modal__dev-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.db-modal__dev-form .form-control {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 40px;
+    font-size: 13px;
+}
+
+.db-modal__dev-form .tf-button {
+    flex: 0 0 auto;
+    height: 40px;
+    padding: 0 16px;
+    font-size: 13px;
+}
+
+/* --- Заметки и центральный блок --- */
+
+.db-center {
+    align-items: stretch;
+}
+
+.db-box-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.db-box-head__hint {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--Body-Text, #575864);
+}
+
+.db-notes__state {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+}
+
+.db-notes__state [hidden] {
+    display: none !important;
+}
+
+.db-notes__status {
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--Body-Text, #575864);
+    text-align: right;
+}
+
+.db-notes__status.is-dirty {
+    color: #b45309;
+}
+
+.db-notes .trumbowyg-box {
+    margin: 0;
+    border: 1px solid var(--Stroke, #e6e9ee);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.db-notes .trumbowyg-button-pane {
+    border-bottom: 1px solid var(--Stroke, #e6e9ee);
+    background: var(--bg-table-1, #f8fafc);
+}
+
+.db-notes .trumbowyg-editor {
+    min-height: 220px;
+    font-size: 14px;
+    line-height: 22px;
+}
+
+.db-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 220px;
+    padding: 32px 24px;
+    border: 1px dashed #c3ccda;
+    border-radius: 14px;
+    background: transparent;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
+}
+
+.db-empty:hover,
+.db-empty:focus-visible {
+    border-color: var(--Main, #2275fc);
+    background: rgba(34, 117, 252, .04);
+}
+
+.db-empty__title {
+    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 22px;
+    color: var(--Heading, #111);
+}
+
+.db-empty__text {
+    max-width: 340px;
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--Body-Text, #575864);
+}
+
+/* --- Сообщения в углу --- */
+
+.db-toasts {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 2000;
+    display: grid;
+    gap: 8px;
+    max-width: min(360px, calc(100vw - 40px));
+}
+
+.db-toast {
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #111827;
+    color: #fff;
+    font-size: 14px;
+    line-height: 20px;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, .25);
+    animation: db-toast-in .2s ease-out;
+}
+
+.db-toast--error {
+    background: #b91c1c;
+}
+
+.db-toast.is-leaving {
+    opacity: 0;
+    transition: opacity .25s;
+}
+
+@keyframes db-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+@media (max-width: 575px) {
+    .dashboard-top-widget-section.db-top {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .db-box-head {
+        flex-wrap: wrap;
+    }
+
+    .db-empty {
+        min-height: 160px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .db-toast {
+        animation: none;
+    }
+}

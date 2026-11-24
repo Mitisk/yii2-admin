@@ -3,6 +3,7 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\widgets\IndexCenterComponentWidget;
+use Mitisk\Yii2Admin\components\DashboardWidgets;
 use Yii;
 use yii\web\Controller;
 use yii\web\Response;
@@ -12,52 +13,48 @@ use Mitisk\Yii2Admin\models\AdminWidgetComponent;
 
 class AjaxWidgetController extends Controller
 {
+    /**
+     * Добавить виджет на главную: зарегистрированный — любой пользователь админки,
+     * произвольный класс (наследник yii\base\Widget) — только супер-администратор.
+     */
     public function actionAdd()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $request = Yii::$app->request;
-
-        if ($request->isPost) {
-            $widgetClass = $request->post('class');
-
-            if (empty($widgetClass)) {
-                return ['success' => false, 'message' => 'Класс виджета не указан'];
-            }
-
-            // Проверяем существование класса
-            if (!class_exists($widgetClass)) {
-                return ['success' => false, 'message' => 'Класс виджета не найден'];
-            }
-
-            $widget = new AdminWidget();
-            $widget->class = $widgetClass;
-            $widget->user_id = Yii::$app->user->id;
-            $widget->published = 1;
-            $widget->alias = (new \ReflectionClass($widgetClass))->getShortName();
-
-            if ($widget->save()) {
-                try {
-                    // Генерируем HTML код виджета
-                    $widgetHtml = $this->renderWidgetHtml($widget);
-
-                    return [
-                        'success' => true,
-                        'html' => $widgetHtml,
-                        'alias' => $widget->alias,
-                        'message' => 'Виджет добавлен успешно'
-                    ];
-                } catch (\Exception $e) {
-                    // Удаляем запись если виджет не рендерится
-                    $widget->delete();
-                    return ['success' => false, 'message' => 'Ошибка рендеринга виджета: ' . $e->getMessage()];
-                }
-            } else {
-                return ['success' => false, 'message' => 'Ошибка сохранения: ' . implode(', ', $widget->getFirstErrors())];
-            }
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'Неверный запрос'];
         }
 
-        return ['success' => false, 'message' => 'Неверный запрос'];
+        $widgetClass = $request->post('class');
+        if (!is_string($widgetClass) || trim($widgetClass) === '') {
+            return ['success' => false, 'message' => 'Выберите виджет'];
+        }
+
+        try {
+            $widget = DashboardWidgets::add(
+                (int) Yii::$app->user->id,
+                $widgetClass,
+                Yii::$app->user->can('superAdminRole')
+            );
+        } catch (\DomainException $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+
+        $html = $this->renderWidgetHtml($widget);
+        if (trim($html) === '') {
+            // Виджет ничего не показал (нет прав или данных) — на главной ему делать нечего
+            $widget->published = 0;
+            $widget->save(false);
+            return ['success' => false, 'message' => 'Виджет не показывает данные для вашей роли.'];
+        }
+
+        return [
+            'success' => true,
+            'html' => $html,
+            'alias' => $widget->alias,
+            'message' => 'Виджет добавлен',
+        ];
     }
 
     public function actionUpdateOrder()
@@ -196,7 +193,13 @@ class AjaxWidgetController extends Controller
             $widget->published = 0;
 
             if ($widget->save()) {
-                return ['success' => true, 'message' => 'Виджет скрыт'];
+                // Класс и название — чтобы страница сразу предложила вернуть виджет
+                return [
+                    'success' => true,
+                    'message' => 'Виджет скрыт',
+                    'class' => ltrim((string) $widget->class, '\\'),
+                    'title' => DashboardWidgets::title((string) $widget->class),
+                ];
             } else {
                 return ['success' => false, 'message' => 'Ошибка скрытия виджета'];
             }
@@ -205,21 +208,15 @@ class AjaxWidgetController extends Controller
         return ['success' => false, 'message' => 'Неверный запрос'];
     }
 
-    private function renderWidgetHtml($widget)
+    private function renderWidgetHtml($widget): string
     {
         $widgetClass = $widget->class;
-
-        // Создаем HTML блок виджета
-        $html = '';
-
-        // Рендерим содержимое виджета
         try {
-            $html .= $widgetClass::widget();
-        } catch (\Exception $e) {
-            $html .= '<div class="alert alert-danger">Ошибка загрузки виджета: ' . $e->getMessage() . '</div>';
+            return (string) $widgetClass::widget();
+        } catch (\Throwable $e) {
+            Yii::error('Виджет главной ' . $widgetClass . ': ' . $e->getMessage(), __METHOD__);
+            return '';
         }
-
-        return $html;
     }
 
     // Рендер HTML попапа со списком компонентов
