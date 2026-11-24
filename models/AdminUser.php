@@ -10,6 +10,7 @@ use yii\helpers\ArrayHelper;
 use yii\web\IdentityInterface;
 use Mitisk\Yii2Admin\models\rbac\AdminUserRbacTrait;
 use Mitisk\Yii2Admin\assets\AppAsset;
+use Mitisk\Yii2Admin\components\MfaSetup;
 
 /**
  * This is the model class for table "user".
@@ -25,6 +26,8 @@ use Mitisk\Yii2Admin\assets\AppAsset;
  * @property string $email
  * @property string $image
  * @property int $status
+ * @property int $auth_type Способ входа: LoginForm::PASSWORD | MFA_PASSWORD | MFA
+ * @property string|null $mfa_secret Секрет приложения-аутентификатора (Base32)
  */
 class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
 {
@@ -40,6 +43,12 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
     public $search;
 
     public $send_new_password;
+
+    /** @var string|null Код из приложения: подтверждает подключение нового секрета в форме */
+    public $mfa_code;
+
+    /** @var mixed «Подключить приложение заново»: выдать новый секрет вместо действующего */
+    public $mfa_reset;
 
     public function behaviors()
     {
@@ -80,14 +89,17 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
             ['status', 'integer'],
             ['status', 'default', 'value' => self::STATUS_ACTIVE],
 
-            [['password', 'name', 'password_hash', 'role', 'image', 'search', 'send_new_password'], 'string', 'skipOnEmpty' => true],
+            // password_hash и image из формы не принимаются: хеш считает saveUser(), путь аватара задают
+            // загрузчик и контроллер (по этому пути потом удаляется файл)
+            [['password', 'name', 'role', 'search', 'send_new_password'], 'string', 'skipOnEmpty' => true],
         ];
 
         // Разрешаем auth_type только значения 0, 1 или 2
         $rules[] = ['auth_type', 'in', 'range' => [0, 1, 2]];
 
-        // mfa_secret — строка с макс длиной 255
-        $rules[] = ['mfa_secret', 'string', 'max' => 255];
+        // mfa_secret из формы не принимается: секрет выдаёт сервер (MfaSetup), см. saveUser()
+        $rules[] = ['mfa_code', 'string', 'max' => 16];
+        $rules[] = ['mfa_reset', 'boolean'];
 
         return $rules;
 
@@ -114,7 +126,8 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
         ];
 
         $labels['mfa_secret'] = 'Секрет';
-        $labels['auth_type'] = 'Тип аутентификации';
+        $labels['mfa_code'] = 'Код из приложения';
+        $labels['auth_type'] = 'Способ входа';
 
         return $labels;
     }
@@ -193,38 +206,146 @@ class AdminUser extends \yii\db\ActiveRecord implements IdentityInterface
     }
 
     /**
-     * Сохранение пользователя в админке
+     * Сохранение пользователя в админке: пароль, способ входа и подключение приложения с кодами.
+     *
      * @return bool
      * @throws \yii\db\Exception
      */
     public function saveUser() : bool
     {
-        if ($this->isNewRecord && !$this->password) {
-            $this->addError('password', 'Пароль обязателен для заполнения');
+        $valid = $this->validate();
+        // Обе проверки выполняются всегда: человек видит все замечания сразу
+        $valid = $this->applyPassword() && $valid;
+        $valid = $this->applyMfa() && $valid;
+        if (!$valid) {
             return false;
         }
-        if ($this->validate()) {
 
-            if ($this->password) {
-                $this->password_hash = Yii::$app->security->generatePasswordHash($this->password);
-            }
+        $setupId = $this->getMfaSetupId();
+        if ($this->save(false)) {
+            MfaSetup::forget($setupId);
+            MfaSetup::forget((int) $this->id);
 
-            if ($this->save()) {
-                if ($this->send_new_password && $this->password && $this->email) {
-                    $tplId = Yii::$app->settings->get(self::class, 'mail_template_new_password');
+            if ($this->send_new_password && $this->password && $this->email && $this->usesPassword()) {
+                $tplId = Yii::$app->settings->get(self::class, 'mail_template_new_password');
 
-                    if ($tplId) {
-                        // Через контейнер: настройка MailService проекта (например, mailer вне прода) действует и здесь
-                        $mailService = Yii::createObject(\Mitisk\Yii2Admin\components\MailService::class);
-                        $mailService->send($tplId, $this->email, [
-                            'PASSWORD' => $this->password
-                        ]);
-                    }
+                if ($tplId) {
+                    // Через контейнер: настройка MailService проекта (например, mailer вне прода) действует и здесь
+                    $mailService = Yii::createObject(\Mitisk\Yii2Admin\components\MailService::class);
+                    $mailService->send($tplId, $this->email, [
+                        'PASSWORD' => $this->password
+                    ]);
                 }
-                return true;
             }
+            return true;
         }
         return false;
+    }
+
+    /**
+     * Вход с паролем (типы «только пароль» и «пароль и код»).
+     */
+    public function usesPassword(): bool
+    {
+        return (int) $this->auth_type !== LoginForm::MFA;
+    }
+
+    /**
+     * Вход с кодом из приложения (типы «пароль и код» и «только код»).
+     */
+    public function usesCode(): bool
+    {
+        return (int) $this->auth_type !== LoginForm::PASSWORD;
+    }
+
+    /**
+     * Приложение-аутентификатор подключено: секрет сохранён в базе.
+     */
+    public function hasMfaApp(): bool
+    {
+        return !$this->isNewRecord && (string) $this->getOldAttribute('mfa_secret') !== '';
+    }
+
+    /**
+     * Пароля у пользователя нет: он новый или входил только по коду.
+     */
+    public function hasNoPassword(): bool
+    {
+        return $this->isNewRecord
+            || (string) $this->getOldAttribute('password_hash') === ''
+            || (int) $this->getOldAttribute('auth_type') === LoginForm::MFA;
+    }
+
+    /**
+     * Номер подключения в MfaSetup: id пользователя, для нового — 0.
+     */
+    public function getMfaSetupId(): int
+    {
+        return $this->isNewRecord ? 0 : (int) $this->getOldPrimaryKey();
+    }
+
+    /**
+     * Пароль: обязателен там, где без него человек не войдёт; при входе «только код» старый пароль гасится.
+     */
+    private function applyPassword(): bool
+    {
+        $password = is_string($this->password) ? $this->password : '';
+
+        if ($this->usesPassword()) {
+            if ($password !== '') {
+                $this->password_hash = Yii::$app->security->generatePasswordHash($password);
+            } elseif ($this->hasNoPassword()) {
+                $this->addError('password', $this->isNewRecord
+                    ? 'Задайте пароль: без него пользователь не сможет войти.'
+                    : 'Задайте пароль: раньше вход был только по коду, пароля у пользователя нет.');
+                return false;
+            }
+            return true;
+        }
+
+        // «Только код»: пароль во входе не участвует. Прежний перестаёт действовать —
+        // при возврате к паролю его придётся задать заново.
+        if (!$this->hasNoPassword() || (string) $this->password_hash === '') {
+            $this->password_hash = Yii::$app->security->generatePasswordHash(
+                Yii::$app->security->generateRandomString(40)
+            );
+        }
+        $this->password = null;
+
+        return true;
+    }
+
+    /**
+     * Секрет приложения: без кода из приложения новый секрет не сохраняется, действующий — не меняется.
+     */
+    private function applyMfa(): bool
+    {
+        $stored = $this->isNewRecord ? '' : (string) $this->getOldAttribute('mfa_secret');
+
+        if (!$this->usesCode()) {
+            // Вход по коду выключен: секрет удаляем, при следующем включении будет новый
+            $this->mfa_secret = null;
+            return true;
+        }
+        if ($stored !== '' && !$this->mfa_reset) {
+            $this->mfa_secret = $stored;
+            return true;
+        }
+
+        $this->mfa_secret = $stored !== '' ? $stored : null;
+        $code = is_string($this->mfa_code) ? trim($this->mfa_code) : '';
+        if ($code === '') {
+            $this->addError('mfa_code', 'Введите код из приложения: без него вход по коду не включится.');
+            return false;
+        }
+        $secret = MfaSetup::confirm($this->getMfaSetupId(), $code);
+        if ($secret === null) {
+            $this->addError('mfa_code', 'Код не подошёл. Отсканируйте QR-код ниже и введите свежий код из приложения.');
+            return false;
+        }
+        $this->mfa_secret = $secret;
+
+        return true;
     }
 
     /**

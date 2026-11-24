@@ -108,7 +108,8 @@ class UserController extends BaseController
 
     public function actionCreate()
     {
-        $model = new AdminUser();
+        // Новый пользователь по умолчанию активен: иначе в списке статусов выбран первый пункт — «Заблокирован»
+        $model = new AdminUser(['status' => AdminUser::STATUS_ACTIVE]);
         $assignedRoles = [];
 
         // Load extra models based on AdminUserMap
@@ -131,30 +132,35 @@ class UserController extends BaseController
 
             $avatarFound = false;
 
-            if ($files) {
+            // Имя файла — только последняя часть пути: аватар лежит в /web/users/avatar/,
+            // а «../» в имени позже привело бы к удалению постороннего файла (deleteImage)
+            $avatarName = null;
+
+            if (is_string($files) && $files !== '') {
                  $filesData = json_decode($files, true);
                  if (json_last_error() === JSON_ERROR_NONE) {
                      if (!empty($filesData['files'][0]['name'])) {
-                         $model->image = '/web/users/avatar/' . $filesData['files'][0]['name'];
-                         $avatarFound = true;
+                         $avatarName = $filesData['files'][0]['name'];
                      } elseif (isset($filesData[0]['name'])) {
-                         $model->image = '/web/users/avatar/' . $filesData[0]['name'];
-                         $avatarFound = true;
+                         $avatarName = $filesData[0]['name'];
                      }
-                 } elseif (is_string($files) && !empty($files)) {
-                      // Проверяем, что это не дефолтная заглушка
-                      if (!str_contains($files, '/img/no_avatar.png')) {
-                          $model->image = '/web/users/avatar/' . $files;
-                          $avatarFound = true;
-                      }
+                 } else {
+                     $avatarName = $files;
                  }
-            } 
-            
-            if (!$avatarFound && $fileList) {
+            }
+
+            if ($avatarName === null && is_string($fileList) && $fileList !== '') {
                 $filesData = json_decode($fileList, true);
                 if (json_last_error() === JSON_ERROR_NONE && !empty($filesData[0]['file'])) {
-                    $model->image = '/web/users/avatar/' . $filesData[0]['file'];
-                    $avatarFound = true;
+                    $avatarName = $filesData[0]['file'];
+                }
+            }
+
+            // Заглушка «нет аватара» приходит в списке файлов как обычный файл — это не аватар
+            if (is_string($avatarName) && !str_contains($avatarName, 'no_avatar')) {
+                $avatarName = basename(str_replace('\\', '/', $avatarName));
+                if ($avatarName !== '' && $avatarName !== '.' && $avatarName !== '..') {
+                    $model->image = '/web/users/avatar/' . $avatarName;
                 }
             }
 

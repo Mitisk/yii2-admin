@@ -9,4 +9,11 @@ npx --yes esbuild src/admin-bar/blocks.js --minify --target=es2017 --legal-comme
 npx --yes esbuild src/admin-bar/bar.css   --minify --outfile=admin-bar/css/admin-bar.min.css
 # Умолчания для обычной разметки в рабочей области админки (AppAsset)
 npx --yes esbuild src/admin/base.css      --minify --outfile=css/base.min.css
-ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css
+# Вход в админку: шаги логин → пароль → код (LoginAsset)
+npx --yes esbuild src/admin/login.js      --minify --target=es2017 --legal-comments=none --outfile=js/login.min.js
+npx --yes esbuild src/admin/login.css     --minify --outfile=css/login-steps.min.css
+# Форма пользователя: способ входа и подключение приложения (UserFormAsset). QR-код рисует
+# библиотека из src/lib (MIT), она встраивается в сборку
+npx --yes esbuild src/admin/user-form.js  --bundle --minify --target=es2017 --legal-comments=none --banner:js="/*! QR Code Generator for JavaScript (c) 2009 Kazuhiko Arase, MIT license. 'QR Code' is a registered trademark of DENSO WAVE INCORPORATED */" --outfile=js/custom.user.form.min.js
+npx --yes esbuild src/admin/user-form.css --minify --outfile=css/user-form.min.css
+ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css js/login.min.js css/login-steps.min.css js/custom.user.form.min.js css/user-form.min.css

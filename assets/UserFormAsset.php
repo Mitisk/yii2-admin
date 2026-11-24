@@ -22,6 +22,7 @@ class UserFormAsset extends AssetBundle
         'component/fileuploader/dist/font/font-fileuploader.min.css',
         'component/fileuploader/css/jquery.fileuploader-theme-avatar.min.css',
         'css/custom.user.form.min.css',
+        'css/user-form.min.css',
     ];
 
     public $depends = [

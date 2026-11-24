@@ -215,58 +215,126 @@ $selected = array_keys($assignedRoles);
                 <?= $form->field($model, 'email')->textInput(['maxlength' => 255])->label('Email <span class="tf-color-1">*</span>') ?>
             </fieldset>
 
-            <fieldset class="name mb-24">
-                <?= $form->field($model, 'auth_type')->dropDownList([
-                    0 => 'Только пароль',
-                    1 => 'Пароль и временный код',
-                    2 => 'Только временный код'
-                ]) ?>
-            </fieldset>
+            <?php
+            // Секрет, который подключают сейчас: живёт в сессии до подтверждения кодом.
+            // Действующий секрет пользователя в страницу не выводится.
+            $mfaPendingSecret = \Mitisk\Yii2Admin\components\MfaSetup::secret($model->getMfaSetupId());
+            $mfaIssuer = trim((string) Yii::$app->settings->get('GENERAL', 'site_name', '')) ?: (string) Yii::$app->request->hostName;
+            $mfaConnected = $model->hasMfaApp();
+            $authType = (int) $model->auth_type;
+            $authMethods = [
+                \Mitisk\Yii2Admin\models\LoginForm::PASSWORD => ['Пароль', 'Только пароль', null],
+                \Mitisk\Yii2Admin\models\LoginForm::MFA_PASSWORD => ['Пароль и код', 'Пароль, затем код из приложения на телефоне', 'Надёжнее'],
+                \Mitisk\Yii2Admin\models\LoginForm::MFA => ['Только код', 'Без пароля — по коду из приложения', null],
+            ];
+            ?>
+            <div class="uf-auth" id="uf-auth">
+                <div class="uf-auth__title">Способ входа</div>
+                <p class="uf-auth__lead">Как пользователь подтверждает, что это он, когда входит в админку.</p>
 
-            <fieldset class="name mb-24" id="field-mfa-secret">
-                <?php
-                if (!$model->mfa_secret) {
-                    $model->mfa_secret = \Mitisk\Yii2Admin\components\MfaHelper::generateSecret();
-                }
-                $siteName = Yii::$app->settings->get('GENERAL', 'site_name', Yii::$app->request->getPathInfo());
-                $otpUrl = \Mitisk\Yii2Admin\components\MfaHelper::getOtpAuthUrl($model->email ?? 'newUser', $siteName, $model->mfa_secret);
-                $qrCodeUrl = 'https://quickchart.io/qr?text=' . urlencode($otpUrl) . '&size=100';
-                echo Html::img($qrCodeUrl, ['id' => 'mfa-qr-code', 'data-secret' => $model->mfa_secret, 'data-issuer' => $siteName]);
-                ?>
-                <p class="right">Откройте на телефоне приложение для сохранения паролей, отсканируйте QR-код в открытом приложении.</p>
-                <?= $form->field($model, 'mfa_secret')->hiddenInput()->label(false) ?>
-            </fieldset>
-
-            <fieldset class="password mb-24" id="field-password">
-                <?= $form->field($model, 'password', [
-                    'template' => '
-                        <div class="input-wrapper">
-                        {label}
-                            {input}
-                            <span class="show-pass">
-                                <i class="icon-eye view"></i>
-                                <i class="icon-eye-off hide"></i>
+                <div class="uf-methods" role="radiogroup" aria-label="Способ входа">
+                    <?php foreach ($authMethods as $value => [$title, $text, $badge]): ?>
+                        <label class="uf-method<?= $authType === $value ? ' is-active' : '' ?>">
+                            <input type="radio" name="<?= Html::getInputName($model, 'auth_type') ?>" value="<?= $value ?>"<?= $authType === $value ? ' checked' : '' ?>>
+                            <span class="uf-method__title">
+                                <?= Html::encode($title) ?>
+                                <?php if ($badge !== null): ?><span class="uf-method__badge"><?= Html::encode($badge) ?></span><?php endif; ?>
                             </span>
-                            <span class="generate-pass" title="Сгенерировать пароль">
-                                <i class="icon-refresh-ccw"></i>
-                            </span>
-                        </div>
-                        {error}'
-                ])->textInput([
-                    'id' => 'password-field',
-                    'maxlength' => 255,
-                    'class' => 'password-input',
-                    'type' => 'password'
-                ]) ?>
-                <div style="margin-top: 10px;">
-                <?php
-                $tplId = Yii::$app->settings->get('Mitisk\Yii2Admin\models\AdminUser', 'mail_template_new_password');
-                if ($tplId) {
-                    echo $form->field($model, 'send_new_password')->checkbox();
-                }
-                ?>
+                            <span class="uf-method__text"><?= Html::encode($text) ?></span>
+                        </label>
+                    <?php endforeach; ?>
                 </div>
-            </fieldset>
+                <?= Html::error($model, 'auth_type', ['class' => 'uf-error']) ?>
+
+                <div class="uf-mfa" id="uf-mfa"<?= $model->usesCode() ? '' : ' hidden' ?>>
+                    <?php if ($mfaConnected): ?>
+                        <div class="uf-mfa__status" id="uf-mfa-connected"<?= $model->mfa_reset ? ' hidden' : '' ?>>
+                            <span class="uf-mfa__ok" aria-hidden="true"><i class="icon-check"></i></span>
+                            <div class="uf-mfa__status-body">
+                                <div class="uf-mfa__status-title">Приложение подключено</div>
+                                <div class="uf-mfa__status-text">Коды для входа показывает приложение-аутентификатор на телефоне. Ключ подключения больше не показывается.</div>
+                            </div>
+                            <button type="button" class="uf-link" id="uf-mfa-reset-btn">Подключить заново</button>
+                        </div>
+                        <input type="hidden" name="<?= Html::getInputName($model, 'mfa_reset') ?>" id="uf-mfa-reset" value="<?= $model->mfa_reset ? '1' : '0' ?>">
+                    <?php endif; ?>
+
+                    <div id="uf-mfa-setup"
+                         data-mfa-secret="<?= Html::encode($mfaPendingSecret) ?>"
+                         data-mfa-issuer="<?= Html::encode($mfaIssuer) ?>"
+                         data-mfa-account="<?= Html::encode((string) ($model->username ?: $model->email)) ?>"
+                         <?= $mfaConnected && !$model->mfa_reset ? 'hidden' : '' ?>>
+                        <div class="uf-mfa__setup">
+                            <div class="uf-mfa__qr" id="uf-mfa-qr"></div>
+                            <ol class="uf-steps">
+                                <li>Откройте на телефоне <strong>приложение-аутентификатор</strong>: Яндекс Ключ, Google Authenticator, 1Password или другое.</li>
+                                <li>
+                                    Отсканируйте в нём QR-код. Если камера не помогает, введите ключ вручную:
+                                    <div class="uf-key-row">
+                                        <code class="uf-key" id="uf-mfa-key"><?= Html::encode(trim(chunk_split($mfaPendingSecret, 4, ' '))) ?></code>
+                                        <button type="button" class="uf-link" id="uf-mfa-copy">Скопировать</button>
+                                    </div>
+                                </li>
+                                <li>
+                                    <label for="uf-mfa-code">Введите <strong>6 цифр</strong>, которые показало приложение</label>
+                                    <input type="text" id="uf-mfa-code" name="<?= Html::getInputName($model, 'mfa_code') ?>"
+                                           class="uf-code<?= $model->hasErrors('mfa_code') ? ' is-invalid' : '' ?>"
+                                           inputmode="numeric" autocomplete="off" maxlength="6" placeholder="000000"
+                                           aria-describedby="uf-mfa-code-error">
+                                    <div class="uf-error" id="uf-mfa-code-error"><?= Html::encode($model->getFirstError('mfa_code')) ?></div>
+                                </li>
+                            </ol>
+                        </div>
+                        <?php if ($mfaConnected): ?>
+                            <p class="uf-note"<?= $model->mfa_reset ? '' : ' hidden' ?>>
+                                После сохранения прежнее приложение перестанет подходить для входа.
+                                <button type="button" class="uf-link" id="uf-mfa-reset-cancel">Оставить прежнее</button>
+                            </p>
+                        <?php else: ?>
+                            <p class="uf-note">Код подтверждает, что приложение настроено: без него вход по коду не включится и пользователь не останется без доступа.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <fieldset class="password" id="field-password"<?= $model->usesPassword() ? '' : ' hidden' ?>>
+                    <?= $form->field($model, 'password', [
+                        'template' => '
+                            <div class="input-wrapper">
+                            {label}
+                                {input}
+                                <span class="show-pass">
+                                    <i class="icon-eye view"></i>
+                                    <i class="icon-eye-off hide"></i>
+                                </span>
+                                <span class="generate-pass" title="Сгенерировать пароль">
+                                    <i class="icon-refresh-ccw"></i>
+                                </span>
+                            </div>
+                            {error}'
+                    ])->textInput([
+                        'id' => 'password-field',
+                        'maxlength' => 255,
+                        'class' => 'password-input',
+                        'type' => 'password',
+                        'autocomplete' => 'new-password',
+                    ])->label($model->hasNoPassword() ? 'Пароль <span class="tf-color-1">*</span>' : 'Новый пароль') ?>
+                    <?php if (!$model->hasNoPassword()): ?>
+                        <div class="uf-hint">Оставьте пустым, чтобы не менять пароль.</div>
+                    <?php endif; ?>
+                    <div style="margin-top: 10px;">
+                    <?php
+                    $tplId = Yii::$app->settings->get('Mitisk\Yii2Admin\models\AdminUser', 'mail_template_new_password');
+                    if ($tplId) {
+                        echo $form->field($model, 'send_new_password')->checkbox();
+                    }
+                    ?>
+                    </div>
+                </fieldset>
+
+                <div class="uf-nopass" id="uf-nopass-note"<?= $model->usesPassword() ? ' hidden' : '' ?>>
+                    Вход без пароля: при входе спрашивается только код из приложения.<?= $model->hasNoPassword() ? '' : ' Прежний пароль перестанет действовать.' ?>
+                </div>
+            </div>
 
         </div>
     </div>
@@ -299,73 +367,3 @@ $selected = array_keys($assignedRoles);
         <button class="tf-button w180" type="submit">Сохранить</button>
     </div>
 <?php ActiveForm::end() ?>
-
-<?php
-$this->registerJs("
-$(document).ready(function() {
-    // ТАБЫ
-    $('.widget-menu-tab .item-title').on('click', function() {
-        var index = $(this).index();
-        $(this).addClass('active').siblings().removeClass('active');
-        // Because content is now inside the form (detached from tabs container), we select by class within the form
-        $('.form-add-new-user .widget-content-inner').removeClass('active').hide();
-        $('.form-add-new-user .widget-content-inner').eq(index).addClass('active').show();
-    });
-
-    // Обновление списка ролей при изменении
-    $('#user-roles-select').on('change', function() {
-        var selectedRoles = $(this).val() || [];
-        console.log('Выбранные роли:', selectedRoles);
-    });
-
-    // Показать подсказку при наведении на роль
-    $('.role-item').hover(
-        function() {
-            $(this).css('background-color', '#e3f2fd');
-        },
-        function() {
-            $(this).css('background-color', 'white');
-        }
-    );
-
-    // Dynamic QR Code Update
-    $('#" . Html::getInputId($model, 'email') . "').on('input change', function() {
-        var email = $(this).val();
-        var qrImg = $('#mfa-qr-code');
-        var secret = qrImg.data('secret');
-        var issuer = qrImg.data('issuer');
-
-        if (email && secret && issuer) {
-            var label = encodeURIComponent(issuer + ':' + email);
-            var otpAuthUrl = 'otpauth://totp/' + label + '?secret=' + secret + '&issuer=' + encodeURIComponent(issuer);
-            var qrUrl = 'https://quickchart.io/qr?text=' + encodeURIComponent(otpAuthUrl) + '&size=100';
-            qrImg.attr('src', qrUrl);
-        }
-    });
-});
-function toggleFields() {
-    var val = $('#" . \yii\helpers\Html::getInputId($model, 'auth_type') . "').val();
-
-    if (val === '0') {
-        // Только пароль
-        $('#field-password').show();
-        $('#field-mfa-secret').hide();
-    } else if (val === '1') {
-        // Пароль и временный код
-        $('#field-password').show();
-        $('#field-mfa-secret').show();
-    } else if (val === '2') {
-        // Только временный код
-        $('#field-password').hide();
-        $('#field-mfa-secret').show();
-    }
-}
-
-// При загрузке страницы
-toggleFields();
-
-// При изменении выбора
-$('#" . \yii\helpers\Html::getInputId($model, 'auth_type') . "').on('change', function() {
-    toggleFields();
-});
-");

@@ -1442,6 +1442,50 @@ WAF — отдельный необязательный пакет (`composer re
 
 ---
 
+## 9e. Вход в админку и код из приложения (2FA)
+
+Три способа входа (`user.auth_type`, константы `LoginForm`): `PASSWORD = 0` — только пароль,
+`MFA_PASSWORD = 1` — пароль и код из приложения-аутентификатора (TOTP), `MFA = 2` — только код.
+Код: `models/LoginForm.php`, `controllers/DefaultController::actionLogin()` и `actionCheckUser()`,
+`components/MfaHelper.php` (TOTP), `components/MfaSetup.php` (подключение приложения), экран —
+`views/default/login.php`, `assets/src/admin/login.js` и `login.css`.
+
+**Шаги входа.** Логин (или email) → пароль → код. Экран кода отдельный: после верного пароля сервер
+запоминает в сессии id пользователя (`LoginForm::MFA_STEP_SESSION_KEY`, на `MFA_STEP_TTL` = 5 минут) и
+отдаёт страницу, где есть только шесть цифр — без полей логина и пароля. Неверный код оставляет на этом
+шаге, пароль заново не спрашивается; пять неверных кодов подряд или истёкшее время возвращают к логину.
+Всю проверку делает `LoginForm::attempt()` (результат — `RESULT_DONE | RESULT_CODE_STEP | RESULT_RETRY`,
+шаг для экрана — `$step`); `login()` оставлен как обёртка.
+
+**Правила, которые нельзя ломать** (страж — `tests/unit/auth/LoginTest.php`):
+- Пустое значение не считается пройденной проверкой. Пароль проверяется только у типов с паролем, код —
+  только у типов с кодом; у «только код» пароль не принимается вовсе. Новый способ входа (ссылка, OAuth)
+  обязан сам отказывать аккаунту с включённым кодом.
+- Лимит попыток проверяется до сверки пароля или кода: `MAX_ATTEMPTS` неудач с адреса — пауза
+  `BLOCK_DURATION`; верные данные во время паузы не пускают. Отдельно `MAX_CODE_FAILURES` неверных кодов
+  на аккаунт с любых адресов (иначе вход «только код» перебирается с разных адресов).
+- Один код принимается один раз (`MfaHelper::matchTimeSlice()` + кэш последнего шага).
+- `check-user` отвечает только «дальше пароль» или «дальше код»: несуществующий, заблокированный и
+  аккаунт с двумя шагами выглядят одинаково. О блокировке говорится после верного пароля или кода.
+- Лимиты и «код уже использован» живут в `Yii::$app->cache`: кэш должен быть общим для всех процессов
+  сайта (FileCache, Redis), с `ArrayCache` или `DummyCache` защиты от перебора нет.
+
+**Подключение приложения в карточке пользователя** (`/admin/user/update/`, страж —
+`tests/unit/auth/UserMfaFormTest.php`). Секрет рождается на сервере (`MfaSetup::secret($userId)`), до
+подтверждения лежит в сессии открывшего форму и попадает в базу только после верного кода из приложения
+(`AdminUser::saveUser()`): включить вход по коду, не настроив приложение, нельзя. `mfa_secret`,
+`password_hash` и `image` из запроса не принимаются. Действующий секрет в страницу не выводится — только
+статус «Приложение подключено» и «Подключить заново» (новый секрет, старый действует до подтверждения).
+Переход на «только пароль» удаляет секрет; переход на «только код» гасит пароль, а возврат к паролю
+требует задать новый. QR-код рисует браузер (`assets/src/admin/user-form.js`, библиотека
+`assets/src/lib/qrcode-generator.mjs`, MIT): ссылка `otpauth://` с секретом не уходит ни на какой сервер —
+внешние генераторы QR не подключать.
+
+Стили и скрипты входа и формы пользователя правятся в `assets/src/admin/` и собираются
+`sh assets/src/build.sh` (в git попадают и исходник, и `.min`).
+
+---
+
 ## 10. Подводные камни
 
 1. **Таблица `user` и RBAC-таблицы `auth_*` создаются миграцией модуля.** Если в проекте
@@ -1551,6 +1595,7 @@ functional для `/admin/*` нужен ещё `request.isConsoleRequest = false
 | `Mitisk\Yii2Admin\widgets\ContentBlock`, `components\ContentBlockService` (`Yii::$app->blocks`), `models\ContentBlock`, `enums\BlockType` | текстовые блоки раздела «Контент» (§9b) |
 | `Mitisk\Yii2Admin\models\Page`, `components\PageService` (`Yii::$app->pages`), `components\PageUrlRule`, `enums\PageStatus`, `components\content\ShortcodeService` | страницы раздела «Контент», шорткоды (§9c) |
 | `Mitisk\Yii2Admin\models\AdminUser` | пользователь админки, RBAC-трейт (`assignRole`, `revokeRole`, `can`) |
+| `Mitisk\Yii2Admin\models\LoginForm`, `components\MfaHelper`, `components\MfaSetup` | вход по шагам, код из приложения, подключение приложения (§9e) |
 
 ### URL-схема компонента
 `/admin/<alias>/` список · `/admin/<alias>/create/` · `/admin/<alias>/update/?id=N` ·
