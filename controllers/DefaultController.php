@@ -82,86 +82,66 @@ class DefaultController extends BaseController
     }
 
     /**
-     * Checks if user exists and returns auth type
-     * @return Response|array
+     * Шаг после логина: спрашивать пароль или сразу код из приложения.
+     *
+     * Ответ одинаков для несуществующего, заблокированного и обычного аккаунта: «password».
+     * О втором шаге при типе «пароль и код» и о блокировке сообщается только после верного пароля.
+     *
+     * @return array
      */
     public function actionCheckUser()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         $username = Yii::$app->request->post('username');
 
-        if (!$username) {
-            return ['success' => false, 'message' => 'Login is required'];
+        if (!is_string($username) || trim($username) === '') {
+            return ['success' => false, 'message' => 'Введите логин'];
         }
 
-        $user = \Mitisk\Yii2Admin\models\AdminUser::findByUsername($username);
-
-        if (!$user) {
-            return [
-                'success' => true,
-                'type' => 'password',
-                'username' => $username
-            ];
-        }
-
-        if ($user->status == \Mitisk\Yii2Admin\models\AdminUser::STATUS_BLOCKED) {
-            return ['success' => false, 'message' => 'Ваш аккаунт заблокирован'];
-        }
-
-        $types = [
-            \Mitisk\Yii2Admin\models\LoginForm::PASSWORD => 'password',
-            \Mitisk\Yii2Admin\models\LoginForm::MFA_PASSWORD => 'mixed',
-            \Mitisk\Yii2Admin\models\LoginForm::MFA => 'otp',
-        ];
+        $loginForm = new LoginForm();
+        $user = $loginForm->findUser($username);
 
         return [
             'success' => true,
-            'type' => $types[$user->auth_type] ?? 'password',
-            'username' => $user->username
+            'type' => $loginForm->stepFor($user),
+            'username' => $user !== null && $loginForm->stepFor($user) === LoginForm::STEP_CODE
+                ? $user->username
+                : trim($username),
         ];
     }
 
     /**
-     * Login action.
+     * Вход: логин → пароль → (если включён) код из приложения отдельным шагом.
      *
      * @return Response|string
      */
     public function actionLogin()
     {
         if (!Yii::$app->user->isGuest) {
-            Yii::$app->getResponse()->redirect(['/admin/default/index'])->send();
-            Yii::$app->end();
+            return $this->redirect(['/admin/default/index']);
         }
 
         $this->layout = false;
 
-        /** @var $loginForm LoginForm */
         $loginForm = new LoginForm();
+        $request = Yii::$app->request;
 
-        if ($loginForm->load(Yii::$app->request->post())) {
-            $loginForm->getAuthTypeByUsername();
-
-            if ($loginForm->password || $loginForm->mfaCode) {
-                if ($loginForm->authType == LoginForm::PASSWORD ||
-                    $loginForm->authType == LoginForm::MFA) {
-                    if ($loginForm->login()) {
-                        Yii::$app->getResponse()->redirect(['/admin/default/index'])->send();
-                        Yii::$app->end();
-                    }
-                    $loginForm->password = '';
-                }
-                if ($loginForm->authType == LoginForm::MFA_PASSWORD) {
-                    if ($loginForm->password && $loginForm->mfaCode) {
-                        if ($loginForm->login()) {
-                            Yii::$app->getResponse()->redirect(['/admin/default/index'])->send();
-                            Yii::$app->end();
-                        }
-                    }
-                    if ($loginForm->password) {
-                        $loginForm->validatePassword('password', []);
-                    }
-                }
+        if ($request->isPost) {
+            if ($request->post('restart')) {
+                $loginForm->forgetCodeStep();
+                return $this->redirect(['/admin/default/login']);
             }
+
+            $loginForm->load($request->post());
+            switch ($loginForm->attempt()) {
+                case LoginForm::RESULT_DONE:
+                    return $this->redirect(['/admin/default/index']);
+                case LoginForm::RESULT_CODE_STEP:
+                    // Переход, а не вывод: обновление страницы не отправит пароль повторно
+                    return $this->redirect(['/admin/default/login']);
+            }
+        } else {
+            $loginForm->restoreStep();
         }
 
         return $this->render('login', [

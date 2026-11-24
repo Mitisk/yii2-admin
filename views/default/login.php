@@ -4,6 +4,7 @@ use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\helpers\Url;
 use Mitisk\Yii2Admin\assets\LoginAsset;
+use Mitisk\Yii2Admin\models\LoginForm;
 
 /** @var yii\web\View $this */
 /** @var Mitisk\Yii2Admin\models\LoginForm $model */
@@ -16,26 +17,27 @@ $loginBundle = LoginAsset::register($this);
 // LoginAsset и AppAsset используют один sourcePath — берём baseUrl из LoginAsset
 $loginImageUrl = $loginBundle->baseUrl . '/img/login.png';
 
-// Pass PHP config to JS
-$initialState = Json::encode([
-    'username' => $model->username,
-    'authType' => $model->authType,
-    'hasErrors' => $model->hasErrors(),
-    'errorMessage' => $model->hasErrors() ? implode(' ', $model->getFirstErrors()) : '',
-]);
-$checkUserUrl = Url::to(['/admin/default/check-user']);
-$csrfParam = Yii::$app->request->csrfParam;
-$csrfToken = Yii::$app->request->csrfToken;
+// Пароль уже проверен: показываем только ввод кода, полей логина и пароля в форме нет
+$codeOnlyScreen = $model->passwordConfirmed && $model->step === LoginForm::STEP_CODE;
 
-$jsConfig = "window.loginConfig = {
-    initialState: {$initialState},
-    authTypes: { 0: 'password', 1: 'mixed', 2: 'otp' },
-    checkUserUrl: " . Json::encode($checkUserUrl) . ",
-    csrfParam: " . Json::encode($csrfParam) . ",
-    csrfToken: " . Json::encode($csrfToken) . "
-};";
+$errorMessage = $model->hasErrors() ? implode(' ', $model->getFirstErrors()) : '';
+
+$jsConfig = 'window.loginConfig = ' . Json::htmlEncode([
+    'initialState' => [
+        'step' => $model->step,
+        'username' => (string) $model->username,
+        'passwordConfirmed' => $codeOnlyScreen,
+        'hasErrors' => $model->hasErrors(),
+        'errorMessage' => $errorMessage,
+    ],
+    'checkUserUrl' => Url::to(['/admin/default/check-user']),
+    'csrfParam' => Yii::$app->request->csrfParam,
+    'csrfToken' => Yii::$app->request->csrfToken,
+]) . ';';
 
 $this->registerJs($jsConfig, \yii\web\View::POS_HEAD);
+
+$otpInputClass = 'otp-input w-12 h-12 text-center text-xl font-bold bg-white border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-700';
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
@@ -82,98 +84,121 @@ $this->registerJs($jsConfig, \yii\web\View::POS_HEAD);
 
                 <div class="mb-6">
                     <h1 class="text-2xl font-bold text-slate-800 mb-2" id="greeting-title">Добро пожаловать</h1>
-                    <p class="text-slate-500 text-sm" id="greeting-subtitle">Введите идентификатор для доступа</p>
+                    <p class="text-slate-500 text-sm" id="greeting-subtitle">Введите логин, чтобы продолжить</p>
+<?php if ($codeOnlyScreen): ?>
+                    <div class="lg-passed">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Пароль принят · <?= Html::encode($model->username) ?></span>
+                    </div>
+<?php endif; ?>
                 </div>
 
                 <!-- Блок ошибки (скрыт по умолчанию) -->
-                <div id="error-alert" class="hidden flex items-start p-3 mb-5 text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl animate-fade-up" role="alert">
-                    <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <div id="error-alert" class="<?= $errorMessage === '' ? 'hidden ' : '' ?>flex items-start p-3 mb-5 text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl" role="alert">
+                    <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
                     </svg>
                     <div>
-                        <span class="font-bold block mb-0.5">Ошибка входа</span>
-                        <span id="error-text">Неверные учетные данные.</span>
+                        <span class="font-bold block mb-0.5">Не получилось войти</span>
+                        <span id="error-text"><?= Html::encode($errorMessage) ?></span>
                     </div>
                 </div>
 
-                <form id="login-form" action="<?= Url::to(['/admin/default/login']) ?>" method="POST" onsubmit="handleAuth(event)" class="space-y-5">
+                <form id="login-form" action="<?= Url::to(['/admin/default/login']) ?>" method="POST" class="space-y-5" novalidate>
 
                     <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
 
-                    <!-- STEP 1: LOGIN -->
-                    <div id="step-login" class="block">
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Логин / Email</label>
+<?php if (!$codeOnlyScreen): ?>
+                    <!-- Шаг 1: логин -->
+                    <div id="step-login">
+                        <label for="username" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Логин / Email</label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg class="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                             </div>
-                            <input type="text" id="username" name="LoginForm[username]" value="<?= Html::encode($model->username) ?>" class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 input-transition placeholder-slate-400 font-medium" placeholder="username" autocomplete="off" oninput="hideError()">
+                            <input type="text" id="username" name="LoginForm[username]" value="<?= Html::encode($model->username) ?>" class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 input-transition placeholder-slate-400 font-medium" placeholder="username" autocomplete="username" autocapitalize="none" spellcheck="false">
 
                             <!-- Privacy Blur Button -->
-                            <button type="button" onclick="toggleBlur()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Скрыть логин">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <button type="button" id="blur-toggle" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Скрыть логин" aria-label="Скрыть логин">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                                 </svg>
                             </button>
                         </div>
                     </div>
 
-                    <!-- STEP 2: PASSWORD (Hidden by default) -->
+                    <!-- Шаг 2: пароль -->
                     <div id="step-password" class="hidden animate-fade-up">
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Пароль</label>
+                        <label for="password" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Пароль</label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg class="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
                             </div>
-                            <input type="password" id="password" name="LoginForm[password]" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 input-transition placeholder-slate-400 font-medium" placeholder="••••••••" oninput="hideError()">
+                            <input type="password" id="password" name="LoginForm[password]" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 input-transition placeholder-slate-400 font-medium" placeholder="••••••••" autocomplete="current-password">
                         </div>
                     </div>
+<?php endif; ?>
 
-                    <!-- STEP 3: OTP (Hidden by default) -->
+                    <!-- Шаг 3: код из приложения — отдельный экран -->
                     <div id="step-otp" class="hidden animate-fade-up">
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 ml-1 flex justify-between">
-                            <span>Код подтверждения</span>
-                        </label>
-                        <div class="flex gap-2 justify-between" id="otp-container">
-                            <input type="text" maxlength="1" class="otp-input w-12 h-12 text-center text-xl font-bold bg-white border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-700" oninput="moveToNext(this, 'otp2'); hideError()" id="otp1">
-                            <input type="text" maxlength="1" class="otp-input w-12 h-12 text-center text-xl font-bold bg-white border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-700" oninput="moveToNext(this, 'otp3'); hideError()" onkeydown="moveToPrev(event, 'otp1')" id="otp2">
-                            <input type="text" maxlength="1" class="otp-input w-12 h-12 text-center text-xl font-bold bg-white border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-700" oninput="moveToNext(this, 'otp4'); hideError()" onkeydown="moveToPrev(event, 'otp2')" id="otp3">
-                            <input type="text" maxlength="1" class="otp-input w-12 h-12 text-center text-xl font-bold bg-white border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-700" oninput="moveToNext(this, 'otp5'); hideError()" onkeydown="moveToPrev(event, 'otp3')" id="otp4">
-                            <input type="text" maxlength="1" class="otp-input w-12 h-12 text-center text-xl font-bold bg-white border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-700" oninput="moveToNext(this, 'otp6'); hideError()" onkeydown="moveToPrev(event, 'otp4')" id="otp5">
-                            <input type="text" maxlength="1" class="otp-input w-12 h-12 text-center text-xl font-bold bg-white border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-700" oninput="moveToNext(this, 'submit-btn'); hideError()" onkeydown="moveToPrev(event, 'otp5')" id="otp6">
+                        <div class="lg-otp" id="otp-container" role="group" aria-label="Код из приложения, 6 цифр">
+<?php for ($i = 1; $i <= 6; $i++): ?>
+                            <input type="text" inputmode="numeric" pattern="[0-9]*" class="<?= $otpInputClass ?>" id="otp<?= $i ?>" aria-label="Цифра <?= $i ?> из 6"<?= $i === 1 ? ' autocomplete="one-time-code"' : ' autocomplete="off"' ?>>
+<?php if ($i === 3): ?>
+                            <span class="lg-otp-sep" aria-hidden="true"></span>
+<?php endif; ?>
+<?php endfor; ?>
                         </div>
+                        <p class="lg-hint">Шесть цифр из приложения-аутентификатора на телефоне. Код меняется каждые 30 секунд.</p>
                         <input type="hidden" name="LoginForm[mfaCode]" id="full_otp_code">
                     </div>
 
-                    <!-- Actions -->
+                    <!-- Действия -->
                     <div class="pt-2">
-                        <button type="button" id="next-btn" onclick="checkUser()" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+<?php if (!$codeOnlyScreen): ?>
+                        <button type="button" id="next-btn" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
                             <span>Продолжить</span>
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                             </svg>
                         </button>
+<?php endif; ?>
 
                         <button type="submit" id="submit-btn" class="hidden w-full py-3 px-4 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl shadow-lg shadow-slate-800/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
-                            <span>Войти в систему</span>
+                            <span id="submit-text">Войти</span>
                         </button>
                     </div>
 
-                    <!-- Reset Flow (Back button) -->
+<?php if (!$codeOnlyScreen): ?>
+                    <!-- Назад к логину (шаги пароля и кода без проверенного пароля) -->
                     <div id="back-option" class="hidden text-center">
-                        <button type="button" onclick="resetFlow()" class="text-sm text-slate-400 hover:text-slate-600 font-medium transition-colors">
-                            ← Вернуться к вводу логина
+                        <button type="button" id="back-btn" class="text-sm text-slate-400 hover:text-slate-600 font-medium transition-colors">
+                            ← Другой логин
                         </button>
                     </div>
+<?php endif; ?>
 
                 </form>
+
+<?php if ($codeOnlyScreen): ?>
+                <!-- Пароль уже проверен на сервере: «назад» должен это забыть -->
+                <form id="restart-form" action="<?= Url::to(['/admin/default/login']) ?>" method="POST" class="lg-restart text-center">
+                    <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
+                    <input type="hidden" name="restart" value="1">
+                    <button type="submit" class="text-sm text-slate-400 hover:text-slate-600 font-medium transition-colors">
+                        ← Войти под другим логином
+                    </button>
+                </form>
+<?php endif; ?>
             </div>
 
             <!-- Футер: Версия -->
@@ -187,7 +212,7 @@ $this->registerJs($jsConfig, \yii\web\View::POS_HEAD);
         <div class="hidden md:block w-1/2 bg-slate-50 relative overflow-hidden">
             <img src="<?= $loginImageUrl ?>"
                  class="absolute inset-0 w-full h-full object-cover opacity-90"
-                 alt="Office abstract">
+                 alt="">
 
             <!-- Оверлей градиент -->
             <div class="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-purple-600/20 mix-blend-overlay"></div>

@@ -1,0 +1,124 @@
+/*
+ * Дополнение к css/login.min.css (собранный набор утилит без исходника): шаг кода из приложения.
+ * Исходник; в пакет попадает css/login-steps.min.css (sh assets/src/build.sh).
+ */
+
+/*
+ * Скрытый шаг скрыт всегда. В css/login.min.css .hidden объявлен раньше .block и .flex,
+ * поэтому элемент с обоими классами оставался на экране (поле логина на шагах пароля и кода).
+ * Картинка справа («hidden md:block») показывается на широком экране — её правило не трогает.
+ */
+.login-page .hidden:not(.md\:block) {
+    display: none !important;
+}
+
+/* Шесть клеток: две тройки, как код показывают приложения-аутентификаторы */
+.lg-otp {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.lg-otp .otp-input {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 52px;
+    height: 56px;
+    font-size: 24px;
+    line-height: 1;
+    padding: 0;
+    font-variant-numeric: tabular-nums;
+    caret-color: #2563eb;
+    background: #f8fafc;
+}
+
+.lg-otp .otp-input:focus {
+    background: #fff;
+}
+
+.lg-otp-sep {
+    flex: 0 0 10px;
+    height: 2px;
+    border-radius: 2px;
+    background: #cbd5e1;
+}
+
+.lg-otp .otp-input.is-error {
+    border-color: #fca5a5;
+    background: #fef2f2;
+    animation: shake .5s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+/* «Пароль принят»: объясняет, почему на экране больше нет поля пароля */
+.lg-passed {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 5px 12px 5px 9px;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 13px;
+    font-weight: 500;
+    max-width: 100%;
+}
+
+.lg-passed span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lg-passed svg {
+    flex: 0 0 auto;
+}
+
+.lg-hint {
+    margin: 12px 0 0 4px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.lg-restart {
+    margin-top: 20px;
+}
+
+/* Кнопка ждёт все шесть цифр: нажать можно (покажет подсказку), но выглядит неактивной */
+#submit-btn.lg-waiting {
+    background: #94a3b8;
+    box-shadow: none;
+}
+
+#submit-btn svg + span {
+    margin-left: 2px;
+}
+
+@media (max-width: 420px) {
+    .lg-otp {
+        gap: 6px;
+    }
+
+    .lg-otp .otp-input {
+        height: 50px;
+        font-size: 21px;
+    }
+
+    .lg-otp-sep {
+        flex-basis: 6px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lg-otp .otp-input.is-error {
+        animation: none;
+    }
+}
+
+/* Декоративные пятна фона выходят за экран: без этого на телефоне страница ездит вбок */
+body.login-page {
+    overflow-x: hidden;
+}

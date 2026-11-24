@@ -1,9 +1,6 @@
 <?php
 namespace Mitisk\Yii2Admin\components;
 
-use Yii;
-use yii\helpers\Url;
-
 final class MfaHelper
 {
     /**
@@ -57,10 +54,10 @@ final class MfaHelper
      * @param int|null $timeSlice
      * @return string
      */
-    private static function getTotpCode(string $secret, int $timeSlice = null): string
+    private static function getTotpCode(string $secret, ?int $timeSlice = null): string
     {
         if ($timeSlice === null) {
-            $timeSlice = floor(time() / 30);
+            $timeSlice = intdiv(time(), 30);
         }
 
         $secretKey = self::base32Decode($secret);
@@ -82,19 +79,51 @@ final class MfaHelper
      * Проверка введённого кода с возможностью обработки сдвига времени
      * (-1, 0, +1 временной интервал)
      *
-     * @param string $secret
-     * @param string $code
+     * @param string|null $secret
+     * @param mixed $code
      * @return bool
      */
-    public static function verifyTotpCode(string $secret, string $code): bool
+    public static function verifyTotpCode(?string $secret, $code): bool
     {
-        $currentSlice = floor(time() / 30);
+        return self::matchTimeSlice($secret, $code) !== null;
+    }
+
+    /**
+     * Номер 30-секундного шага, которому соответствует код, или null, если код не подходит.
+     * Номер нужен, чтобы не принять один и тот же код дважды.
+     *
+     * @param string|null $secret
+     * @param mixed $code шесть цифр; пробелы допустимы («123 456»)
+     * @param int|null $time момент проверки (unix), по умолчанию — сейчас
+     * @return int|null
+     */
+    public static function matchTimeSlice(?string $secret, $code, ?int $time = null): ?int
+    {
+        if (!is_string($code) || (string) $secret === '') {
+            return null;
+        }
+        $code = (string) preg_replace('/\s+/', '', $code);
+        if (!preg_match('/^\d{6}$/', $code)) {
+            return null;
+        }
+
+        $currentSlice = intdiv($time ?? time(), 30);
+        $matched = null;
+        // Без раннего выхода: время проверки не зависит от того, какой шаг совпал
         for ($i = -1; $i <= 1; $i++) {
-            if (self::getTotpCode($secret, $currentSlice + $i) === $code) {
-                return true;
+            if (hash_equals(self::getTotpCode($secret, $currentSlice + $i), $code)) {
+                $matched = $currentSlice + $i;
             }
         }
-        return false;
+        return $matched;
+    }
+
+    /**
+     * Секрет похож на настоящий: Base32, не короче 16 знаков.
+     */
+    public static function isValidSecret($secret): bool
+    {
+        return is_string($secret) && preg_match('/^[A-Z2-7]{16,64}$/', $secret) === 1;
     }
 
     /**
@@ -106,8 +135,9 @@ final class MfaHelper
      */
     public static function getOtpAuthUrl(string $user, string $host, string $secret): string
     {
-        $issuer = urlencode($host);
-        $user = urlencode($user);
+        // rawurlencode: пробел в названии сайта должен стать %20, а не «+» (приложения показывают «+» как есть)
+        $issuer = rawurlencode($host);
+        $user = rawurlencode($user);
         return "otpauth://totp/{$issuer}:{$user}?secret={$secret}&issuer={$issuer}";
     }
 }

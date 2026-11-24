@@ -18,6 +18,7 @@ class LoginAsset extends AssetBundle
 
     public $css = [
         'css/login.min.css',
+        'css/login-steps.min.css',
     ];
 
     public $js = [

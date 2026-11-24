@@ -135,6 +135,8 @@ final class TestApp
                 'charset' => 'utf8mb4',
             ],
             'cache' => ['class' => ArrayCache::class],
+            // Хеширование паролей в тестах — с минимальной стоимостью, иначе каждое сохранение пользователя ~0,5 с
+            'security' => ['passwordHashCost' => 4],
             'settings' => ['class' => SettingsComponent::class],
             'authManager' => [
                 'class' => DbManager::class,
