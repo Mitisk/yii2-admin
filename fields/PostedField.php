@@ -20,16 +20,20 @@ class PostedField extends Field
         $onLabel = $isKnown ? 'Активно' : Html::encode($this->label);
         $offLabel = $isKnown ? 'Неактивно' : Html::encode($this->label);
 
+        // Те же условия, что проверяет сервер в update-attribute (кроме roles: без них колонка скрыта)
+        $canToggle = !filter_var($this->readonly, FILTER_VALIDATE_BOOLEAN)
+            && $this->model->canUpdate();
+
         return [
             'attribute' => $column,
             'format' => 'raw',
             'filter' => ['' => '---', '1' => $onLabel, '0' => $offLabel],
-            'value' => function ($data) use ($column, $isKnown, $onLabel, $offLabel) {
+            'value' => function ($data) use ($column, $onLabel, $offLabel, $canToggle) {
                 $isActive = (bool)$data->{$column};
 
                 $labelText = $isActive ? $onLabel : $offLabel;
 
-                if (!(\Yii::$app->user->can(get_class($data) . '\update') || \Yii::$app->user->can('admin'))) {
+                if (!$canToggle) {
                     $cls = $isActive ? 'block-available' : 'block-not-available';
                     return '<div class="' . $cls . '">' . $labelText . '</div>';
                 }

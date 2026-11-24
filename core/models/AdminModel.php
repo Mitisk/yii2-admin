@@ -203,6 +203,33 @@ class AdminModel extends BaseObject
     }
 
     /**
+     * Атрибуты, которые можно менять переключателем в списке (update-attribute):
+     * поля типа posted из формы компонента, не readonly и видимые пользователю.
+     *
+     * @return string[]
+     */
+    public function getListToggleAttributes(): array
+    {
+        $inputs = json_decode((string)$this->component->data, true);
+        if (!is_array($inputs)) {
+            return [];
+        }
+
+        $attributes = [];
+        foreach ($inputs as $input) {
+            if (!is_array($input)) {
+                continue;
+            }
+            $field = new Field(['input' => $input, 'model' => $this]);
+            if ($field->isListToggle()) {
+                $attributes[] = (string)$input['name'];
+            }
+        }
+
+        return $attributes;
+    }
+
+    /**
      * Return grid columns
      * @return array
      */

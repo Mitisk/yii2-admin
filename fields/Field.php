@@ -295,6 +295,28 @@ class Field extends Widget implements FieldInterface
     }
 
     /**
+     * Можно ли менять значение поля переключателем в списке (POST update-attribute):
+     * только поле типа posted, не readonly и видимое текущему пользователю по roles.
+     *
+     * @return bool
+     */
+    public function isListToggle(): bool
+    {
+        if (!is_array($this->input)
+            || !empty($this->input['isContent'])
+            || empty($this->input['name'])
+        ) {
+            return false;
+        }
+
+        $field = $this->_buildField();
+
+        return $field instanceof PostedField
+            && !filter_var($field->readonly, FILTER_VALIDATE_BOOLEAN)
+            && $field->canRender();
+    }
+
+    /**
      * Builds and returns the concrete field subclass instance.
      *
      * @return Field
