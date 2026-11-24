@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mitisk\Yii2Admin\components;
 
+use Mitisk\Yii2Admin\components\mail\MailEventInterface;
 use Mitisk\Yii2Admin\components\mail\TemplateRenderer;
 use Mitisk\Yii2Admin\models\EmailTemplate;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -77,23 +78,120 @@ class MailService extends Component
                 return false;
             }
 
-            $htmlParams = [];
-            foreach (is_array($template->params) ? $template->params : [] as $key => $config) {
-                $config = is_array($config) ? $config : [];
-                if (!empty($config['required']) && (string)($params[$key] ?? '') === '') {
-                    Yii::error("MailService: {$slug} не отправлено: нет обязательной переменной {$key}", self::LOG_CATEGORY);
-                    return false;
-                }
-                if (!empty($config['html'])) {
-                    $htmlParams[] = (string)$key;
-                }
-            }
-
-            return $this->deliver($slug, $to, (string)$template->subject, (string)$template->body, $params, $htmlParams);
+            $config = is_array($template->params) ? $template->params : [];
+            return $this->sendWith($slug, $to, (string)$template->subject, (string)$template->body, $params, $config);
         } catch (Throwable $e) {
             Yii::error("MailService: {$slug} не отправлено: " . $e::class, self::LOG_CATEGORY);
             return false;
         }
+    }
+
+    /**
+     * Письмо-событие из кода. Шаблона с кодом $event->slug() нет — создаётся из текстов события
+     * (дальше его правит владелец в админке); выключен — письмо не уходит (без записи в лог: это
+     * решение владельца). Пустые тема или тело шаблона заменяются текстами из кода. Обязательные
+     * и HTML-переменные — из кода и из шаблона вместе.
+     *
+     * @param array<string, string|int|float|null> $params
+     */
+    public function sendEvent(MailEventInterface $event, string $to, array $params = []): bool
+    {
+        $slug = $event->slug();
+        try {
+            $template = $this->eventTemplate($event);
+            if ($template !== null && (int)$template->active === 0) {
+                return false;
+            }
+
+            $subject = trim((string)($template->subject ?? '')) !== '' ? (string)$template->subject : $event->defaultSubject();
+            $body = trim((string)($template->body ?? '')) !== '' ? (string)$template->body : $event->defaultBody();
+            $config = $event->params();
+            foreach ($template !== null && is_array($template->params) ? $template->params : [] as $key => $own) {
+                $code = $config[$key] ?? [];
+                $own = is_array($own) ? $own : [];
+                // Флаги «обязательно» и «HTML» из кода владелец не снимет; добавить свои — может
+                $config[$key] = [
+                    'required' => !empty($code['required']) || !empty($own['required']) ? '1' : '0',
+                    'html' => !empty($code['html']) || !empty($own['html']) ? '1' : '0',
+                ];
+            }
+
+            return $this->sendWith($slug, $to, $subject, $body, $params, $config);
+        } catch (Throwable $e) {
+            Yii::error("MailService: {$slug} не отправлено: " . $e::class, self::LOG_CATEGORY);
+            return false;
+        }
+    }
+
+    /**
+     * Включено ли письмо-событие: шаблона нет — да (sendEvent создаст его), active = 0 — нет.
+     * Не удалось прочитать — да (лучше попытаться отправить, чем молча потерять письмо).
+     */
+    public function isEnabled(MailEventInterface $event): bool
+    {
+        try {
+            $template = EmailTemplate::findOne(['slug' => $event->slug()]);
+            return $template === null || (int)$template->active !== 0;
+        } catch (Throwable $e) {
+            Yii::error('MailService: проверка шаблона ' . $event->slug() . ' не выполнена: ' . $e::class, self::LOG_CATEGORY);
+            return true;
+        }
+    }
+
+    /**
+     * Проверка обязательных переменных и отправка.
+     *
+     * @param array<string, string|int|float|null> $params
+     * @param array<string, mixed> $config переменные шаблона: ['ИМЯ' => ['required' => '1', 'html' => '1']]
+     * @throws Throwable
+     */
+    private function sendWith(string $slug, string $to, string $subject, string $body, array $params, array $config): bool
+    {
+        $htmlParams = [];
+        foreach ($config as $key => $item) {
+            $item = is_array($item) ? $item : [];
+            if (!empty($item['required']) && (string)($params[$key] ?? '') === '') {
+                Yii::error("MailService: {$slug} не отправлено: нет обязательной переменной {$key}", self::LOG_CATEGORY);
+                return false;
+            }
+            if (!empty($item['html'])) {
+                $htmlParams[] = (string)$key;
+            }
+        }
+
+        return $this->deliver($slug, $to, $subject, $body, $params, $htmlParams);
+    }
+
+    /**
+     * Шаблон события; нет — создаётся из текстов в коде. Не сохранился — null (письмо уйдёт
+     * по текстам из кода); параллельный запрос мог вставить ту же строку — берём её.
+     */
+    private function eventTemplate(MailEventInterface $event): ?EmailTemplate
+    {
+        $template = EmailTemplate::findOne(['slug' => $event->slug()]);
+        if ($template !== null) {
+            return $template;
+        }
+
+        $template = new EmailTemplate(['slug' => $event->slug()]);
+        $template->name = $event->label();
+        $template->subject = $event->defaultSubject();
+        $template->body = $event->defaultBody();
+        $template->params = $event->params();
+        $template->active = 1;
+        try {
+            if ($template->save()) {
+                return $template;
+            }
+        } catch (Throwable) {
+            $existing = EmailTemplate::findOne(['slug' => $event->slug()]);
+            if ($existing !== null) {
+                return $existing;
+            }
+        }
+        Yii::warning('MailService: шаблон ' . $event->slug() . ' не создан', self::LOG_CATEGORY);
+
+        return null;
     }
 
     /**

@@ -866,6 +866,36 @@ $ok = $mail->send('new_order', $order->email, [
   `Yii::$container->set(MailService::class, ['mailer' => 'mailer'])` — действует везде, где сервис
   создаётся через `Yii::createObject()` (в том числе письмо с новым паролем пользователю).
 
+**Письма-события из кода** (`MailService::sendEvent()`): тексты по умолчанию живут в коде, шаблон в
+админке создаётся при первой отправке, дальше владелец правит его без деплоя.
+
+```php
+use Mitisk\Yii2Admin\components\mail\MailEventInterface;
+
+enum MailEvent: string implements MailEventInterface
+{
+    case OrderPaid = 'order_paid';
+
+    public function slug(): string { return $this->value; }
+    public function label(): string { return 'Заказ оплачен'; }
+    public function defaultSubject(): string { return 'Заказ №{{ID}} оплачен'; }
+    public function defaultBody(): string { return '<p>{{NAME}}, спасибо! {{BUTTON}}</p>'; }
+    public function params(): array
+    {
+        return [
+            'ID' => ['desc' => 'Номер заказа', 'required' => '1'],
+            'NAME' => ['desc' => 'Имя', 'required' => '0'],
+            'BUTTON' => ['desc' => 'Кнопка', 'required' => '0', 'html' => '1'],
+        ];
+    }
+}
+
+Yii::createObject(MailService::class)->sendEvent(MailEvent::OrderPaid, $email, ['ID' => 7, 'NAME' => $name]);
+```
+- Шаблона нет — создаётся из кода; `active = 0` — письмо не уходит (`isEnabled($event)` — проверить заранее).
+- Пустые тема или тело в админке — берётся текст из кода.
+- Флаги `required` и `html` из кода действуют всегда, владелец может добавить свои.
+
 Рекомендуемый паттерн «событие → настраиваемый шаблон»: заведите настройку типа
 `mail_template` (§5), чтобы админ выбирал шаблон сам:
 
