@@ -1440,6 +1440,14 @@ vendor/bin/phpunit            # пакет установлен отдельно
   к тестовым БД разработчиков).
 - Исправление бага начинается с теста, который его воспроизводит.
 
+**Тесты проекта, где стоит пакет:** вход в админку — `Mitisk\Yii2Admin\testing\AdminSession::login()`
+(роль `admin`; `login(['manager'], ['role' => 9])` — свои роли и обязательные колонки таблицы `user`
+проекта). Создаёт пользователя или берёт существующего по `username`, недостающие роли, записывает
+`GENERAL.version` (без неё `/admin/*` уводит на страницу обновления) и логинит `adminUser`. В Codeception
+functional для `/admin/*` нужен ещё `request.isConsoleRequest = false` в тестовом конфиге — иначе модуль
+в CLI не подставляет `adminUser` вместо `user`. Письма в тестах — `Yii::$container->set(MailService::class,
+['mailer' => 'mailer'])` (§6).
+
 ---
 
 ## 11. Справочник
