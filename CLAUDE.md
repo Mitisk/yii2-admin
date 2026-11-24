@@ -919,14 +919,8 @@ use Yii;
 
 class ReportsController extends ExtAdminController
 {
-    public function behaviors(): array
-    {
-        $behaviors = parent::behaviors();
-        $behaviors['access']['rules'] = [
-            ['allow' => true, 'roles' => ['@'], 'matchCallback' => fn() => Yii::$app->user->can('viewReports')],
-        ];
-        return $behaviors;
-    }
+    /** Кто открывает экраны: роль/разрешение или список; по умолчанию 'admin', '@' — любой вошедший. */
+    public $access = 'viewReports';
 
     public function actionIndex(): string
     {
@@ -940,6 +934,11 @@ class ReportsController extends ExtAdminController
 Правила:
 - Класс **обязан** наследовать `Mitisk\Yii2Admin\components\ExtAdminController`,
   иначе карта его проигнорирует (в лог — warning).
+- Доступ — свойство `$access`: по умолчанию роль `admin` (с 1.8.0; раньше пускал любого вошедшего
+  в админку). Задаётся в классе или в `config` строки карты: `{"access": ["viewReports", "admin"]}`;
+  `'@'` — любой вошедший. Свои правила `behaviors()['access']` по-прежнему работают.
+- Возврат после действия — `$this->redirectBack('/admin/reports/')`: берёт `return` из запроса
+  только если это локальный путь (`safeReturnUrl()`), иначе — адрес по умолчанию.
 - Namespace начинается с `app\controllers\` → вьюхи ищутся в `@app/views/<controller_id>/`.
   Для другого namespace переопределите `getViewPath()`, иначе Yii пойдёт в
   `vendor/mitisk/yii2-admin/views/<controller_id>/`.
