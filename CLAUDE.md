@@ -722,6 +722,17 @@ $menu->data = json_encode(array_values($items), JSON_UNESCAPED_UNICODE);
 $menu->save(false);
 ```
 
+**Редактор меню** — `/admin/menu/` (роль `superAdminRole`; `controllers/MenuController`, экран —
+`views/menu/index.php`, `assets/src/admin/menu-editor.js` и `menu-editor.css`, страж —
+`tests/unit/menu/MenuEditorTest.php`). Дерево пунктов с перетаскиванием (два уровня — столько показывает
+боковое меню), форма пункта: название, ссылка, иконка, «Кто видит» (роль или право; пусто — все вошедшие),
+новая вкладка, подсказка. Все меню сохраняются одним запросом `POST /admin/menu/save/` (поле `menus` — JSON)
+в одной транзакции; удаление меню — только POST. Пункты перед записью проходят `Menu::sanitizeItems()`:
+остаются только поля из примера выше, ссылка — адрес сайта (`/...`), `http(s)://` или `#`, пункт без названия
+отбрасывается, третий уровень не сохраняется. Кроме бокового меню (`alias = admin`, название и алиас не
+меняются) можно завести свои меню проекта: в коде сайта их получают как `Menu::findOne(['alias' => 'footer'])`
+и разбирают `data`.
+
 Редактор меню в UI: `/admin/menu/`. Сохранение меню синхронизирует флаг
 `admin_model.in_menu` по корневым `href` вида `/admin/<alias>/`.
 

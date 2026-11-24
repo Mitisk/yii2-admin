@@ -24,6 +24,63 @@ class Menu extends \yii\db\ActiveRecord
         return '{{%menu}}';
     }
 
+    /** Сколько уровней показывает боковое меню: пункт и его подпункты */
+    public const MAX_DEPTH = 2;
+
+    /**
+     * Приводит пункты меню к хранимому виду: только известные поля, безопасные ссылки, не глубже двух уровней.
+     * Пункт без названия отбрасывается.
+     *
+     * @param array<int|string, mixed> $items
+     * @return array<int, array<string, mixed>>
+     */
+    public static function sanitizeItems(array $items, int $level = 1): array
+    {
+        $string = static function ($value, int $max): string {
+            return is_scalar($value) ? mb_substr(trim((string) $value), 0, $max) : '';
+        };
+
+        $result = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $text = $string($item['text'] ?? '', 100);
+            if ($text === '') {
+                continue;
+            }
+
+            $href = $string($item['href'] ?? '', 500);
+            // Ссылка — адрес сайта, полный http(s)-адрес или «#» (раздел без своей страницы)
+            if ($href === '' || !preg_match('~^(/(?!/)|https?://|#)~i', $href)) {
+                $href = '#';
+            }
+            $icon = $string($item['icon'] ?? '', 60);
+            if (!preg_match('/^[a-z0-9 _-]*$/i', $icon)) {
+                $icon = '';
+            }
+            $target = $string($item['target'] ?? '', 10);
+
+            $clean = [
+                'text' => $text,
+                'href' => $href,
+                'icon' => $icon,
+                'target' => in_array($target, ['_self', '_blank', '_top'], true) ? $target : '_self',
+                'rule' => $string($item['rule'] ?? '', 255),
+                'title' => $string($item['title'] ?? '', 255),
+            ];
+            if ($level < self::MAX_DEPTH && !empty($item['children']) && is_array($item['children'])) {
+                $children = self::sanitizeItems($item['children'], $level + 1);
+                if ($children) {
+                    $clean['children'] = $children;
+                }
+            }
+            $result[] = $clean;
+        }
+
+        return $result;
+    }
+
     /**
      * {@inheritdoc}
      */

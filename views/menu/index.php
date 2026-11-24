@@ -1,141 +1,144 @@
 <?php
-use \yii\helpers\Html;
+use yii\helpers\Html;
+use yii\helpers\Json;
+use yii\helpers\Url;
 
 /* @var $this yii\web\View */
-/* @var $models \Mitisk\Yii2Admin\models\Menu[] */
-/* @var $permissions array */
+/* @var $menus array<int, array{id: int, alias: string, name: string, locked: bool, items: array}> */
+/* @var $rules array{roles: array, permissions: array} */
+/* @var $links array<int, array{href: string, label: string}> */
 
 $this->title = 'Меню';
 $this->params['breadcrumbs'][] = $this->title;
 
 \Mitisk\Yii2Admin\assets\MenuFormAsset::register($this);
+
+// Иконки для быстрого выбора (Font Awesome 5, как в боковом меню); любой другой класс можно вписать вручную
+$icons = ['home', 'user-friends', 'users', 'user', 'cog', 'cogs', 'box', 'boxes', 'shopping-cart', 'shopping-bag',
+    'file', 'file-alt', 'folder', 'image', 'images', 'envelope', 'comment', 'comments', 'bell', 'calendar-alt',
+    'chart-bar', 'chart-line', 'chart-pie', 'database', 'list', 'th-large', 'tags', 'star', 'heart',
+    'map-marker-alt', 'globe', 'link', 'lock', 'shield-alt', 'key', 'wrench', 'tools', 'flask', 'newspaper',
+    'bullhorn', 'credit-card', 'ruble-sign', 'gift', 'music', 'camera', 'video', 'question-circle', 'info-circle'];
 ?>
 
-<div class="tf-section-2 form-add-product">
-    <div class="wg-box">
-        <div class="widget-tabs">
-            <ul class="widget-menu-tab">
+<div class="me-editor" id="me-editor"
+     data-save-url="<?= Url::to(['/admin/menu/save']) ?>"
+     data-delete-url="<?= Url::to(['/admin/menu/delete']) ?>">
 
-                <?php foreach($models as $model): ?>
-                    <li class="item-title <?= $model == $models[array_key_first($models)] ? 'active' : '' ?>">
-                        <span class="inner" data-alias="<?= $model->alias ?>">
-                            <h6><?= $model->name ?></h6>
-                        </span>
-                    </li>
-                <?php endforeach; ?>
+    <script type="application/json" id="me-data"><?= Json::htmlEncode(['menus' => $menus]) ?></script>
 
-                <li class="item-title">
-                    <span class="inner"><h6>+</h6></span>
-                </li>
+    <div class="me-tabs" id="me-tabs" role="tablist" aria-label="Меню"></div>
 
-            </ul>
-            <div class="widget-content-tab">
-                <?php foreach($models as $model): ?>
-                    <div class="widget-content-inner <?= $model == $models[array_key_first($models)] ? 'active' : '' ?>" style="<?= $model == $models[array_key_first($models)] ? '' : 'display: none;' ?>">
-                        <?= $this->render('_name', ['model' => $model]) ?>
+    <div class="me-layout">
+        <section class="me-card me-structure">
+            <div class="me-card__head">
+                <div>
+                    <div class="me-card__title" id="me-menu-title"></div>
+                    <p class="me-card__lead" id="me-menu-lead"></p>
+                </div>
+                <button type="button" class="tf-button style-1 me-add-root" id="me-add-root"><i class="icon-plus"></i> Пункт</button>
+            </div>
+
+            <div class="me-settings" id="me-settings" hidden>
+                <label class="me-field">
+                    <span class="me-field__label">Название меню</span>
+                    <input type="text" id="me-menu-name" maxlength="255" autocomplete="off">
+                </label>
+                <label class="me-field">
+                    <span class="me-field__label">Алиас</span>
+                    <input type="text" id="me-menu-alias" maxlength="255" autocomplete="off" placeholder="footer">
+                    <span class="me-hint" id="me-menu-alias-hint">Латиница, по нему меню получают в коде сайта. После сохранения не меняется.</span>
+                </label>
+                <button type="button" class="me-link me-link--danger" id="me-menu-delete" hidden>Удалить меню</button>
+            </div>
+            <div class="me-error" id="me-menu-error" hidden></div>
+
+            <ul class="me-list" id="me-list"></ul>
+            <p class="me-empty" id="me-empty" hidden>В меню пока нет пунктов. Нажмите «Пункт», чтобы добавить первый.</p>
+            <p class="me-hint me-structure__hint">Перетаскивайте пункты за <i class="icon-menu"></i>, чтобы поменять порядок или вложить один в другой. Боковое меню показывает два уровня.</p>
+        </section>
+
+        <aside class="me-card me-form" id="me-form-card">
+            <div class="me-form__placeholder" id="me-form-empty">
+                <div class="me-card__title">Пункт меню</div>
+                <p class="me-card__lead">Выберите пункт слева, чтобы изменить его, или добавьте новый.</p>
+            </div>
+
+            <form id="me-form" hidden novalidate>
+                <div class="me-card__title" id="me-form-title">Пункт меню</div>
+
+                <label class="me-field">
+                    <span class="me-field__label">Название <span class="tf-color-1">*</span></span>
+                    <input type="text" id="me-text" maxlength="100" autocomplete="off">
+                    <span class="me-error" id="me-text-error" hidden>Введите название пункта.</span>
+                </label>
+
+                <label class="me-field">
+                    <span class="me-field__label">Ссылка</span>
+                    <input type="text" id="me-href" maxlength="500" autocomplete="off" list="me-links" placeholder="/admin/product/">
+                    <span class="me-hint">Адрес раздела. «#» — заголовок группы без своей страницы.</span>
+                </label>
+                <datalist id="me-links">
+                    <?php foreach ($links as $link): ?>
+                        <option value="<?= Html::encode($link['href']) ?>"><?= Html::encode($link['label']) ?></option>
+                    <?php endforeach; ?>
+                </datalist>
+
+                <div class="me-field" id="me-icon-field">
+                    <span class="me-field__label">Иконка</span>
+                    <div class="me-icon-row">
+                        <span class="me-icon-preview" id="me-icon-preview" aria-hidden="true"></span>
+                        <input type="text" id="me-icon" maxlength="60" autocomplete="off" placeholder="fas fa-box" aria-label="Класс иконки">
+                        <button type="button" class="me-link" id="me-icon-clear">Без иконки</button>
                     </div>
-                <?php endforeach; ?>
-
-                <div class="widget-content-inner" style="display: none;">
-                    <?= $this->render('_name', ['model' => new \Mitisk\Yii2Admin\models\Menu()]) ?>
+                    <div class="me-icons" id="me-icons">
+                        <?php foreach ($icons as $icon): ?>
+                            <button type="button" class="me-icons__item" data-icon="fas fa-<?= $icon ?>" title="<?= $icon ?>" aria-label="<?= $icon ?>"><i class="fas fa-<?= $icon ?>"></i></button>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
-            </div>
-            <?= $this->render('_builder')?>
-        </div>
+                <label class="me-field">
+                    <span class="me-field__label">Кто видит</span>
+                    <select id="me-rule">
+                        <option value="">Все, кто вошёл в админку</option>
+                        <optgroup label="Роли">
+                            <?php foreach ($rules['roles'] as $rule): ?>
+                                <option value="<?= Html::encode($rule['value']) ?>"><?= Html::encode($rule['label']) ?></option>
+                            <?php endforeach; ?>
+                        </optgroup>
+                        <optgroup label="Права">
+                            <?php foreach ($rules['permissions'] as $rule): ?>
+                                <option value="<?= Html::encode($rule['value']) ?>"><?= Html::encode($rule['label']) ?></option>
+                            <?php endforeach; ?>
+                        </optgroup>
+                    </select>
+                    <span class="me-hint">Пункт скрыт от тех, у кого нет этой роли или права.</span>
+                </label>
+
+                <label class="me-check">
+                    <input type="checkbox" id="me-blank">
+                    <span>Открывать в новой вкладке</span>
+                </label>
+
+                <label class="me-field">
+                    <span class="me-field__label">Подсказка</span>
+                    <input type="text" id="me-title" maxlength="255" autocomplete="off" placeholder="Показывается при наведении">
+                </label>
+
+                <div class="me-form__actions">
+                    <button type="submit" class="tf-button" id="me-form-apply">Готово</button>
+                    <button type="button" class="me-link" id="me-form-cancel">Отмена</button>
+                </div>
+            </form>
+        </aside>
     </div>
 
-    <?= $this->render('_builder_form', ['permissions' => $permissions])?>
-
-    <?= Html::beginForm('', 'post', ['id' => 'form-main']) ?>
-
-    <?php foreach($models as $model): ?>
-        <?= Html::hiddenInput('Menu[' . $model->alias . '][name]', $model->name, ['id' => 'name-' . $model->alias]) ?>
-        <?= Html::hiddenInput('Menu[' . $model->alias . '][alias]', $model->alias, ['id' => 'alias-' . $model->alias]) ?>
-        <?= Html::hiddenInput('Menu[' . $model->alias . '][data]', $model->data, ['id' => $model->alias]) ?>
-    <?php endforeach; ?>
-
-    <div class="bot">
-        <button class="tf-button w180" type="submit" id="save-button">Сохранить</button>
+    <div class="me-actions">
+        <button type="button" class="tf-button w180" id="me-save">Сохранить</button>
+        <span class="me-actions__state" id="me-state" aria-live="polite"></span>
     </div>
 
+    <?= Html::beginForm(['/admin/menu/delete'], 'post', ['id' => 'me-delete-form', 'hidden' => true]) ?>
     <?= Html::endForm() ?>
-
 </div>
-
-<script>
-    window.addEventListener('load', function() {
-
-        var arrayjson = [];
-        var active = 0;
-
-        <?php $active = 0;?>
-        <?php foreach ($models as $model): ?>
-
-        <?php if(!$active): ?>
-        <?php $active = $model->alias; ?>
-        active = "<?= $model->alias ?>";
-        <?php endif;?>
-
-        arrayjson["<?= $model->alias ?>"] = <?= $model->data ? $model->data : '[]' ?>;
-
-        <?php endforeach; ?>
-
-        // icon picker options
-        var iconPickerOptions = {searchText: "Найти...", labelHeader: "{0}/{1}"};
-        // sortable list options
-        var sortableListOptions = {
-            placeholderCss: {'background-color': "#cccccc"}
-        };
-
-        var editor = new MenuEditor('myEditor', {maxLevel: 1, listOptions: sortableListOptions, iconPicker: iconPickerOptions});
-        editor.setForm($('#frmEdit'));
-        editor.setUpdateButton($('#btnUpdate'));
-        editor.setData(arrayjson[active]);
-
-        $('#btnReload').on('click', function () {
-            editor.setData(arrayjson);
-        });
-
-        $('#btnOutput').on('click', function () {
-            var str = editor.getString();
-            $("#out").text(str);
-        });
-
-        $("#btnUpdate").click(function(e){
-            e.preventDefault();
-            editor.update();
-            $("#" + active).val(editor.getString());
-        });
-
-        $('#btnAdd').click(function(e){
-            e.preventDefault();
-            editor.add();
-            $("#" + active).val(editor.getString());
-        });
-
-        $(document).on('click', '#save-button', function(e){
-            e.preventDefault();
-            $("#" + active).val(editor.getString());
-            $(this).closest('form').submit();
-        });
-
-        $('.widget-menu-tab li').click(function(e){
-            e.preventDefault();
-
-            arrayjson[active] = editor.getString();
-
-            var alias = $(this).find('span').data('alias');
-
-            active = alias ? alias : 'new';
-
-            if(!arrayjson[active]) {
-                editor.setData([]);
-            } else {
-                editor.setData(arrayjson[active]);
-            }
-
-        });
-
-    });
-</script>
