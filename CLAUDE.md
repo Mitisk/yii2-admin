@@ -423,6 +423,11 @@ class Product extends ActiveRecord
    с именем связи. Связь — `hasMany(...)->viaTable(...)`. При сохранении админка делает
    `unlinkAll` + `link` по junction-таблице; при удалении записи — `unlinkAll`.
    Junction-таблица должна существовать (`product_tag(product_id, tag_id)`).
+4. **PHP enum** — `selectSourceType: "enum"`, `selectSourceVal: "app\\enums\\OrderStatus"` (FQCN
+   backed enum), `name` = колонка. Значение — `value` варианта, подпись — его `label()`, если метод
+   есть, иначе имя варианта. Статический метод-обёртка в модели не нужен. В редакторе раздела —
+   «Источник данных → Перечисление (PHP enum)» и полное имя класса. Не backed enum или класса нет —
+   пустой список и warning в лог.
 
 ### 3.7 Файлы
 

@@ -415,7 +415,12 @@ class Field extends Widget implements FieldInterface
             ) {
                 $input['multiple'] = $input['selectMultiple'];
             }
-            if (!empty($input['selectSourceVal'])
+            if (($input['selectSourceType'] ?? '') === 'enum') {
+                // Источник — backed enum: selectSourceVal содержит его FQCN, а не метод модели
+                if (!empty($input['selectSourceVal']) && empty($input['enumClass'])) {
+                    $input['enumClass'] = $input['selectSourceVal'];
+                }
+            } elseif (!empty($input['selectSourceVal'])
                 && empty($input['publicStaticMethod'])
             ) {
                 $input['publicStaticMethod'] = $input['selectSourceVal'];

@@ -96,6 +96,26 @@ class FieldsHelper extends BaseObject
     }
 
     /**
+     * Варианты select из backed enum: [value => подпись]. Подпись — label() варианта,
+     * если метод есть, иначе имя варианта. Не enum — пустой список и warning в лог.
+     *
+     * @return array<int|string, string>
+     */
+    public static function enumValues(string $enumClass): array
+    {
+        if (!enum_exists($enumClass) || !is_a($enumClass, \BackedEnum::class, true)) {
+            \Yii::warning("Источник select «{$enumClass}» — не backed enum", __METHOD__);
+            return [];
+        }
+
+        $values = [];
+        foreach ($enumClass::cases() as $case) {
+            $values[$case->value] = method_exists($case, 'label') ? (string)$case->label() : $case->name;
+        }
+        return $values;
+    }
+
+    /**
      * Возвращает массив значений
      * @return array
      */
@@ -103,7 +123,9 @@ class FieldsHelper extends BaseObject
     {
         $values = [];
 
-        if ($field->publicStaticMethod) {
+        if ($field instanceof SelectField && !empty($field->enumClass)) {
+            $values = self::enumValues((string)$field->enumClass);
+        } elseif ($field->publicStaticMethod) {
             $reflectionClass = $field->model->getReflectionClass();
 
             // Извлекаем имя метода, если сохранён полный путь

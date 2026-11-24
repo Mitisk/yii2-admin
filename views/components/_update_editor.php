@@ -557,13 +557,17 @@ $this->registerJs(
                 </div>
                 <div class="mb-10">
                     <label class="body-title mb-10" style="font-size:12px;">Источник данных</label>
-                    <select class="form-select form-select-sm mb-8" id="prop-sel-source-type" onchange="canvasUpdateField()">
+                    <select class="form-select form-select-sm mb-8" id="prop-sel-source-type" onchange="canvasToggleSelectOpts(); canvasUpdateField();">
                         <option value="method">Статический метод модели</option>
                         <option value="entity">Связь (ActiveQuery)</option>
+                        <option value="enum">Перечисление (PHP enum)</option>
                     </select>
                     <select class="form-select form-select-sm" id="prop-sel-source-val" onchange="canvasUpdateField()">
                         <option value="">--- выберите метод ---</option>
                     </select>
+                    <input type="text" class="form-control form-control-sm" id="prop-sel-source-enum"
+                           placeholder="app\enums\Status" style="display:none;" onchange="canvasUpdateField()"
+                           title="Полное имя backed enum: значение — value варианта, подпись — label() или имя варианта">
                 </div>
                 <div>
                     <label class="body-title mb-10" style="font-size:12px;">Метод для сохранения</label>

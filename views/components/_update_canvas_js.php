@@ -414,7 +414,8 @@ $this->registerJsVar(
             document.getElementById('prop-file-multiple').checked  = !!item.fileMultiple;
             document.getElementById('prop-sel-multiple').checked    = !!item.selectMultiple;
             document.getElementById('prop-sel-source-type').value   = item.selectSourceType || 'method';
-            document.getElementById('prop-sel-source-val').value    = item.selectSourceVal  || '';
+            document.getElementById('prop-sel-source-val').value    = item.selectSourceType === 'enum' ? '' : (item.selectSourceVal || '');
+            document.getElementById('prop-sel-source-enum').value   = item.selectSourceType === 'enum' ? (item.selectSourceVal || '') : '';
             document.getElementById('prop-sel-save-method').value   = item.selectSaveMethod || '';
             document.getElementById('prop-image-aspect').value      = item.aspectRatio      || '';
 
@@ -459,7 +460,9 @@ $this->registerJsVar(
             item.fileMultiple   = document.getElementById('prop-file-multiple').checked;
             item.selectMultiple = document.getElementById('prop-sel-multiple').checked;
             item.selectSourceType  = document.getElementById('prop-sel-source-type').value;
-            item.selectSourceVal   = document.getElementById('prop-sel-source-val').value;
+            item.selectSourceVal   = item.selectSourceType === 'enum'
+                ? document.getElementById('prop-sel-source-enum').value.trim()
+                : document.getElementById('prop-sel-source-val').value;
             item.selectSaveMethod  = document.getElementById('prop-sel-save-method').value;
             item.aspectRatio       = document.getElementById('prop-image-aspect').value;
             item.roles = Array.from(document.querySelectorAll('.role-cb:checked')).map(cb => cb.value);
@@ -579,6 +582,15 @@ $this->registerJsVar(
         var imageGrp = document.getElementById('props-image-group');
         if (type && imageGrp) {
             imageGrp.style.display = type.value === 'image' ? 'block' : 'none';
+        }
+        // Источник enum — поле для имени класса вместо списка методов модели
+        var srcType = document.getElementById('prop-sel-source-type');
+        var srcVal  = document.getElementById('prop-sel-source-val');
+        var srcEnum = document.getElementById('prop-sel-source-enum');
+        if (srcType && srcVal && srcEnum) {
+            var isEnum = srcType.value === 'enum';
+            srcVal.style.display  = isEnum ? 'none' : '';
+            srcEnum.style.display = isEnum ? '' : 'none';
         }
     };
 

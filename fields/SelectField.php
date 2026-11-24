@@ -19,6 +19,12 @@ class SelectField extends Field
     public $publicSaveMethod = '';
 
     /**
+     * @var string|null FQCN backed enum — источник вариантов (selectSourceType: enum):
+     *                  значение — value варианта, подпись — label() варианта или его имя
+     */
+    public $enumClass;
+
+    /**
      * @inheritdoc
      * @param string $column Выводимое поле
      * @return array Массив с данным для GridView
