@@ -29,11 +29,14 @@ class PageUrlRule extends BaseObject implements UrlRuleInterface
 
     public function parseRequest($manager, $request): array|false
     {
-        $path = trim((string)$request->getPathInfo(), '/');
-        if ($path === '' || !$this->enabled()) {
+        if (!$this->enabled()) {
             return false;
         }
         $service = $this->service();
+        $path = $service->requestPath((string)$request->getPathInfo());
+        if ($path === '') {
+            return false;
+        }
         $controller = $service->controllerId;
         // Регистр не различаем: /About найдёт about, а контроллер сделает 301 на каноничный адрес
         $row = $service->resolve($path) ?? $service->resolve(mb_strtolower($path));
@@ -72,7 +75,7 @@ class PageUrlRule extends BaseObject implements UrlRuleInterface
             return false;
         }
         unset($params['path'], $params['id']);
-        return $path . ($params === [] ? '' : '?' . http_build_query($params));
+        return $path . $this->service()->urlSuffix() . ($params === [] ? '' : '?' . http_build_query($params));
     }
 
     private function enabled(): bool

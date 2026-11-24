@@ -36,10 +36,10 @@ class PageController extends Controller
         if (!$live && !$pages->canPreview((int)$page->id, $preview)) {
             throw new NotFoundHttpException('Страница не найдена.');
         }
-        // Каноничный адрес: пришли с другим регистром или слешем на конце — 301
-        // (правило страниц не проходит через UrlNormalizer, поэтому сравниваем путь как есть)
+        // Каноничный адрес — path + окончание адресов сайта (suffix urlManager): пришли с другим
+        // регистром, без слеша или с лишним — 301 (правило страниц не проходит через UrlNormalizer)
         $requested = (string)Yii::$app->request->getPathInfo();
-        if ($requested !== $page->path) {
+        if ($requested !== $page->path . $pages->urlSuffix()) {
             return $this->redirect($pages->url($page, $preview !== null ? ['preview' => $preview] : []), 301);
         }
         if (!$live) {
@@ -58,9 +58,10 @@ class PageController extends Controller
     /** Старый адрес страницы → новый. */
     public function actionRedirect(string $to, int $code = 301): Response
     {
-        $from = trim((string)Yii::$app->request->getPathInfo(), '/');
+        $pages = $this->pages();
+        $from = $pages->requestPath((string)Yii::$app->request->getPathInfo());
         PageRedirect::updateAll(['hits' => new \yii\db\Expression('[[hits]] + 1'), 'last_hit_at' => time()], ['from_path' => $from]);
-        return $this->redirect('/' . ltrim($to, '/'), $code === 302 ? 302 : 301);
+        return $this->redirect('/' . trim($to, '/') . $pages->urlSuffix(), $code === 302 ? 302 : 301);
     }
 
     public function actionSitemap(): Response

@@ -142,8 +142,12 @@ class Page extends ActiveRecord
             && ($this->published_at === null || (int)$this->published_at <= ($now ?? time()));
     }
 
+    /** Адрес страницы на сайте — как у Yii::$app->pages->url() (с окончанием адресов сайта). */
     public function getUrl(): string
     {
+        if (Yii::$app->has('pages')) {
+            return Yii::$app->get('pages')->url($this);
+        }
         return '/' . $this->path;
     }
 

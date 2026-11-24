@@ -191,6 +191,25 @@ class PageService extends Component
         return $this->_pages[$id];
     }
 
+    /**
+     * Окончание адресов сайта — suffix его urlManager ('/' в инструкции пакета, '.html', или пусто).
+     * Адреса страниц и редиректов строятся с ним, каноничный адрес страницы — path . suffix.
+     */
+    public function urlSuffix(): string
+    {
+        return Yii::$app->has('urlManager') ? (string)Yii::$app->getUrlManager()->suffix : '';
+    }
+
+    /** Путь страницы из pathInfo запроса: без окончания адресов сайта и слешей по краям. */
+    public function requestPath(string $pathInfo): string
+    {
+        $suffix = $this->urlSuffix();
+        if ($suffix !== '' && $suffix !== '/' && str_ends_with($pathInfo, $suffix)) {
+            $pathInfo = substr($pathInfo, 0, -strlen($suffix));
+        }
+        return trim($pathInfo, '/');
+    }
+
     /** Адрес страницы на сайте. */
     public function url(string|Page $pathOrPage, array $params = []): string
     {
