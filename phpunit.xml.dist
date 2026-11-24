@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Тесты пакета. Нужна пустая MySQL-база: bootstrap сам применяет миграции модуля и тестовые
+    таблицы (tests/_app/migrations), каждый тест работает в транзакции и откатывается.
+
+    Локальные доступы к БД — в phpunit.xml (git-ignored, копия этого файла) или в переменных
+    окружения YII2ADMIN_TEST_DSN / YII2ADMIN_TEST_USER / YII2ADMIN_TEST_PASSWORD.
+
+    Запуск из папки пакета: vendor/bin/phpunit, а если пакет подключён в приложение
+    (packages/yii2-admin) — ../../vendor/bin/phpunit.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         failOnWarning="true"
+         failOnNotice="true"
+         failOnDeprecation="false">
+    <testsuites>
+        <testsuite name="yii2-admin">
+            <directory>tests/unit</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="YII2ADMIN_TEST_DSN" value="mysql:host=127.0.0.1;dbname=yii2admin_test"/>
+        <env name="YII2ADMIN_TEST_USER" value="root"/>
+        <env name="YII2ADMIN_TEST_PASSWORD" value=""/>
+    </php>
+</phpunit>

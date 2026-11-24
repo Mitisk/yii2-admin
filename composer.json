@@ -18,6 +18,9 @@
     "yiisoft/yii2-bootstrap5": "~2.0.2",
     "yiisoft/yii2-symfonymailer": "~2.0.3"
   },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0 || ^13.0"
+  },
   "suggest": {
     "aws/aws-sdk-php": "Требуется, если вы планируете хранить файлы в Amazon S3",
     "yiisoft/yii2-imagine": "Требуется для манипуляций с изображениями (кроп, ресайз)"
@@ -28,7 +31,8 @@
     }
   },
   "scripts": {
-    "migrate": "php ../../yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations --interactive=0"
+    "migrate": "php ../../yii migrate --migrationPath=@vendor/mitisk/yii2-admin/migrations --interactive=0",
+    "test": "phpunit"
   },
   "extra": {
     "branch-alias": {

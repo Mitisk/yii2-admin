@@ -1,0 +1,3 @@
+# Тесты не нужны в vendor/ проектов, которые ставят пакет из Packagist
+/tests export-ignore
+/phpunit.xml.dist export-ignore

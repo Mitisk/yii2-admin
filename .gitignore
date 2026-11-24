@@ -8,3 +8,5 @@ composer.lock
 !*.min.js
 !assets/src/**/*.js
 !assets/src/**/*.css
+phpunit.xml
+.phpunit.cache/

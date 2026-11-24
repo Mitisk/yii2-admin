@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Mitisk\Yii2Admin\tests\_app\models;
+
+use yii\db\ActiveRecord;
+
+/**
+ * Тестовая сущность для универсального CRUD.
+ *
+ * @property int $id
+ * @property string $title
+ * @property int $published
+ * @property int $archived
+ * @property array|null $tags JSON-колонка: Yii отдаёт и принимает массив
+ */
+final class Note extends ActiveRecord
+{
+    public static function tableName(): string
+    {
+        return '{{%test_note}}';
+    }
+
+    public function rules(): array
+    {
+        return [
+            [['title'], 'required'],
+            [['title'], 'string', 'max' => 255],
+            [['published', 'archived'], 'integer'],
+            [['published', 'archived'], 'in', 'range' => [0, 1]],
+            [['tags'], 'safe'],
+        ];
+    }
+}
