@@ -19,9 +19,12 @@ use yii\rbac\DbManager;
  */
 final class TestApp
 {
-    public static function console(): void
+    /**
+     * @param bool $withModule подключить модуль admin, как в консольном конфиге проекта (§2.2 инструкции)
+     */
+    public static function console(bool $withModule = false): void
     {
-        new \yii\console\Application([
+        $config = [
             'id' => 'yii2admin-test-console',
             'basePath' => __DIR__ . '/_app',
             'vendorPath' => self::vendorPath(),
@@ -30,7 +33,12 @@ final class TestApp
             'controllerMap' => [
                 'migrate' => ['class' => MigrateController::class],
             ],
-        ]);
+        ];
+        if ($withModule) {
+            $config['bootstrap'] = ['admin'];
+            $config['modules'] = ['admin' => ['class' => Module::class]];
+        }
+        new \yii\console\Application($config);
         Yii::$app->errorHandler->unregister();
     }
 

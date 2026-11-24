@@ -63,17 +63,24 @@ class Page extends ActiveRecord
 
     public function behaviors(): array
     {
-        $adminId = static function (): ?int {
-            if (!Yii::$app->has('adminUser')) {
-                return null;
-            }
-            $user = Yii::$app->get('adminUser');
-            return $user->getIsGuest() ? null : (int)$user->getId();
-        };
         return [
             TimestampBehavior::class,
-            ['class' => BlameableBehavior::class, 'value' => $adminId],
+            // Строка-callable, а не замыкание: модель остаётся сериализуемой (кэш целиком)
+            ['class' => BlameableBehavior::class, 'value' => [self::class, 'currentAdminId']],
         ];
+    }
+
+    /**
+     * Автор правки — вошедший администратор. В консоли (миграции, команды) автора нет:
+     * adminUser там — веб-компонент, и обращение к нему требует сессии.
+     */
+    public static function currentAdminId(): ?int
+    {
+        if (!Yii::$app instanceof \yii\web\Application || !Yii::$app->has('adminUser')) {
+            return null;
+        }
+        $user = Yii::$app->get('adminUser');
+        return $user->getIsGuest() ? null : (int)$user->getId();
     }
 
     public function rules(): array
