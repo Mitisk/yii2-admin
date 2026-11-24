@@ -56,6 +56,7 @@ final class ReservedAlias
         'sitemap',
         'log',
         'model-info',
+        'waf',
     ];
 
     /**

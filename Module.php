@@ -165,6 +165,9 @@ final class Module extends \yii\base\Module implements BootstrapInterface
                     Yii::$app->response->redirect(['/admin/default/upgrade'])->send();
                     return false;
                 }
+                // Настройки WAF живут в его файле в runtime; если папку очистили при выкладке —
+                // возвращаем файл из копии в базе (без пакета WAF ничего не делает)
+                \Mitisk\Yii2Admin\components\WafBridge::heal();
             }
         }
         return parent::beforeAction($action);

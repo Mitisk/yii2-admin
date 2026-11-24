@@ -112,6 +112,18 @@ use Mitisk\Yii2Admin\components\MenuHelper;
                         </a>
                     </li>
 
+                    <?php /* Раздел появляется сам, если в проекте установлен mitisk/yii2-lightweight-waf */ ?>
+                    <?php if (\Mitisk\Yii2Admin\components\WafBridge::isInstalled()): ?>
+                        <li class="menu-item <?= MenuHelper::build([
+                            ['href' => \yii\helpers\Url::to(['/admin/waf/index']), 'text' => 'Защита']
+                        ])[0]['_active'] ? 'active' : '' ?>">
+                            <a href="<?= \yii\helpers\Url::to(['/admin/waf/index']) ?>">
+                                <div class="icon"><i class="icon-shield"></i></div>
+                                <div class="text">Защита</div>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
                     <?php if (Yii::$app->user->can('superAdmin')): ?>
                         <li class="menu-item <?= MenuHelper::build([
                             ['href' => \yii\helpers\Url::to(['/admin/components/index']), 'text'=>'Компоненты']

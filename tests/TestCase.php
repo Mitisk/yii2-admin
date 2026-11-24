@@ -21,6 +21,8 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     {
         parent::setUp();
         TestApp::web();
+        // Кэш настроек — статический: откат транзакции прошлого теста его не сбрасывает
+        \Mitisk\Yii2Admin\models\Settings::clearCache();
         Yii::$app->db->beginTransaction();
     }
 
