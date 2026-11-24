@@ -1,6 +1,8 @@
 <?php
 use yii\widgets\ActiveForm;
 use yii\helpers\Html;
+use yii\helpers\Url;
+use Mitisk\Yii2Admin\models\AdminUser;
 
 /* @var $this yii\web\View */
 /* @var $model \Mitisk\Yii2Admin\models\AdminUser */
@@ -11,82 +13,22 @@ use yii\helpers\Html;
 
 \Mitisk\Yii2Admin\assets\UserFormAsset::register($this);
 
-$this->registerCss("
-.rbac-section {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 20px;
-    margin-bottom: 24px;
-}
-.rbac-title {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 15px;
-}
-.role-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    margin-bottom: 8px;
-}
-.role-item:last-child {
-    margin-bottom: 0;
-}
-.role-name {
-    font-weight: 500;
-    color: #007bff;
-}
-.role-description {
-    font-size: 13px;
-    color: #6c757d;
-    margin-left: 10px;
-}
-/* Восстановление нативного чекбокса и размеров только в RBAC-блоке */
-.rbac-checkbox-list .form-check-input {
-  appearance: auto !important;
-  -webkit-appearance: auto !important;
-  -moz-appearance: auto !important;
+$assigned = array_keys($assignedRoles);
+$canManageRoles = Yii::$app->user->can('manageUserRoles');
+$isSelf = !$model->isNewRecord && (int) $model->id === (int) Yii::$app->user->id;
+$isActive = (int) $model->status === AdminUser::STATUS_ACTIVE;
+$displayName = trim((string) ($model->name ?: $model->username));
+$authManager = Yii::$app->authManager;
 
-  position: static !important;
-  display: inline-block !important;
-  width: 15px !important;
-  height: 15px !important;
-  margin: 0;
-  margin-right: .5rem !important;
+// Роли, которые назначены, но текущему администратору недоступны для изменения
+$lockedRoles = array_values(array_diff($assigned, array_keys($availableRoles)));
 
-  transform: none !important;
-  scale: 1 !important;
-  opacity: 1 !important;
-  z-index: auto !important;
-  pointer-events: auto !important;
-
-  background: initial !important;          /* убрать кастомные bg-спрайты */
-  background-image: none !important;
-  border: 1px solid #adb5bd !important;    /* аккуратная рамка по умолчанию */
-  border-radius: .25rem !important;
-
-  /* Цвет галочки и акцента — избегайте белого ! */
-  accent-color: #0d6efd; /* или ваш брендовый цвет */
-}
-
-/* Кликабельность по подписи */
-.rbac-checkbox-list .form-check-label {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  font-size: 12px;
-}
-
-/* На всякий случай снять блокировки кликов с контейнера */
-.rbac-checkbox-list, .rbac-checkbox-list * {
-  pointer-events: auto !important;
-}
-");
-
-$selected = array_keys($assignedRoles);
+$formatter = Yii::$app->formatter;
+$moments = array_filter([
+    'Создан' => $model->created_at,
+    'Изменён' => $model->updated_at,
+    'Был в сети' => $model->online_at,
+]);
 ?>
 
 <?php if (isset($maps) && !empty($maps)): ?>
@@ -112,108 +54,74 @@ $selected = array_keys($assignedRoles);
         'errorOptions' => ['class' => 'col-lg-7 invalid-feedback'],
     ],
     'options' => [
-        'class' => 'form-add-new-user form-style-2',
+        'class' => 'form-add-new-user form-style-2 uf-form',
         'enctype' => 'multipart/form-data'
     ]
 ]) ?>
     <?php ob_start(); ?>
-    <div class="wg-box widget-content-inner active">
-        <div class="left">
-            <fieldset class="title mb-24">
-                <div class="body-title mb-10">Аватар</div>
-                <input type="file" name="files" data-fileuploader-default="<?php echo $model->getAvatar(); ?>" data-fileuploader-files='<?php echo isset($avatar) ? json_encode(array($avatar)) : '';?>'>
-            </fieldset>
+    <div class="widget-content-inner active uf-layout">
 
-            <!-- RBAC Роли и разрешения -->
-            <div class="rbac-section">
-                <div class="rbac-title">
-                    <i class="icon-shield"></i> Роли и разрешения
+        <aside class="uf-side">
+            <div class="uf-card uf-profile">
+                <div class="uf-profile__avatar">
+                    <input type="file" name="files" data-fileuploader-default="<?php echo $model->getAvatar(); ?>" data-fileuploader-files='<?php echo isset($avatar) ? json_encode(array($avatar)) : '';?>'>
                 </div>
+                <div class="uf-profile__name" id="uf-profile-name" data-empty="Новый пользователь"><?= Html::encode($displayName !== '' ? $displayName : 'Новый пользователь') ?></div>
+                <div class="uf-profile__login" id="uf-profile-login"<?= $model->username ? '' : ' hidden' ?>>@<span><?= Html::encode((string) $model->username) ?></span></div>
+                <div class="uf-chip <?= $isActive ? 'uf-chip--ok' : 'uf-chip--off' ?>" id="uf-profile-status"><?= $isActive ? 'Активен' : 'Заблокирован' ?></div>
 
-                <?php if (Yii::$app->user->can('manageUserRoles')): ?>
-                    <fieldset class="roles">
-                        <div class="body-title mb-10">Назначить роли</div>
-
-                        <div class="rbac-checkbox-list">
-                            <?php foreach ($availableRoles as $value => $label): ?>
-                                <?php $id = 'role-' . Html::encode($value); ?>
-                                <div class="form-check mb-2">
-                                    <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            id="<?= $id ?>"
-                                            name="user_roles[]"
-                                            value="<?= Html::encode($value) ?>"
-                                        <?= in_array($value, $selected, true) ? 'checked' : '' ?>
-                                    >
-                                    <label class="form-check-label" for="<?= $id ?>">
-                                        <?= Html::encode($label) ?>
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </fieldset>
+                <?php if ($moments): ?>
+                    <dl class="uf-meta">
+                        <?php foreach ($moments as $label => $time): ?>
+                            <div class="uf-meta__row">
+                                <dt><?= $label ?></dt>
+                                <dd title="<?= Html::encode($formatter->asDatetime($time, 'd MMMM y, HH:mm')) ?>"><?= Html::encode($formatter->asRelativeTime($time)) ?></dd>
+                            </div>
+                        <?php endforeach; ?>
+                    </dl>
                 <?php else: ?>
-                    <div class="alert alert-info">
-                        <i class="icon-info"></i>
-                        У вас нет прав на управление ролями пользователей
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!empty($assignedRoles)): ?>
-                    <fieldset class="current-roles mb-24">
-                        <div class="body-title mb-10">Текущие роли</div>
-                        <div class="roles-list">
-                            <?php foreach ($assignedRoles as $roleName): ?>
-                                <?php
-                                $authManager = Yii::$app->authManager;
-                                $role = $authManager->getRole($roleName);
-                                ?>
-                                <div class="role-item">
-                                    <span class="role-name"><?= Html::encode($roleName) ?></span>
-                                    <?php if ($role && $role->description): ?>
-                                        <span class="role-description"><?= Html::encode($role->description) ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </fieldset>
+                    <p class="uf-profile__hint">Аватар можно загрузить сейчас или позже — в карточке пользователя.</p>
                 <?php endif; ?>
             </div>
+        </aside>
 
-            <?php if ($model->created_at): ?>
-                <div class="body-title">Дата регистрации</div>
-                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->created_at, 'd MMMM y HH:mm:ss') ?></div>
-            <?php endif ?>
-            <?php if ($model->updated_at): ?>
-                <div class="body-title mt-2">Дата изменения</div>
-                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->updated_at, 'd MMMM y HH:mm:ss') ?></div>
-            <?php endif ?>
-            <?php if ($model->online_at): ?>
-                <div class="body-title mt-2">Дата активности</div>
-                <div class="body-text"><?= Yii::$app->formatter->asDatetime($model->online_at, 'd MMMM y HH:mm:ss') ?></div>
-            <?php endif ?>
-        </div>
+        <div class="uf-main">
 
-        <div class="right flex-grow">
-            <fieldset class="name mb-24">
-                <?= $form->field($model, 'status')->dropDownList([
-                    \Mitisk\Yii2Admin\models\AdminUser::STATUS_BLOCKED => 'Заблокирован',
-                    \Mitisk\Yii2Admin\models\AdminUser::STATUS_ACTIVE => 'Активен'
-                ], ['class' => 'tom-select']) ?>
-            </fieldset>
+            <section class="uf-card">
+                <div class="uf-card__title">Основное</div>
+                <p class="uf-card__lead">Логин и email нужны для входа и писем, имя видно в админке.</p>
 
-            <fieldset class="name mb-24">
-                <?= $form->field($model, 'username')->textInput(['maxlength' => 255])->label('Логин <span class="tf-color-1">*</span>') ?>
-            </fieldset>
+                <div class="uf-grid">
+                    <fieldset class="name">
+                        <?= $form->field($model, 'username')->textInput(['maxlength' => 255, 'autocomplete' => 'off'])->label('Логин <span class="tf-color-1">*</span>') ?>
+                    </fieldset>
 
-            <fieldset class="name mb-24">
-                <?= $form->field($model, 'name')->textInput(['maxlength' => 255]) ?>
-            </fieldset>
+                    <fieldset class="name">
+                        <?= $form->field($model, 'name')->textInput(['maxlength' => 255, 'placeholder' => 'Как показывать в админке']) ?>
+                    </fieldset>
 
-            <fieldset class="email mb-24">
-                <?= $form->field($model, 'email')->textInput(['maxlength' => 255])->label('Email <span class="tf-color-1">*</span>') ?>
-            </fieldset>
+                    <fieldset class="email">
+                        <?= $form->field($model, 'email')->textInput(['maxlength' => 255, 'type' => 'email', 'autocomplete' => 'off'])->label('Email <span class="tf-color-1">*</span>') ?>
+                    </fieldset>
+
+                    <div class="uf-status">
+                        <div class="body-title mb-10">Статус</div>
+                        <div class="uf-switch" role="radiogroup" aria-label="Статус">
+                            <?php foreach ([AdminUser::STATUS_ACTIVE => 'Активен', AdminUser::STATUS_BLOCKED => 'Заблокирован'] as $value => $label): ?>
+                                <label class="uf-switch__item<?= $value === AdminUser::STATUS_BLOCKED ? ' uf-switch__item--off' : '' ?>">
+                                    <input type="radio" name="<?= Html::getInputName($model, 'status') ?>" value="<?= $value ?>"
+                                        <?= ((int) $model->status === $value) ? 'checked' : '' ?><?= $isSelf ? ' disabled' : '' ?>>
+                                    <span><?= $label ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="uf-hint"><?= $isSelf
+                            ? 'Свой аккаунт заблокировать нельзя.'
+                            : 'Заблокированный пользователь не может войти в админку.' ?></div>
+                        <?= Html::error($model, 'status', ['class' => 'uf-error']) ?>
+                    </div>
+                </div>
+            </section>
 
             <?php
             // Секрет, который подключают сейчас: живёт в сессии до подтверждения кодом.
@@ -228,9 +136,9 @@ $selected = array_keys($assignedRoles);
                 \Mitisk\Yii2Admin\models\LoginForm::MFA => ['Только код', 'Без пароля — по коду из приложения', null],
             ];
             ?>
-            <div class="uf-auth" id="uf-auth">
-                <div class="uf-auth__title">Способ входа</div>
-                <p class="uf-auth__lead">Как пользователь подтверждает, что это он, когда входит в админку.</p>
+            <section class="uf-card uf-auth" id="uf-auth">
+                <div class="uf-card__title">Способ входа</div>
+                <p class="uf-card__lead">Как пользователь подтверждает, что это он, когда входит в админку.</p>
 
                 <div class="uf-methods" role="radiogroup" aria-label="Способ входа">
                     <?php foreach ($authMethods as $value => [$title, $text, $badge]): ?>
@@ -334,8 +242,47 @@ $selected = array_keys($assignedRoles);
                 <div class="uf-nopass" id="uf-nopass-note"<?= $model->usesPassword() ? ' hidden' : '' ?>>
                     Вход без пароля: при входе спрашивается только код из приложения.<?= $model->hasNoPassword() ? '' : ' Прежний пароль перестанет действовать.' ?>
                 </div>
-            </div>
+            </section>
 
+            <section class="uf-card">
+                <div class="uf-card__title">Роли</div>
+                <?php if ($canManageRoles): ?>
+                    <p class="uf-card__lead">Роль определяет, какие разделы админки доступны. Можно отметить несколько.</p>
+                    <div class="uf-roles">
+                        <?php foreach ($availableRoles as $value => $label): ?>
+                            <?php $checked = in_array($value, $assigned, true); ?>
+                            <label class="uf-role<?= $checked ? ' is-active' : '' ?>">
+                                <input type="checkbox" name="user_roles[]" value="<?= Html::encode($value) ?>"<?= $checked ? ' checked' : '' ?>>
+                                <span class="uf-role__body">
+                                    <span class="uf-role__title"><?= Html::encode($label) ?></span>
+                                    <span class="uf-role__code"><?= Html::encode($value) ?></span>
+                                </span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($lockedRoles): ?>
+                        <div class="uf-roles-locked">
+                            <span class="uf-hint">Назначены, но изменить их вы не можете:</span>
+                            <?php foreach ($lockedRoles as $roleName): ?>
+                                <?php $role = $authManager->getRole($roleName); ?>
+                                <span class="uf-chip"><?= Html::encode($role && $role->description ? $role->description : $roleName) ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <p class="uf-card__lead">Роли назначает администратор с правом управления ролями.</p>
+                    <div class="uf-roles-locked">
+                        <?php if ($assigned): ?>
+                            <?php foreach ($assigned as $roleName): ?>
+                                <?php $role = $authManager->getRole($roleName); ?>
+                                <span class="uf-chip"><?= Html::encode($role && $role->description ? $role->description : $roleName) ?></span>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <span class="uf-hint">Ролей пока нет.</span>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </section>
         </div>
     </div>
     <?php $mainContent = ob_get_clean(); ?>
@@ -345,7 +292,7 @@ $selected = array_keys($assignedRoles);
         <?= $mainContent ?>
 
         <?php foreach ($maps as $map): ?>
-            <div class="widget-content-inner" style="display: none;">
+            <div class="widget-content-inner wg-box" style="display: none;">
                 <?php
                 if (isset($extraModels[$map->id])) {
                     echo $this->render($map->view, [
@@ -363,7 +310,8 @@ $selected = array_keys($assignedRoles);
 
     <?php endif; ?>
 
-    <div class="bot">
-        <button class="tf-button w180" type="submit">Сохранить</button>
+    <div class="uf-actions">
+        <button class="tf-button w180" type="submit"><?= $model->isNewRecord ? 'Создать' : 'Сохранить' ?></button>
+        <a class="uf-actions__cancel" href="<?= Url::to(['index']) ?>">Отмена</a>
     </div>
 <?php ActiveForm::end() ?>

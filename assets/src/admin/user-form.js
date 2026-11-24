@@ -76,6 +76,53 @@ import qrcode from '../lib/qrcode-generator.mjs';
         });
     }
 
+    // --- Карточка профиля слева: имя, логин и статус обновляются по мере ввода ---
+
+    var profileName = byId('uf-profile-name');
+    var profileLogin = byId('uf-profile-login');
+    var profileStatus = byId('uf-profile-status');
+    var nameInput = form.querySelector('input[name$="[name]"]');
+    var loginInput = form.querySelector('input[name$="[username]"]');
+    var statusInputs = Array.prototype.slice.call(form.querySelectorAll('input[name$="[status]"]'));
+
+    function refreshProfile() {
+        var login = loginInput ? loginInput.value.trim() : '';
+        var name = nameInput ? nameInput.value.trim() : '';
+        if (profileName) {
+            profileName.textContent = name || login || profileName.getAttribute('data-empty') || '';
+        }
+        if (profileLogin) {
+            profileLogin.hidden = !login;
+            profileLogin.querySelector('span').textContent = login;
+        }
+        var checked = statusInputs.filter(function (input) {
+            return input.checked;
+        })[0];
+        if (profileStatus && checked) {
+            var active = checked.value === '1';
+            profileStatus.textContent = active ? 'Активен' : 'Заблокирован';
+            profileStatus.classList.toggle('uf-chip--ok', active);
+            profileStatus.classList.toggle('uf-chip--off', !active);
+        }
+    }
+
+    [nameInput, loginInput].forEach(function (input) {
+        if (input) {
+            input.addEventListener('input', refreshProfile);
+        }
+    });
+    statusInputs.forEach(function (input) {
+        input.addEventListener('change', refreshProfile);
+    });
+
+    // --- Роли: подсветка отмеченных ---
+
+    Array.prototype.slice.call(form.querySelectorAll('.uf-role input')).forEach(function (input) {
+        input.addEventListener('change', function () {
+            input.closest('.uf-role').classList.toggle('is-active', input.checked);
+        });
+    });
+
     // --- Способ входа ---
 
     var auth = byId('uf-auth');

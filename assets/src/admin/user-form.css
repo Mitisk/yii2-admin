@@ -4,31 +4,344 @@
  * Размеры в px: корневой шрифт темы — 10px.
  */
 
-.uf-auth {
-    margin-bottom: 24px;
-    padding: 20px;
-    border: 1px solid var(--Stroke, #e6e9ee);
-    border-radius: 14px;
-    background: var(--bg-table-1, #f8fafc);
-}
+/* --- Раскладка: слева карточка профиля, справа секции --- */
 
-.uf-auth [hidden] {
+.uf-form [hidden] {
     display: none !important;
 }
 
-.uf-auth__title {
+/* Двойной класс: тема задаёт .widget-content-inner.active как flex */
+.uf-form .uf-layout.widget-content-inner {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.uf-main {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+}
+
+.uf-card {
+    margin: 0;
+    padding: 24px;
+    border-radius: 14px;
+    background: var(--White, #fff);
+    box-shadow: 0 4px 24px 2px rgba(20, 25, 38, .05);
+}
+
+.uf-card__title {
     margin: 0 0 4px;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
-    line-height: 22px;
+    line-height: 26px;
     color: var(--Heading, #111);
 }
 
-.uf-auth__lead {
-    margin: 0 0 16px;
+.uf-card__lead {
+    margin: 0 0 20px;
     font-size: 13px;
     line-height: 19px;
     color: var(--Body-Text, #575864);
+}
+
+.uf-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 24px;
+    align-items: start;
+}
+
+.uf-grid fieldset {
+    margin: 0;
+    min-width: 0;
+}
+
+.uf-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--Body-Text, #575864);
+}
+
+/* --- Карточка профиля --- */
+
+.uf-side {
+    position: sticky;
+    top: 100px;
+}
+
+.uf-profile {
+    text-align: center;
+}
+
+.uf-profile__avatar {
+    margin: 0 auto 16px;
+    max-width: 168px;
+}
+
+.uf-profile__name {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 24px;
+    color: var(--Heading, #111);
+    overflow-wrap: anywhere;
+}
+
+.uf-profile__login {
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--Body-Text, #575864);
+    overflow-wrap: anywhere;
+}
+
+.uf-profile__hint {
+    margin: 16px 0 0;
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--Body-Text, #575864);
+}
+
+.uf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--bg-table-1, #f1f5f9);
+    color: var(--Heading, #111);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+}
+
+.uf-profile .uf-chip {
+    margin-top: 12px;
+}
+
+.uf-chip--ok,
+.uf-chip--off {
+    padding-left: 8px;
+}
+
+.uf-chip--ok::before,
+.uf-chip--off::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.uf-chip--ok {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.uf-chip--off {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.uf-meta {
+    margin: 20px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--Stroke, #e6e9ee);
+    text-align: left;
+}
+
+.uf-meta__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0;
+    font-size: 13px;
+    line-height: 19px;
+}
+
+.uf-meta dt {
+    font-weight: 400;
+    color: var(--Body-Text, #575864);
+}
+
+.uf-meta dd {
+    margin: 0;
+    font-weight: 600;
+    color: var(--Heading, #111);
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* --- Статус: переключатель из двух положений --- */
+
+.uf-switch {
+    display: inline-grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--bg-table-1, #f1f5f9);
+}
+
+.uf-switch__item {
+    position: relative;
+    margin: 0;
+    cursor: pointer;
+}
+
+.uf-switch__item input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.uf-switch__item span {
+    display: block;
+    padding: 9px 18px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--Body-Text, #575864);
+    text-align: center;
+    white-space: nowrap;
+    transition: background-color .15s, color .15s, box-shadow .15s;
+}
+
+.uf-switch__item input:checked + span {
+    background: var(--White, #fff);
+    color: #15803d;
+    box-shadow: 0 1px 4px rgba(20, 25, 38, .12);
+}
+
+.uf-switch__item--off input:checked + span {
+    color: #b91c1c;
+}
+
+.uf-switch__item input:focus-visible + span {
+    outline: 2px solid var(--Main, #2275fc);
+    outline-offset: 1px;
+}
+
+.uf-switch__item input:disabled,
+.uf-switch__item input:disabled + span {
+    cursor: not-allowed;
+}
+
+.uf-switch__item input:disabled:not(:checked) + span {
+    opacity: .5;
+}
+
+/* --- Роли --- */
+
+.uf-roles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.uf-role {
+    position: relative;
+    display: block;
+    margin: 0;
+    padding: 12px 14px 12px 42px;
+    border: 1px solid var(--Stroke, #e6e9ee);
+    border-radius: 12px;
+    background: var(--White, #fff);
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
+}
+
+.uf-role:hover {
+    border-color: var(--Main, #2275fc);
+}
+
+.uf-role.is-active {
+    border-color: var(--Main, #2275fc);
+    background: rgba(34, 117, 252, .05);
+}
+
+/* Тема прячет нативные флажки и рисует свои — здесь нужен обычный */
+.uf-role input[type="checkbox"] {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    opacity: 1;
+    appearance: auto;
+    -webkit-appearance: checkbox;
+    accent-color: var(--Main, #2275fc);
+    cursor: pointer;
+}
+
+.uf-role__title {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--Heading, #111);
+    overflow-wrap: anywhere;
+}
+
+.uf-role__code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 16px;
+    color: var(--Body-Text, #575864);
+    overflow-wrap: anywhere;
+}
+
+.uf-roles-locked {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.uf-roles + .uf-roles-locked {
+    margin-top: 16px;
+}
+
+.uf-roles-locked .uf-hint {
+    margin: 0;
+}
+
+/* --- Нижняя панель --- */
+
+.uf-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 0;
+    padding: 14px 24px;
+    border-radius: 14px;
+    background: var(--White, #fff);
+    box-shadow: 0 -2px 24px 2px rgba(20, 25, 38, .08);
+}
+
+.uf-actions__cancel {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--Body-Text, #575864);
+}
+
+.uf-actions__cancel:hover {
+    color: var(--Main, #2275fc);
 }
 
 /* --- Три способа входа --- */
@@ -119,9 +432,8 @@
 .uf-mfa {
     margin-top: 16px;
     padding: 16px;
-    border: 1px solid var(--Stroke, #e6e9ee);
     border-radius: 12px;
-    background: var(--White, #fff);
+    background: var(--bg-table-1, #f8fafc);
 }
 
 .uf-mfa__status {
@@ -254,7 +566,7 @@
     padding: 5px 10px;
     border: 1px dashed var(--Stroke, #e6e9ee);
     border-radius: 8px;
-    background: var(--bg-table-1, #f8fafc);
+    background: var(--White, #fff);
     color: var(--Heading, #111);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 14px;
@@ -330,20 +642,9 @@
     margin: 16px 0 0;
 }
 
-.uf-auth .uf-hint {
-    margin-top: 6px;
-    font-size: 12px;
-    line-height: 17px;
-    color: var(--Body-Text, #575864);
-}
-
 /* Ошибки полей формы: тема скрывает .invalid-feedback, пока поле не помечено Bootstrap-классом */
 .form-add-new-user .invalid-feedback:not(:empty) {
     display: block;
-}
-
-.role-item:hover {
-    background-color: var(--hv-item, #e3f2fd);
 }
 
 @media (max-width: 1199px) {
@@ -352,9 +653,27 @@
     }
 }
 
+@media (max-width: 991px) {
+    .uf-form .uf-layout.widget-content-inner {
+        grid-template-columns: 1fr;
+    }
+
+    .uf-side {
+        position: static;
+    }
+}
+
 @media (max-width: 575px) {
-    .uf-auth {
-        padding: 14px;
+    .uf-card {
+        padding: 16px;
+    }
+
+    .uf-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .uf-actions {
+        padding: 12px 16px;
     }
 
     .uf-mfa__setup {

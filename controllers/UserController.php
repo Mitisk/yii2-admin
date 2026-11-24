@@ -241,7 +241,16 @@ class UserController extends BaseController
             // Получаем роли из POST данных
             $postRoles = Yii::$app->request->post('user_roles', []);
 
-            if ($model->saveUser()) {
+            // Свой аккаунт заблокировать нельзя: следующий же запрос выкинет из админки,
+            // а разблокировать будет некому, если администратор один
+            $blocksSelf = (int) $model->id === (int) Yii::$app->user->id
+                && (int) $model->status !== AdminUser::STATUS_ACTIVE;
+            if ($blocksSelf) {
+                $model->status = AdminUser::STATUS_ACTIVE;
+                $model->addError('status', 'Свой аккаунт заблокировать нельзя.');
+            }
+
+            if (!$blocksSelf && $model->saveUser()) {
                 // Обновляем роли пользователя
                 $this->updateUserRoles($id, $postRoles);
 

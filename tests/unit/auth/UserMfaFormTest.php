@@ -248,10 +248,35 @@ final class UserMfaFormTest extends TestCase
 
         self::assertIsString($html);
         self::assertMatchesRegularExpression(
-            '/<option value="' . AdminUser::STATUS_ACTIVE . '" selected[^>]*>Активен/u',
+            '/name="AdminUser\[status\]" value="' . AdminUser::STATUS_ACTIVE . '"\s+checked/u',
             $html,
             'В форме создания по умолчанию выбран статус «Заблокирован»'
         );
+    }
+
+    public function testOwnAccountCannotBeBlocked(): void
+    {
+        $me = AdminUser::findOne(self::ADMIN_ID);
+
+        $html = $this->save($me, ['auth_type' => LoginForm::PASSWORD, 'status' => AdminUser::STATUS_BLOCKED]);
+
+        self::assertIsString($html);
+        self::assertStringContainsString('Свой аккаунт заблокировать нельзя', $html);
+        $me->refresh();
+        self::assertSame(AdminUser::STATUS_ACTIVE, (int) $me->status);
+    }
+
+    public function testRoleOutOfEditorsReachIsShownButNotEditable(): void
+    {
+        $editor = $this->createUser('editor', ['updateUsers', 'manageUserRoles', 'accessAdmin']);
+        $user = $this->user(LoginForm::PASSWORD);
+        Yii::$app->authManager->assign(Yii::$app->authManager->getRole('admin'), $user->id);
+        $this->loginAs((int) $editor->id);
+
+        $html = $this->form($user);
+
+        self::assertStringNotContainsString('name="user_roles[]" value="admin"', $html, 'Роль admin назначает только супер-администратор');
+        self::assertStringContainsString('изменить их вы не можете', $html);
     }
 
     public function testAvatarPlaceholderIsNotSavedAsAvatar(): void
