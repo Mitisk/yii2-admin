@@ -74,6 +74,9 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 
 .ab-root.is-collapsed .ab-bar { display: none; }
 
+/* Кнопки не сжимаются: на узком экране остров прокручивается, а не плющит иконки до 18px */
+.ab-bar > *, .ab-ctx > * { flex: none; }
+
 .ab-btn {
     position: relative;
     display: inline-flex;
@@ -292,4 +295,14 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
     .ab-btn[data-tip]::after { display: none; }
     .ab-toasts { width: calc(100vw - 24px); }
     .ab-toast { text-align: center; }
+    /* Статус записи — цветная точка вместо надписи (текст остаётся для экранного диктора) */
+    .ab-ctx-status { width: 8px; height: 8px; padding: 0; border-radius: 50%; font-size: 0; overflow: hidden; margin: 0 4px; }
+    /* «Свернуть» всегда у правого края острова, остальное доступно прокруткой */
+    .ab-collapse { position: sticky; right: 0; background: var(--ab-bg-solid); box-shadow: -10px 0 8px -6px var(--ab-bg-solid); }
+}
+
+@media (max-width: 480px) {
+    .ab-sep { display: none; }
+    .ab-btn, .ab-btn.is-icon { width: 32px; height: 32px; }
+    .ab-ctx .ab-btn, .ab-ctx .ab-btn.is-icon { width: 30px; }
 }

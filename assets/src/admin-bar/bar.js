@@ -249,7 +249,7 @@
         bar.appendChild(themeBtn);
 
         // Свернуть
-        var collapseBtn = el('<button type="button" class="ab-btn is-icon" data-tip="Свернуть (' + esc((s.prefs || {}).hotkey || 'Alt+Shift+A') + ')">' + icon('minus') + '</button>');
+        var collapseBtn = el('<button type="button" class="ab-btn is-icon ab-collapse" data-tip="Свернуть (' + esc((s.prefs || {}).hotkey || 'Alt+Shift+A') + ')">' + icon('minus') + '</button>');
         collapseBtn.addEventListener('click', this.setCollapsed.bind(this, true));
         bar.appendChild(collapseBtn);
 
