@@ -7,4 +7,6 @@ npx --yes esbuild src/admin-bar/bar.js    --minify --target=es2017 --legal-comme
 npx --yes esbuild src/admin-bar/loader.js --minify --target=es2017 --legal-comments=none --outfile=admin-bar/js/admin-bar-loader.min.js
 npx --yes esbuild src/admin-bar/blocks.js --minify --target=es2017 --legal-comments=none --outfile=admin-bar/js/admin-bar-blocks.min.js
 npx --yes esbuild src/admin-bar/bar.css   --minify --outfile=admin-bar/css/admin-bar.min.css
-ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css
+# Умолчания для обычной разметки в рабочей области админки (AppAsset)
+npx --yes esbuild src/admin/base.css      --minify --outfile=css/base.min.css
+ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css

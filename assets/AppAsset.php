@@ -20,6 +20,8 @@ class AppAsset extends AssetBundle
         'icon/style.min.css',
         'css/site.min.css',
         'css/admin-links.min.css',
+        // Последним: умолчания для обычной разметки (голые теги, .table, .btn, LinkPager) — src/admin/base.css
+        'css/base.min.css',
     ];
 
     public $js = [

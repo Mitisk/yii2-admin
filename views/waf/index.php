@@ -188,7 +188,7 @@ $this->params['recordCount'] = $blocksTotal;
                     <textarea name="Waf[allowIps]" id="waf-allow-ips" rows="4" placeholder="203.0.113.5&#10;10.0.0.0/8"><?= Html::encode(implode("\n", $config->allowIps)) ?></textarea>
                     <div class="body-text">
                         По одному адресу или сети (CIDR) в строке.
-                        <a href="javascript:void(0);" id="waf-add-my-ip" data-ip="<?= Html::encode($myIp) ?>">Добавить мой адрес (<?= Html::encode($myIp) ?>)</a>
+                        <a href="javascript:void(0);" id="waf-add-my-ip" style="color:var(--Main);" data-ip="<?= Html::encode($myIp) ?>">Добавить мой адрес (<?= Html::encode($myIp) ?>)</a>
                     </div>
                 </fieldset>
                 <?php foreach ([

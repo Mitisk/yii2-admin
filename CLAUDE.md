@@ -1046,6 +1046,16 @@ class ReportsController extends ExtAdminController
   `vendor/mitisk/yii2-admin/views/<controller_id>/`.
 - Лейаут админки (меню, шапка, flash) применяется автоматически; доступны классы
   темы (`wg-box`, `tf-button`, `body-title` и т.д.).
+- **Вёрстка своих экранов.** Обычная разметка Yii выглядит в стиле темы без её классов: `GridView` с
+  классом `table` (умолчание Yii), `DetailView`, `LinkPager`, `ActiveForm` (`form-group`, `form-control`,
+  `hint-block`, ошибки), кнопки `btn btn-primary|success|danger|default|outline-*`, `alert alert-*`, `badge`,
+  таблица без класса, заголовки, списки, `code`, `pre`, `dl`, `details`. Это слой умолчаний
+  `assets/src/admin/base.css` (собирается в `css/base.min.css`, подключается последним в `AppAsset`).
+  Достаточно обернуть содержимое в `<div class="wg-box">`. Поля фильтра в ряд —
+  `<form class="flex gap10 flex-wrap">`. Свои классы и классы темы сильнее умолчаний.
+  Правила слоя: только внутри `.main-content-wrap`; голые теги — только без атрибута `class`;
+  блок без класса получает нормальный размер текста, только если внутри него нет элементов с классами.
+  Меняете `base.css` — `sh assets/src/build.sh` и проверка, что встроенные страницы админки не сдвинулись.
 - `Yii::$app->user` внутри — админский пользователь (`AdminUser`).
 - URL: `/admin/<controller_id>/<action>/`. `controller_id` не должен совпадать с
   alias компонентов и зарезервированными именами (§11).
