@@ -206,7 +206,7 @@ class AdminController extends BaseController
                 $changed = [];
                 foreach ($modelData->getAttributes() as $attr => $newVal) {
                     $oldVal = $oldAttributes[$attr] ?? null;
-                    if ((string)$oldVal !== (string)$newVal) {
+                    if (!AuditService::sameValue($oldVal, $newVal)) {
                         $changed[$attr] = $oldVal;
                     }
                 }
@@ -393,7 +393,7 @@ class AdminController extends BaseController
             }
 
             $count++;
-            if ((string)$old !== (string)$record->getAttribute($attribute)) {
+            if (!AuditService::sameValue($old, $record->getAttribute($attribute))) {
                 AuditService::log('update', $record, [$attribute => $old]);
             }
         }

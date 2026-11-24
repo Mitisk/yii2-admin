@@ -148,11 +148,34 @@ class AuditService
         $diff = [];
         foreach ($changed as $attr => $oldValue) {
             $newValue = $model->getAttribute($attr);
-            if ((string)$oldValue !== (string)$newValue) {
+            if (!self::sameValue($oldValue, $newValue)) {
                 $diff[$attr] = [$oldValue, $newValue];
             }
         }
 
         return $diff ?: null;
+    }
+
+    /**
+     * Равны ли значения атрибута для журнала: null и '' равны, 1 и '1' равны,
+     * массивы и объекты (JSON-колонки) сравниваются по JSON.
+     *
+     * @param mixed $old
+     * @param mixed $new
+     *
+     * @return bool
+     */
+    public static function sameValue(mixed $old, mixed $new): bool
+    {
+        return self::comparable($old) === self::comparable($new);
+    }
+
+    private static function comparable(mixed $value): string
+    {
+        if (is_array($value) || is_object($value)) {
+            return (string)json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+
+        return (string)$value;
     }
 }

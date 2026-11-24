@@ -30,6 +30,7 @@ final class TestApp
                 'migrate' => ['class' => MigrateController::class],
             ],
         ]);
+        Yii::$app->errorHandler->unregister();
     }
 
     public static function web(): void
