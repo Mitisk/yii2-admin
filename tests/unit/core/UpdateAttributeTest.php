@@ -92,6 +92,18 @@ final class UpdateAttributeTest extends TestCase
         self::assertSame(0, (int) Note::findOne($note->id)->published);
     }
 
+    public function testToggleUpdatesTimestampLikeAnySave(): void
+    {
+        $this->registerNoteComponent();
+        $note = $this->createNote(['published' => 0]);
+        Note::updateAll(['updated_at' => 1000], ['id' => $note->id]);
+        $this->loginAs(self::ADMIN_ID);
+
+        $this->toggle(Note::class, $note->id, 'published', '1');
+
+        self::assertGreaterThan(1000, (int) Note::findOne($note->id)->updated_at);
+    }
+
     public function testWritesChangeToAuditLog(): void
     {
         $this->registerNoteComponent();

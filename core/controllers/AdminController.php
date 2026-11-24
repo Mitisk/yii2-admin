@@ -387,7 +387,9 @@ class AdminController extends BaseController
                 $errors[] = "ID {$id}: " . implode(', ', $record->getErrorSummary(false));
                 continue;
             }
-            if ($record->save(false, [$attribute]) === false) {
+            // Без списка атрибутов: пишутся только изменённые — тумблер и то, что добавят поведения
+            // модели (TimestampBehavior и т.п.); валидация атрибута уже прошла выше
+            if ($record->save(false) === false) {
                 $errors[] = "Ошибка сохранения ID {$id}";
                 continue;
             }
