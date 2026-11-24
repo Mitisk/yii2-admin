@@ -191,8 +191,13 @@ class AdminController extends BaseController
 
     public function actionUpdate($id)
     {
-        /** @var AdminModel $model */
         $model = $this->findModel();
+        if ($model instanceof Response) {
+            return $model;
+        }
+        if (!$model->canUpdate()) {
+            throw new ForbiddenHttpException('Правка записей в этом разделе запрещена.');
+        }
 
         if (\Yii::$app->request->isPost) {
             $modelData = $model->getModel();
@@ -226,6 +231,12 @@ class AdminController extends BaseController
     public function actionView($id)
     {
         $model = $this->findModel();
+        if ($model instanceof Response) {
+            return $model;
+        }
+        if (!$model->canView()) {
+            throw new ForbiddenHttpException('Просмотр записей в этом разделе запрещён.');
+        }
 
         return $this->render($this->actionViewTemplate, [
                 'model' => $model,
@@ -236,9 +247,15 @@ class AdminController extends BaseController
     public function actionDelete()
     {
         $adminModel = $this->findModel();
+        if ($adminModel instanceof Response) {
+            return $adminModel;
+        }
+        if (!$adminModel->canDelete()) {
+            throw new ForbiddenHttpException('Удаление записей в этом разделе запрещено.');
+        }
 
-        $arModel = $adminModel?->getModel();
-        if($adminModel?->beforeDelete() && $arModel?->delete()) {
+        $arModel = $adminModel->getModel();
+        if ($adminModel->beforeDelete() && $arModel->delete()) {
             AuditService::log('delete', $arModel);
             Yii::$app->session->setFlash('success', 'Запись успешно удалена');
         } else {
@@ -252,6 +269,11 @@ class AdminController extends BaseController
     {
         $ids = Yii::$app->request->post('ids');
         $modelName = $this->_modelName;
+
+        $component = new AdminModel(Yii::createObject(['class' => $modelName]));
+        if (!$component->canDelete()) {
+            throw new ForbiddenHttpException('Удаление записей в этом разделе запрещено.');
+        }
 
         if (empty($ids) || !is_array($ids)) {
             Yii::$app->session->setFlash('error', 'Элементы не выбраны');

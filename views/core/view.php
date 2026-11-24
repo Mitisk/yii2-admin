@@ -42,7 +42,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
         <div class="bot">
             <div class="list-box-value mb-10">
-                <?php if ($model->canCreate()) : ?>
+                <?php if ($model->canUpdate()) : ?>
                 <div>
                     <?= Html::a("Редактировать", $model->getUrls('update'), [
                         'class' => 'tf-button w208'
