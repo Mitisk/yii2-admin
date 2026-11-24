@@ -874,7 +874,29 @@ if ($slug) {
 `user_id = NULL` — «шаблоны», доступные всем; пользователь может скрывать,
 переставлять и добавлять виджеты по имени класса (создаются копии с его `user_id`).
 
-Класс:
+**Обычная карточка «число + подпись» — наследник `Mitisk\Yii2Admin\widgets\StatWidget`:**
+вёрстку и меню карточки пакет рисует сам, подкласс отдаёт только данные.
+
+```php
+final class OrdersTodayWidget extends \Mitisk\Yii2Admin\widgets\StatWidget
+{
+    public $permission = 'app\models\Order\view';   // по умолчанию 'admin'; null — любой вошедший
+
+    protected function stat(): array
+    {
+        return [
+            'title' => 'Заказов за неделю',
+            'icon'  => 'icon-shopping-bag',                 // иконка темы
+            'value' => Order::find()->where(['>=', 'created_at', $this->since()])->count(),  // число — «1 234»
+            'note'  => 'сегодня: ' . $today,                // необязательно
+            'url'   => '/admin/orders/',                    // необязательно: вся карточка — ссылка
+        ];
+    }
+}
+```
+Регистрация — `AdminRegistry::registerDashboardWidget('OrdersTodayWidget', OrdersTodayWidget::class, 3)` (§3.9a).
+
+Своя вёрстка — обычный виджет, как ниже. Класс:
 
 ```php
 <?php
