@@ -81,6 +81,39 @@ if ($model->data) {
             <i class="fas fa-book-open me-1"></i> Инструкция
         </button>
     </li>
+    <?php
+    // Проверка и экспорт считаются по сохранённому состоянию компонента
+    $doctorReport = \Mitisk\Yii2Admin\components\ComponentDoctor::check($model);
+    $doctorErrors = \Mitisk\Yii2Admin\components\ComponentDoctor::problemCount($doctorReport, 'error');
+    $doctorWarnings = \Mitisk\Yii2Admin\components\ComponentDoctor::problemCount($doctorReport, 'warning');
+    $doctorPlural = static function (int $n, string $one, string $few, string $many): string {
+        $mod10 = $n % 10;
+        $mod100 = $n % 100;
+        if ($mod10 === 1 && $mod100 !== 11) {
+            return $n . ' ' . $one;
+        }
+        return $n . ' ' . ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14) ? $few : $many);
+    };
+    ?>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-doctor-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-doctor" type="button" role="tab">
+            <i class="fas fa-stethoscope me-1"></i> Проверка
+            <?php if ($doctorErrors > 0) : ?>
+                <span class="cd-count cd-count--error" title="Ошибок: <?= $doctorErrors ?>"><?= $doctorErrors ?></span>
+            <?php elseif ($doctorWarnings > 0) : ?>
+                <span class="cd-count cd-count--warning" title="Замечаний: <?= $doctorWarnings ?>"><?= $doctorWarnings ?></span>
+            <?php else : ?>
+                <span class="cd-count cd-count--ok" title="Замечаний нет"><i class="fas fa-check"></i></span>
+            <?php endif; ?>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-export-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-export" type="button" role="tab">
+            <i class="fas fa-file-code me-1"></i> Миграция
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content comp-tab-content" id="compTabContent">
@@ -368,14 +401,14 @@ echo $form->field($model, 'file_path')
 
             <?php /* Основная область холста */ ?>
             <div>
-                <div class="flex align-items-center justify-content-between mb-16">
-                    <div>
+                <div class="canvas-head mb-16">
+                    <div class="canvas-head__text">
                         <div class="body-title" style="font-size:16px;">Холст формы редактирования</div>
                         <div class="body-text" style="font-size:13px;color:#64748b;">
                             Кликните поле — откроются настройки ширины и параметров
                         </div>
                     </div>
-                    <div style="display:flex;gap:8px;">
+                    <div class="canvas-head__tools">
                         <button type="button" class="tf-button style-2" onclick="canvasAutoBuild()">
                             <i class="fas fa-magic me-1"></i> Собрать автоматически
                         </button>
@@ -440,8 +473,79 @@ echo $form->field($model, 'file_path')
     </div>
     <?php /* ─── /TAB: Инструкция ─────────────────────────── */ ?>
 
+    <?php /* ─── TAB: Проверка ─────────────────────────────── */ ?>
+    <div class="tab-pane fade" id="tab-doctor" role="tabpanel">
+        <div class="wg-box cd-box">
+            <div class="cd-head">
+                <div>
+                    <h5>Проверка компонента</h5>
+                    <div class="body-text">Настройки раздела сверены с моделью <code><?= Html::encode((string)$model->model_class) ?></code>. Проверяется сохранённое состояние: после правок нажмите «Сохранить».</div>
+                </div>
+                <div class="cd-summary">
+                    <span class="cd-pill cd-pill--error<?= $doctorErrors ? '' : ' is-zero' ?>"><?= $doctorPlural($doctorErrors, 'ошибка', 'ошибки', 'ошибок') ?></span>
+                    <span class="cd-pill cd-pill--warning<?= $doctorWarnings ? '' : ' is-zero' ?>"><?= $doctorPlural($doctorWarnings, 'замечание', 'замечания', 'замечаний') ?></span>
+                </div>
+            </div>
+            <ul class="cd-list">
+                <?php foreach ($doctorReport as $finding) : ?>
+                    <li class="cd-item cd-item--<?= $finding['level'] ?>">
+                        <span class="cd-item__mark" aria-hidden="true">
+                            <i class="fas <?= $finding['level'] === 'error' ? 'fa-times' : ($finding['level'] === 'warning' ? 'fa-exclamation' : 'fa-check') ?>"></i>
+                        </span>
+                        <div>
+                            <div class="cd-item__title"><?= Html::encode($finding['title']) ?></div>
+                            <div class="cd-item__text"><?= Html::encode($finding['text']) ?></div>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+    <?php /* ─── /TAB: Проверка ────────────────────────────── */ ?>
+
+    <?php /* ─── TAB: Миграция ─────────────────────────────── */ ?>
+    <div class="tab-pane fade" id="tab-export" role="tabpanel">
+        <div class="wg-box cd-box">
+            <div class="cd-head">
+                <div>
+                    <h5>Миграция с настройками раздела</h5>
+                    <div class="body-text">Раздел настроен в редакторе — перенесите его на другие окружения миграцией. Сохраните код в папку <code>migrations/</code> проекта под именем класса и выполните <code>php yii migrate</code>. В коде — сохранённое состояние компонента.</div>
+                </div>
+                <button type="button" class="tf-button style-1" id="cd-copy" data-done="Скопировано">
+                    <i class="fas fa-copy me-1"></i> <span>Скопировать</span>
+                </button>
+            </div>
+            <textarea class="cd-code" id="cd-code" readonly spellcheck="false" rows="24" aria-label="Код миграции"><?= Html::encode(\Mitisk\Yii2Admin\components\ComponentExporter::migration($model)) ?></textarea>
+        </div>
+    </div>
+    <?php /* ─── /TAB: Миграция ────────────────────────────── */ ?>
+
 </div>
 <?php /* ─── /tab-content ─────────────────────────────── */ ?>
+<?php
+// Кнопка «Скопировать» на вкладке «Миграция»
+$this->registerJs(<<<'JS'
+(function () {
+    var button = document.getElementById('cd-copy');
+    var code = document.getElementById('cd-code');
+    if (!button || !code) { return; }
+    button.addEventListener('click', function () {
+        var label = button.querySelector('span');
+        var text = label.textContent;
+        var done = function () {
+            label.textContent = button.getAttribute('data-done');
+            setTimeout(function () { label.textContent = text; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code.value).then(done, function () { code.select(); });
+        } else {
+            code.select();
+            try { document.execCommand('copy'); done(); } catch (e) {}
+        }
+    });
+})();
+JS);
+?>
 
 <?php
 $this->registerJs(
