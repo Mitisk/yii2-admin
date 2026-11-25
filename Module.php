@@ -45,12 +45,18 @@ final class Module extends \yii\base\Module implements BootstrapInterface
     {
         parent::init();
 
-        // Регистрируем компонент как 'adminUser', чтобы не конфликтовать с основным 'user'
+        // Регистрируем компонент как 'adminUser', чтобы не конфликтовать с основным 'user'.
+        // Сессия у них одна, поэтому все ключи сессии свои: общий __authKey перетирался входом
+        // на сайте и в админке по очереди («Invalid session auth key attempted», tests/unit/auth/SessionKeysTest).
         \Yii::$app->set('adminUser', [
             'class' => 'yii\web\User',
             'identityClass' => 'Mitisk\Yii2Admin\models\AdminUser',
             'enableAutoLogin' => true,
             'idParam' => '__admin_id',
+            'authKeyParam' => '__admin_authKey',
+            'authTimeoutParam' => '__admin_expire',
+            'absoluteAuthTimeoutParam' => '__admin_absoluteExpire',
+            'returnUrlParam' => '__admin_returnUrl',
             'identityCookie' => ['name' => '_admin_identity', 'httpOnly' => true],
             'loginUrl' => ['/admin/default/login'],
         ]);

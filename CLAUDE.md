@@ -20,7 +20,11 @@
 - Модуль монтируется как `admin`, все URL начинаются с `/admin/`. Внутри модуля
   компонент `Yii::$app->user` подменяется на `adminUser` (identity —
   `Mitisk\Yii2Admin\models\AdminUser`, таблица `user`). Фронтовый `user` проекта
-  не затрагивается, но таблица `user` общая.
+  не затрагивается, но таблица `user` общая. Сессия у них тоже общая, поэтому у `adminUser`
+  все ключи сессии свои (`__admin_id`, `__admin_authKey`, `__admin_expire`,
+  `__admin_absoluteExpire`, `__admin_returnUrl`) и своя cookie `_admin_identity`: вход на сайте
+  и в админке в одном браузере не выбивает друг друга (страж — `tests/unit/auth/SessionKeysTest.php`).
+  Новый параметр `yii\web\User`, который хранится в сессии, — тоже со своим именем.
 - **Сущность в админке = запись в таблице `admin_model`** (AR-класс
   `Mitisk\Yii2Admin\models\AdminModel`, в UI называется «Компонент»). Запись хранит:
   название, alias (slug в URL), FQCN модели проекта, JSON-конфиг колонок списка (`list`),
