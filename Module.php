@@ -10,7 +10,7 @@ use Mitisk\Yii2Admin\components\ExtAdminController;
 
 final class Module extends \yii\base\Module implements BootstrapInterface
 {
-    public const VERSION = '1.8.3';
+    public const VERSION = '1.8.4';
 
     /**
      * Карта «неймспейс => путь/алиас» директорий с моделями приложения.
