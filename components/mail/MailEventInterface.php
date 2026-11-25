@@ -25,10 +25,11 @@ interface MailEventInterface
     public function defaultBody(): string;
 
     /**
-     * Переменные: ['ИМЯ' => ['desc' => 'Описание', 'required' => '1'|'0', 'html' => '1'|'0']].
-     * required — письмо без значения не отправляется; html — значение вставляется без экранирования.
+     * Переменные: ['ИМЯ' => ['desc' => 'Описание', 'required' => '1'|'0', 'html' => '1'|'0', 'sample' => 'Пример']].
+     * required — письмо без значения не отправляется; html — значение вставляется без экранирования;
+     * sample — значение для предпросмотра и тестового письма в админке (необязательно).
      *
-     * @return array<string, array{desc: string, required?: string, html?: string}>
+     * @return array<string, array{desc: string, required?: string, html?: string, sample?: string}>
      */
     public function params(): array;
 }

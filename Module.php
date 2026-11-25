@@ -40,6 +40,15 @@ final class Module extends \yii\base\Module implements BootstrapInterface
      */
     public array $auditActions = [];
 
+    /**
+     * Письма-события проекта для раздела «Шаблоны писем» (§6 инструкции): классы enum с MailEventInterface,
+     * объекты событий или callable, который их возвращает. Зная событие, админка показывает его переменные
+     * с описаниями, умеет вернуть исходный текст письма и заводит шаблон до первой отправки.
+     *
+     * @var array<int, mixed>|callable
+     */
+    public $mailEvents = [];
+
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
 

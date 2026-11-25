@@ -139,6 +139,54 @@ class MailService extends Component
     }
 
     /**
+     * Письмо по тексту, которого может не быть в базе: тестовая отправка со страницы шаблона
+     * (то, что сейчас в редакторе). Тот же рендер и тот же транспорт, что у обычных писем.
+     *
+     * @param array<string, string|int|float|null> $params значения переменных
+     * @param string[] $htmlParams переменные, значения которых вставляются без экранирования
+     */
+    public function sendContent(string $to, string $subject, string $body, array $params = [], array $htmlParams = []): bool
+    {
+        try {
+            return $this->deliver('test', $to, $subject, $body, $params, $htmlParams);
+        } catch (Throwable $e) {
+            Yii::error('MailService: тестовое письмо не отправлено: ' . $e::class, self::LOG_CATEGORY);
+            return false;
+        }
+    }
+
+    /**
+     * Есть ли чем отправлять: задан мейлер приложения или хост SMTP в настройках админки.
+     */
+    public function isConfigured(): bool
+    {
+        return $this->mailer !== null || trim((string)$this->getSetting('mailserver_host')) !== '';
+    }
+
+    /**
+     * От кого уходят письма.
+     *
+     * @return array{email: string, name: string}
+     */
+    public function sender(): array
+    {
+        return ['email' => $this->fromEmail(), 'name' => $this->fromName()];
+    }
+
+    /**
+     * Шаблон письма-события; если его ещё нет — создаётся из текстов в коде (как при первой отправке).
+     */
+    public function ensureTemplate(MailEventInterface $event): ?EmailTemplate
+    {
+        try {
+            return $this->eventTemplate($event);
+        } catch (Throwable $e) {
+            Yii::error('MailService: шаблон ' . $event->slug() . ' не создан: ' . $e::class, self::LOG_CATEGORY);
+            return null;
+        }
+    }
+
+    /**
      * Проверка обязательных переменных и отправка.
      *
      * @param array<string, string|int|float|null> $params

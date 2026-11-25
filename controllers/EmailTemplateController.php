@@ -3,14 +3,24 @@
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
-use Mitisk\Yii2Admin\models\EmailTemplate;
+use Mitisk\Yii2Admin\components\mail\MailEventInterface;
+use Mitisk\Yii2Admin\components\mail\MailEvents;
+use Mitisk\Yii2Admin\components\mail\TemplateParams;
+use Mitisk\Yii2Admin\components\mail\TemplateRenderer;
 use Mitisk\Yii2Admin\components\MailService;
+use Mitisk\Yii2Admin\models\EmailTemplate;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
+use yii\validators\EmailValidator;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
+/**
+ * Шаблоны писем (/admin/email-template/): список, редактор с предпросмотром и тестовой отправкой, общий макет.
+ * Экран редактора — views/email-template/_form.php, assets/src/admin/email-template.js и .css (префикс et-).
+ */
 class EmailTemplateController extends BaseController
 {
     public function behaviors(): array
@@ -25,11 +35,21 @@ class EmailTemplateController extends BaseController
                     ],
                 ],
             ],
+            'verbs' => [
+                'class' => VerbFilter::class,
+                'actions' => [
+                    'delete' => ['POST'],
+                    'preview' => ['POST'],
+                    'test-send' => ['POST'],
+                ],
+            ],
         ];
     }
 
     public function actionIndex()
     {
+        $this->createMissingEventTemplates();
+
         $dataProvider = new ActiveDataProvider([
             'query' => EmailTemplate::find(),
             'sort' => ['defaultOrder' => ['created_at' => SORT_DESC]],
@@ -42,34 +62,33 @@ class EmailTemplateController extends BaseController
 
     public function actionCreate()
     {
-        $model = new EmailTemplate();
+        $model = new EmailTemplate(['active' => 1]);
 
-        if ($this->saveModel($model)) {
-            return $this->redirect(['index']);
+        if ($this->saveModel($model, null)) {
+            return $this->redirect(['update', 'id' => $model->id]);
         }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+        return $this->render('create', $this->formData($model, null));
     }
 
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $event = MailEvents::fromModule()->find((string)$model->slug);
 
-        if ($this->saveModel($model)) {
-            return $this->redirect(['index']);
+        if ($this->saveModel($model, $event)) {
+            // Остаёмся на странице: после правки текста обычно смотрят предпросмотр и шлют тест
+            return $this->redirect(['update', 'id' => $model->id]);
         }
 
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        return $this->render('update', $this->formData($model, $event));
     }
 
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-        Yii::$app->session->setFlash('success', 'Шаблон удален');
+        Yii::$app->session->setFlash('success', 'Шаблон удалён');
+
         return $this->redirect(['index']);
     }
 
@@ -130,60 +149,178 @@ class EmailTemplateController extends BaseController
     }
 
     /**
-     * AJAX Action для тестовой отправки
+     * Письмо так, как его увидит получатель: текст из редактора (ещё не сохранённый), значения-примеры
+     * вместо переменных, общий макет.
+     *
+     * @return array{subject: string, html: string, hasLayout: bool}
      */
-    public function actionTestSend()
+    public function actionPreview(): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $request = Yii::$app->request;
+        [$subject, $body, $params] = $this->postedContent();
 
-        $id = $request->post('id');
-        $email = $request->post('email');
+        $layout = $this->mailLayout();
+        $email = (new TemplateRenderer())->render(
+            $subject,
+            $body,
+            TemplateParams::samples($params, TemplateParams::names($subject, $body, (string)$layout)),
+            TemplateParams::htmlNames($params),
+            $layout,
+        );
 
-        // Собираем значения переменных из формы, если нужно тестировать с данными
-        // В упрощенном варианте шлем пустые или заглушки "Test Value"
+        return ['subject' => $email->subject, 'html' => $email->html, 'hasLayout' => $layout !== null];
+    }
 
-        if (!$id || !$email) {
-            return ['success' => false, 'message' => 'Некорректные данные'];
+    /**
+     * Тестовое письмо: то, что сейчас в редакторе, со значениями-примерами.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function actionTestSend(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $email = trim((string)Yii::$app->request->post('email', ''));
+        if (!(new EmailValidator())->validate($email)) {
+            return ['success' => false, 'message' => 'Укажите адрес, на который отправить письмо.'];
         }
 
-        $model = $this->findModel($id);
-
-        // Генерируем тестовые данные для обязательных параметров
-        $params = [];
-        if (is_array($model->params)) {
-            foreach ($model->params as $key => $config) {
-                $params[$key] = 'TEST_' . strtoupper($key);
-            }
+        [$subject, $body, $params] = $this->postedContent();
+        if (trim($subject) === '' && trim($body) === '') {
+            return ['success' => false, 'message' => 'В письме пока нет ни темы, ни текста.'];
         }
 
         /** @var MailService $mailer */
         $mailer = Yii::createObject(MailService::class);
-
-        if ($mailer->send($model->slug, $email, $params)) {
-            return ['success' => true, 'message' => 'Тестовое письмо отправлено на ' . $email];
+        if (!$mailer->isConfigured()) {
+            return ['success' => false, 'message' => 'Почтовый сервер не настроен: укажите его в настройках писем (кнопка «Почтовый сервер»).'];
         }
 
-        return ['success' => false, 'message' => 'Ошибка отправки. Проверьте настройки SMTP.'];
+        $sent = $mailer->sendContent(
+            $email,
+            'Тест: ' . $subject,
+            $body,
+            TemplateParams::samples($params, TemplateParams::names($subject, $body, (string)$this->mailLayout())),
+            TemplateParams::htmlNames($params),
+        );
+
+        return $sent
+            ? ['success' => true, 'message' => 'Письмо отправлено на ' . $email . '. Если его нет во «Входящих», проверьте «Спам».']
+            : ['success' => false, 'message' => 'Письмо не ушло: почтовый сервер не принял его или недоступен. Подробности — в журнале ошибок сайта.'];
     }
 
-    protected function saveModel(EmailTemplate $model): bool
+    /**
+     * Данные формы: переменные (из кода события, сохранённые и найденные в тексте), отправитель, тексты из кода.
+     *
+     * @return array<string, mixed>
+     */
+    private function formData(EmailTemplate $model, ?MailEventInterface $event): array
     {
-        if ($model->load(Yii::$app->request->post())) {
-            // Обработка params приходит как массив из формы
-            // Yii автоматически загрузит их в params если в форме имена вида EmailTemplate[params][key]
-            // Но лучше убедиться, что это массив
-            if (!is_array($model->params)) {
-                $model->params = [];
-            }
-            // Убираем пустые ключи если вдруг попали
+        /** @var MailService $mailer */
+        $mailer = Yii::createObject(MailService::class);
+        $adminEmails = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string)Yii::$app->settings->get('GENERAL', 'admin_email', ''))
+        )));
 
-            if ($model->save()) {
-                Yii::$app->session->setFlash('success', 'Сохранено');
-                return true;
-            }
+        return [
+            'model' => $model,
+            'event' => $event,
+            'rows' => TemplateParams::rows(
+                is_array($model->params) ? $model->params : [],
+                $event !== null ? $event->params() : [],
+                TemplateParams::names((string)$model->subject, (string)$model->body),
+            ),
+            'sender' => $mailer->sender(),
+            'smtpReady' => $mailer->isConfigured(),
+            'hasLayout' => $this->mailLayout() !== null,
+            'adminEmails' => $adminEmails,
+        ];
+    }
+
+    private function saveModel(EmailTemplate $model, ?MailEventInterface $event): bool
+    {
+        $post = Yii::$app->request->post();
+        $slug = $model->slug;
+        if (!$model->load($post)) {
+            return false;
         }
+        if ($event !== null) {
+            // По этому коду письмо отправляет код проекта — из формы он не меняется
+            $model->slug = $slug;
+        }
+
+        $used = TemplateParams::names((string)$model->subject, (string)$model->body);
+        $rows = TemplateParams::rows(
+            TemplateParams::normalize($post[$model->formName()]['params'] ?? []),
+            $event !== null ? $event->params() : [],
+            $used,
+        );
+        $params = [];
+        foreach ($rows as $name => $row) {
+            // Опечатка или убранная из текста переменная без описания и примера — не хранится
+            if (!$row['used'] && !$row['code'] && $row['desc'] === '' && $row['sample'] === '') {
+                continue;
+            }
+            $params[$name] = [
+                'desc' => $row['desc'],
+                'required' => $row['required'],
+                'html' => $row['html'],
+                'sample' => $row['sample'],
+            ];
+        }
+        $model->params = $params;
+
+        if ($model->save()) {
+            Yii::$app->session->setFlash('success', 'Шаблон сохранён');
+
+            return true;
+        }
+
         return false;
+    }
+
+    /**
+     * Тема, тело и переменные из запроса предпросмотра или тестовой отправки.
+     *
+     * @return array{0: string, 1: string, 2: array<string, array<string, string>>}
+     */
+    private function postedContent(): array
+    {
+        $request = Yii::$app->request;
+
+        return [
+            (string)$request->post('subject', ''),
+            (string)$request->post('body', ''),
+            TemplateParams::normalize($request->post('params', [])),
+        ];
+    }
+
+    /** Общий макет писем — тот же, что подставляет MailService; не задан или без метки {{content}} — null. */
+    private function mailLayout(): ?string
+    {
+        $layout = Yii::$app->settings->get('HIDDEN', 'mail_layout');
+
+        return is_string($layout) && str_contains($layout, '{{content}}') ? $layout : null;
+    }
+
+    /** Письма-события из настройки mailEvents, которых ещё нет в списке, — как при первой отправке. */
+    private function createMissingEventTemplates(): void
+    {
+        $events = MailEvents::fromModule()->all();
+        if ($events === []) {
+            return;
+        }
+        $existing = EmailTemplate::find()->select('slug')->where(['slug' => array_keys($events)])->column();
+        $missing = array_diff_key($events, array_flip($existing));
+        if ($missing === []) {
+            return;
+        }
+        /** @var MailService $mailer */
+        $mailer = Yii::createObject(MailService::class);
+        foreach ($missing as $event) {
+            $mailer->ensureTemplate($event);
+        }
     }
 
     protected function findModel($id): EmailTemplate
@@ -191,6 +328,6 @@ class EmailTemplateController extends BaseController
         if (($model = EmailTemplate::findOne($id)) !== null) {
             return $model;
         }
-        throw new NotFoundHttpException('The requested page does not exist.');
+        throw new NotFoundHttpException('Шаблон письма не найден.');
     }
 }

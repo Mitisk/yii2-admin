@@ -25,8 +25,11 @@ npx --yes esbuild src/admin/menu-editor.css --minify --outfile=css/menu-editor.m
 # Журналы: действия и ошибки сайта (LogAsset)
 npx --yes esbuild src/admin/log.js  --minify --target=es2017 --legal-comments=none --outfile=js/log.min.js
 npx --yes esbuild src/admin/log.css --minify --outfile=css/log.min.css
+# Редактор шаблона письма (EmailTemplateAsset)
+npx --yes esbuild src/admin/email-template.js  --minify --target=es2017 --legal-comments=none --outfile=js/email-template.min.js
+npx --yes esbuild src/admin/email-template.css --minify --outfile=css/email-template.min.css
 # Оболочка админки: логотип, меню, шапка (AppAsset)
 npx --yes esbuild src/admin/shell.css     --minify --outfile=css/shell.min.css
 # Редактор кода Ace: режимы и темы в пакете только .min.js (AceAsset)
 npx --yes esbuild src/admin/ace-config.js --minify --target=es2017 --legal-comments=none --outfile=js/ace-config.min.js
-ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css js/login.min.js css/login-steps.min.css js/custom.user.form.min.js css/user-form.min.css js/page/index.min.js css/dashboard.min.css js/menu-editor.min.js css/menu-editor.min.css css/shell.min.css js/log.min.js css/log.min.css js/ace-config.min.js
+ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css js/login.min.js css/login-steps.min.css js/custom.user.form.min.js css/user-form.min.css js/page/index.min.js css/dashboard.min.css js/menu-editor.min.js css/menu-editor.min.css css/shell.min.css js/log.min.js css/log.min.css js/email-template.min.js css/email-template.min.css js/ace-config.min.js
