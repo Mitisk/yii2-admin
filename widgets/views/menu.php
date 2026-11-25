@@ -131,6 +131,14 @@ use Mitisk\Yii2Admin\components\MenuHelper;
 
                     <?php if (Yii::$app->user->can('superAdmin')): ?>
                         <li class="menu-item <?= MenuHelper::build([
+                            ['href' => \yii\helpers\Url::to(['/admin/cron/index']), 'text' => 'Планировщик']
+                        ])[0]['_active'] ? 'active' : '' ?>">
+                            <a href="<?= \yii\helpers\Url::to(['/admin/cron/index']) ?>">
+                                <div class="icon"><i class="icon-clock"></i></div>
+                                <div class="text">Планировщик</div>
+                            </a>
+                        </li>
+                        <li class="menu-item <?= MenuHelper::build([
                             ['href' => \yii\helpers\Url::to(['/admin/components/index']), 'text'=>'Компоненты']
                         ])[0]['_active'] ? 'active' : '' ?>">
                             <a href="<?= \yii\helpers\Url::to(['/admin/components/index']) ?>">

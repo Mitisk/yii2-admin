@@ -1534,6 +1534,44 @@ WAF — отдельный необязательный пакет (`composer re
 
 ---
 
+## 9f. Планировщик задач (Cron)
+
+Раздел `/admin/cron/` (только `superAdminRole`): консольные команды проекта по расписанию, без правки crontab
+на сервере. Код: `models/{CronTask,CronLog}.php`, `components/cron/{CronExpression,CronRunner,ProcessLauncher}.php`,
+`controllers/CronController.php` (админка), `commands/CronController.php` (консоль), `views/cron/*`. Миграция
+`m261125_120000_create_admin_cron_tables` (таблицы `admin_cron_task`, `admin_cron_log`, настройки `CRON`).
+Страж — `tests/unit/cron/CronTest.php`.
+
+**Подключение на сервере** — одна строка crontab, дальше всё в админке:
+
+```
+* * * * * cd /path/to/project && php yii admin/cron/run >/dev/null 2>&1
+```
+
+Нужен модуль `admin` в консольном конфиге (§2.2). Пока диспетчер не запускался дольше трёх минут, раздел
+показывает эту строку с путём проекта.
+
+**Задача** — название, команда, расписание, лимит времени, «включена». Команда — маршрут консоли Yii вида
+«контроллер/действие» и аргументы (`catalog/reindex --force=1`), не строка для shell: диспетчер запускает
+`php yii <маршрут> <аргументы>` через `proc_open` массивом, без командной оболочки. Маршруты `admin/cron/*`
+запрещены. Расписание — пять полей cron (`*`, списки, диапазоны, шаг; 0 и 7 — воскресенье; имён месяцев и
+дней нет), время — по часовому поясу приложения. В форме есть готовые варианты и «своё расписание».
+
+**Диспетчер** (`CronRunner::run()`): за вызов запускает задачи, которым пора по расписанию или по кнопке
+«Запустить сейчас» (кнопка ставит `run_requested_at`; задача выполнится в течение минуты, даже выключенная),
+каждую — отдельным процессом, параллельно, с лимитом времени. Задача, которая ещё идёт (`running_since`),
+второй раз не стартует; зависшая дольше лимита + 5 минут считается мёртвой. Пропущенные минуты не
+догоняются. Итог запуска — `ok | fail | timeout` — в `admin_cron_task.last_*` и строкой в журнале.
+
+**Журнал чистит себя сам** при каждом вызове диспетчера: записи старше `CRON.log_days` дней (14) и всё сверх
+`CRON.log_rows` последних запусков на задачу (200) удаляются; вывод команды хранится обрезанным до
+`CronRunner::OUTPUT_LIMIT` байт (конец вывода, там обычно ошибка). Сроки — «Настройки → Планировщик».
+
+Задачу из кода (миграцией) добавляют через AR: `new CronTask(['name' => ..., 'command' => 'cache/flush-all',
+'schedule' => '0 3 * * *'])` + `save()` — валидация та же, что в форме.
+
+---
+
 ## 10. Подводные камни
 
 1. **Таблица `user` и RBAC-таблицы `auth_*` создаются миграцией модуля.** Если в проекте
@@ -1593,7 +1631,7 @@ functional для `/admin/*` нужен ещё `request.isConsoleRequest = false
 ### Таблицы модуля
 `user`, `admin_model`, `admin_model_info`, `admin_controller_map`, `admin_widget`,
 `admin_widget_component`, `admin_note`, `admin_user_map`, `admin_audit_log`,
-`email_templates`, `file`, `menu`, `settings`, `settings_block`, `seo_rules`,
+`email_templates`, `file`, `menu`, `settings`, `settings_block`, `seo_rules`, `admin_cron_task`, `admin_cron_log`,
 `content_block` (§9b), `page`, `page_redirect` (§9c),
 `auth_item`, `auth_item_child`, `auth_assignment`, `auth_rule`, `migration`.
 
@@ -1614,7 +1652,7 @@ functional для `/admin/*` нужен ещё `request.isConsoleRequest = false
 Технические: `index`, `error`, `captcha`, `contact`, `login`, `logout`, `default`, `auth`,
 `user`, `settings`, `role`, `menu`, `components`, `ajax`, `ajax-widget`, `ajax-note`.
 Встроенные контроллеры модуля (с версии 1.7.0 тоже в списке технических): `bar`, `core`, `email-template`,
-`seo-rule`, `log`, `model-info`, `content`, `content-block`, `page`, `pages`, `sitemap`, `waf`.
+`seo-rule`, `log`, `model-info`, `content`, `content-block`, `page`, `pages`, `sitemap`, `waf`, `cron`.
 Плюс все существующие alias компонентов и controller_id.
 
 Корневые адреса страниц (§9c) резервируются отдельно, в `PagePath::RESERVED` и `PageService::reservedSegments()`.

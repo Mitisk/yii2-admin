@@ -57,6 +57,7 @@ final class ReservedAlias
         'log',
         'model-info',
         'waf',
+        'cron',
     ];
 
     /**
