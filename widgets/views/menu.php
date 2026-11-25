@@ -9,12 +9,17 @@ use Mitisk\Yii2Admin\components\MenuHelper;
     <div class="box-logo">
         <a href="<?= \yii\helpers\Url::to(['/admin/default/index']) ?>" id="site-logo-inner">
             <?php
+            // Свой логотип из настроек показывается как есть; встроенный меняется вместе с темой
+            // (атрибуты data-light / data-dark читает скрипт переключения темы)
             $logo = \Yii::$app->settings->get('ADMIN', 'logo');
+            $logoThemes = '';
             if (empty($logo)) {
-                $logo = \Mitisk\Yii2Admin\assets\AppAsset::register($this)->baseUrl . '/img/logo.png';
+                $logoBase = \Mitisk\Yii2Admin\assets\AppAsset::register($this)->baseUrl . '/img/';
+                $logo = $logoBase . 'logo.webp';
+                $logoThemes = ' class="adm-logo-default" data-light="' . $logoBase . 'logo.webp" data-dark="' . $logoBase . 'logo-dark.webp"';
             }
             ?>
-            <img id="logo_header" alt="" src="<?= $logo ?>">
+            <img id="logo_header" alt="" src="<?= $logo ?>"<?= $logoThemes ?>>
         </a>
         <div class="button-show-hide"><i class="icon-menu-left"></i></div>
     </div>

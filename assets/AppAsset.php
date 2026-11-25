@@ -21,6 +21,7 @@ class AppAsset extends AssetBundle
         'css/site.min.css',
         'css/admin-links.min.css',
         // Последним: умолчания для обычной разметки (голые теги, .table, .btn, LinkPager) — src/admin/base.css
+        'css/shell.min.css',
         'css/base.min.css',
     ];
 

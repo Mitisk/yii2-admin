@@ -22,4 +22,6 @@ npx --yes esbuild src/admin/dashboard.css --minify --outfile=css/dashboard.min.c
 # Редактор меню (MenuFormAsset)
 npx --yes esbuild src/admin/menu-editor.js  --minify --target=es2017 --legal-comments=none --outfile=js/menu-editor.min.js
 npx --yes esbuild src/admin/menu-editor.css --minify --outfile=css/menu-editor.min.css
-ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css js/login.min.js css/login-steps.min.css js/custom.user.form.min.js css/user-form.min.css js/page/index.min.js css/dashboard.min.css js/menu-editor.min.js css/menu-editor.min.css
+# Оболочка админки: логотип, меню, шапка (AppAsset)
+npx --yes esbuild src/admin/shell.css     --minify --outfile=css/shell.min.css
+ls -la admin-bar/js/admin-bar*.js admin-bar/css/admin-bar.min.css css/base.min.css js/login.min.js css/login-steps.min.css js/custom.user.form.min.js css/user-form.min.css js/page/index.min.js css/dashboard.min.css js/menu-editor.min.js css/menu-editor.min.css css/shell.min.css

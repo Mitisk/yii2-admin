@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/img/logo.png" alt="Logo" width="200" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/img/logo-dark.webp">
+    <img src="assets/img/logo.webp" alt="Yii2:admin" width="260" />
+  </picture>
 </p>
 
 # Yii2 Admin Module

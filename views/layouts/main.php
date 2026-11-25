@@ -78,11 +78,12 @@ $this->registerJs("
                                 <a href="<?= \yii\helpers\Url::to(['/admin/default/index']) ?>">
                                     <?php
                                     $logo = \Yii::$app->settings->get('ADMIN', 'logo');
-                                    if (empty($logo)) {
-                                        $logo = \Mitisk\Yii2Admin\assets\AppAsset::register($this)->baseUrl . '/img/logo.png';
+                                    $logoIsDefault = empty($logo);
+                                    if ($logoIsDefault) {
+                                        $logo = \Mitisk\Yii2Admin\assets\AppAsset::register($this)->baseUrl . '/img/logo.webp';
                                     }
                                     ?>
-                                    <img id="logo_header_mobile" alt="Logo" src="<?= $logo ?>">
+                                    <img id="logo_header_mobile" alt="" src="<?= $logo ?>"<?= $logoIsDefault ? ' class="adm-logo-default"' : '' ?>>
                                 </a>
                                 <div class="button-show-hide">
                                     <i class="icon-menu-left"></i>
