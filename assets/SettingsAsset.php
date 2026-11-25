@@ -2,11 +2,9 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
-class SettingsAsset extends AssetBundle
+class SettingsAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
     public $js = [
         'js/moment.min.js',
         'js/moment-timezone.min.js',

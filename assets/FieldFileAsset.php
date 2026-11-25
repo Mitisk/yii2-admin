@@ -2,15 +2,12 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
 /**
  * Asset для поля загрузки файлов
  */
-class FieldFileAsset extends AssetBundle
+class FieldFileAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $js = [
         'component/fileuploader/dist/jquery.fileuploader.min.js',
         'component/fileuploader/js/custom.min.js',

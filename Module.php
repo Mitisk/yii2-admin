@@ -137,6 +137,7 @@ final class Module extends \yii\base\Module implements BootstrapInterface
 
         if (Yii::$app->request->isConsoleRequest === false) {
             $route = $action->uniqueId;
+            $this->ensureAssetsPublished($route);
             $skipRoutes = [
                 'admin/default/login',
                 'admin/default/check-user',
@@ -171,6 +172,28 @@ final class Module extends \yii\base\Module implements BootstrapInterface
             }
         }
         return parent::beforeAction($action);
+    }
+
+    /**
+     * Стили и скрипты админки: общая папка пакета копируется в web/assets целиком и без лимита
+     * времени, а оборванная копия (страница без стилей после обновления) восстанавливается.
+     * Только для страниц: AJAX и запросы панели на сайте не ждут копирования.
+     */
+    private function ensureAssetsPublished(string $route): void
+    {
+        $request = Yii::$app->request;
+        if (!$request instanceof \yii\web\Request || $request->isAjax || str_starts_with($route, 'admin/bar/')) {
+            return;
+        }
+        try {
+            \Mitisk\Yii2Admin\components\AssetPublisher::ensure(
+                Yii::$app->getAssetManager(),
+                (string)Yii::getAlias('@Mitisk/Yii2Admin/assets'),
+                \Mitisk\Yii2Admin\assets\PackageAsset::PUBLISH_OPTIONS
+            );
+        } catch (\Throwable $e) {
+            Yii::warning('Ассеты админки не опубликованы: ' . $e->getMessage(), __METHOD__);
+        }
     }
 
     /**

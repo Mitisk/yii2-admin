@@ -2,12 +2,9 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
-class IndexAsset extends AssetBundle
+class IndexAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $css = [
         'css/dashboard.min.css',
     ];

@@ -2,12 +2,8 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
-
-class AppAsset extends AssetBundle
+class AppAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $css = [
         'css/animate.min.css',
         'css/animation.min.css',

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
 /**
  * Ассет для страницы авторизации.
@@ -12,10 +11,8 @@ use yii\web\AssetBundle;
  * Подключает скомпилированные Tailwind CSS утилиты, кастомные стили
  * и JS-логику многошаговой формы входа.
  */
-class LoginAsset extends AssetBundle
+class LoginAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $css = [
         'css/login.min.css',
         'css/login-steps.min.css',

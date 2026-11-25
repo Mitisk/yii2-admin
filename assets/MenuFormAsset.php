@@ -2,15 +2,12 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
 /**
  * Редактор меню (/admin/menu/). Исходники скрипта и стилей — assets/src/admin/menu-editor.*
  */
-class MenuFormAsset extends AssetBundle
+class MenuFormAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $js = [
         'node_modules/sortablejs/Sortable.min.js',
         'js/menu-editor.min.js',

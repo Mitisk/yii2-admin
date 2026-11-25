@@ -2,16 +2,13 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
 /**
  * Asset для поля выбора значений
  * @see https://harvesthq.github.io/chosen/
  */
-class FieldSelectAsset extends AssetBundle
+class FieldSelectAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $js = [
         'node_modules/chosen-js/chosen.jquery.min.js',
         'js/custom.chosen.min.js'

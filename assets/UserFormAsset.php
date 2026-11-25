@@ -2,15 +2,12 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
 /**
  * Asset для формы редактирования пользователя
  */
-class UserFormAsset extends AssetBundle
+class UserFormAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $js = [
         'component/fileuploader/dist/jquery.fileuploader.min.js',
         'component/fileuploader/js/avatar.min.js',

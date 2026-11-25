@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
 /**
  * Страницы раздела «Контент» → «Текстовые блоки».
  */
-class ContentBlockAsset extends AssetBundle
+class ContentBlockAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $js = [
         'js/page/content-block.min.js',
     ];

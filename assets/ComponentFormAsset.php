@@ -2,15 +2,12 @@
 
 namespace Mitisk\Yii2Admin\assets;
 
-use yii\web\AssetBundle;
 
 /**
  * Asset для формы редактирования компонентов
  */
-class ComponentFormAsset extends AssetBundle
+class ComponentFormAsset extends PackageAsset
 {
-    public $sourcePath = '@Mitisk/Yii2Admin/assets';
-
     public $js = [
         'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js',
         'component/form-builder/form-builder.min.js',
