@@ -662,21 +662,25 @@ class SelfUpdateService extends Component
      */
     private function exec(array $args, string $cwd, array $env, callable $out): int
     {
-        $cmd = implode(' ', array_map('escapeshellarg', $args));
+        // Массив аргументов — без командной оболочки; stdin — сразу закрытый канал (на Windows нет /dev/null)
         $descriptors = [
-            0 => ['file', '/dev/null', 'r'],
+            0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
             2 => ['pipe', 'w'],
         ];
         $fullEnv = array_merge(getenv() ?: [], $env);
-        $process = proc_open($cmd, $descriptors, $pipes, $cwd, $fullEnv);
+        $process = proc_open($args, $descriptors, $pipes, $cwd, $fullEnv);
         if (!is_resource($process)) {
-            $out('Не удалось запустить: ' . $cmd);
+            $out('Не удалось запустить: ' . implode(' ', $args));
             return 1;
         }
+        fclose($pipes[0]);
         stream_set_blocking($pipes[1], false);
         stream_set_blocking($pipes[2], false);
 
+        // Код выхода из первого proc_get_status(), который увидел завершение: в PHP < 8.3 только он
+        // настоящий, а proc_close() после него возвращает -1
+        $exitCode = null;
         $buffers = ['', ''];
         while (true) {
             $read = [$pipes[1], $pipes[2]];
@@ -699,6 +703,9 @@ class SelfUpdateService extends Component
                 }
             }
             $status = proc_get_status($process);
+            if (!$status['running'] && $exitCode === null) {
+                $exitCode = (int)$status['exitcode'];
+            }
             if (!$status['running'] && feof($pipes[1]) && feof($pipes[2])) {
                 break;
             }
@@ -710,6 +717,26 @@ class SelfUpdateService extends Component
         }
         fclose($pipes[1]);
         fclose($pipes[2]);
-        return proc_close($process);
+
+        return self::exitCode($exitCode, proc_close($process));
+    }
+
+    /**
+     * Код завершения процесса: тот, что увидел proc_get_status(), иначе — результат proc_close().
+     *
+     * @param int|null $fromStatus exitcode из первого proc_get_status() с running = false (null — не видел)
+     * @param int      $fromClose  результат proc_close()
+     */
+    public static function exitCode(?int $fromStatus, int $fromClose): int
+    {
+        if ($fromStatus !== null && $fromStatus >= 0) {
+            return $fromStatus;
+        }
+        if ($fromStatus === null) {
+            return $fromClose;
+        }
+
+        // proc_get_status() отдал -1: процесс убит сигналом — это не успех
+        return $fromClose > 0 ? $fromClose : 1;
     }
 }
