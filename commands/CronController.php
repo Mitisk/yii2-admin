@@ -23,14 +23,17 @@ class CronController extends Controller
 {
     /**
      * Запустить задачи, которым пора, и почистить журнал.
+     *
+     * Тихо, пока всё хорошо: печатает только догон пропущенных минут, пропуски и сбои (их же пишет в лог
+     * приложения, категория cron). Код выхода 1 — хотя бы одна задача завершилась с ошибкой.
      */
     public function actionRun(): int
     {
         $summary = (new CronRunner())->run();
-        if ($summary['started'] > 0) {
-            $this->stdout(sprintf("Запущено задач: %d, успешно: %d, с ошибкой: %d\n", $summary['started'], $summary['ok'], $summary['failed']));
+        foreach ($summary['problems'] as $line) {
+            $this->stdout('admin/cron/run: ' . $line . "\n");
         }
 
-        return ExitCode::OK;
+        return $summary['failed'] > 0 ? ExitCode::UNSPECIFIED_ERROR : ExitCode::OK;
     }
 }

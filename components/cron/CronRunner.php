@@ -50,7 +50,8 @@ final class CronRunner
     }
 
     /**
-     * @return array{started: int, ok: int, failed: int, skipped: int}
+     * @return array{started: int, ok: int, failed: int, skipped: int, minutes: int, problems: string[]}
+     *         problems — сбои и пропуски словами (успешные запуски сюда не попадают)
      */
     public function run(?int $now = null): array
     {
@@ -59,8 +60,12 @@ final class CronRunner
         Yii::$app->settings->set('HIDDEN', 'cron_heartbeat', (string) $now, 'integer');
         CodeTasks::sync();
 
-        $summary = ['started' => 0, 'ok' => 0, 'failed' => 0, 'skipped' => 0];
+        $summary = ['started' => 0, 'ok' => 0, 'failed' => 0, 'skipped' => 0, 'minutes' => 0, 'problems' => []];
         $minutes = $this->claimMinutes($now);
+        $summary['minutes'] = count($minutes);
+        if (count($minutes) > 1) {
+            $summary['problems'][] = 'Догоняю пропущенные минуты: ' . (count($minutes) - 1) . '.';
+        }
         if ($minutes !== []) {
             foreach ($this->groups($minutes) as $group) {
                 $this->runGroup($group, $now + max(0, time() - $realStart), $summary);
@@ -212,7 +217,7 @@ final class CronRunner
      * Запускает задачи группы параллельно и ждёт их. Задача, чей замок занят, пропускается.
      *
      * @param array<int, array{task: CronTask, source: string}> $group
-     * @param array{started: int, ok: int, failed: int, skipped: int} $summary
+     * @param array{started: int, ok: int, failed: int, skipped: int, minutes: int, problems: string[]} $summary
      */
     private function runGroup(array $group, int $startedAt, array &$summary): void
     {
@@ -226,6 +231,9 @@ final class CronRunner
                     fclose($lock);
                 }
                 $summary['skipped']++;
+                $message = '«' . $task->name . '» (' . $task->command . ') пропущена — прошлый запуск ещё идёт.';
+                $summary['problems'][] = $message;
+                Yii::warning('Планировщик: ' . $message, 'cron');
                 continue;
             }
             $locks[$task->id] = $lock;
@@ -243,9 +251,18 @@ final class CronRunner
                 if (!isset($jobs[$task->id])) {
                     continue;
                 }
-                $status = $this->record($task, $sources[$task->id], $startedAt, $results[$task->id] ?? null);
+                $result = $results[$task->id] ?? null;
+                $status = $this->record($task, $sources[$task->id], $startedAt, $result);
                 $summary['started']++;
                 $summary[$status === CronTask::STATUS_OK ? 'ok' : 'failed']++;
+                if ($status !== CronTask::STATUS_OK) {
+                    $message = '«' . $task->name . '» (' . $task->command . ') '
+                        . ($status === CronTask::STATUS_TIMEOUT
+                            ? 'не уложилась в лимит времени и остановлена.'
+                            : 'завершилась с ошибкой, код ' . ($result['exit'] ?? '—') . '.');
+                    $summary['problems'][] = $message;
+                    Yii::error('Планировщик: ' . $message, 'cron');
+                }
             }
         } finally {
             foreach ($locks as $lock) {

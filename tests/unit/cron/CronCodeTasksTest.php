@@ -233,6 +233,43 @@ final class CronCodeTasksTest extends TestCase
         self::assertSame($start + 4 * 60, (int) $logs[1]->started_at, 'Остаётся последний успешный запуск');
     }
 
+    public function testReportNamesProblemsAndStaysQuietOnSuccess(): void
+    {
+        $this->setCodeTasks([
+            ['key' => 'ok', 'name' => 'Тихая', 'command' => 'quiet/run', 'schedule' => '* * * * *'],
+            ['key' => 'bad', 'name' => 'Сломанная', 'command' => 'broken/run', 'schedule' => '* * * * *'],
+            ['key' => 'busy', 'name' => 'Долгая', 'command' => 'long/run', 'schedule' => '* * * * *'],
+        ]);
+        CodeTasks::sync();
+        $busy = CronTask::findOne(['code_key' => 'busy']);
+        $lock = fopen(CronRunner::lockFile((int) $busy->id), 'c');
+        flock($lock, LOCK_EX | LOCK_NB);
+        $runner = new CronRunner(static function (array $jobs): array {
+            $results = [];
+            foreach ($jobs as $id => $job) {
+                $failed = $job['command'] === ['broken/run'];
+                $results[$id] = ['exit' => $failed ? 3 : 0, 'output' => '', 'duration' => 5, 'timedOut' => false];
+            }
+
+            return $results;
+        });
+
+        try {
+            $summary = $runner->run(mktime(10, 5, 0, 11, 23, 2026));
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+
+        self::assertSame(1, $summary['failed']);
+        $problems = implode("\n", $summary['problems']);
+        self::assertStringContainsString('Сломанная', $problems);
+        self::assertStringContainsString('код 3', $problems);
+        self::assertStringContainsString('Долгая', $problems);
+        self::assertStringContainsString('ещё идёт', $problems);
+        self::assertStringNotContainsString('Тихая', $problems, 'Успешный запуск попал в отчёт');
+    }
+
     // --- Раздел в админке ---
 
     public function testCodeTaskIsShownButCannotBeChangedFromAdmin(): void
