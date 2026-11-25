@@ -46,7 +46,8 @@
 - Настройки: таблица `settings` (key-value по разделам) + фасад `Yii::$app->settings`.
 - Письма: таблица `email_templates` + сервис `Mitisk\Yii2Admin\components\MailService`.
 - Меню слева: таблица `menu`, запись с `alias = 'admin'`, JSON-массив пунктов.
-- Все действия create/update/delete пишутся в аудит-лог автоматически.
+- Все действия create/update/delete пишутся в аудит-лог автоматически; журнал и лог ошибок сайта —
+  `/admin/log/` (§9g).
 - Доступ к редактору компонентов (`/admin/components/`) — только роль `superAdminRole`.
   Пользователь по умолчанию: `admin` / `123456` (создаётся миграцией модуля).
 
@@ -1602,6 +1603,62 @@ WAF — отдельный необязательный пакет (`composer re
 
 ---
 
+## 9g. Журналы: действия и ошибки сайта
+
+Раздел `/admin/log/` — две вкладки. Код: `controllers/LogController.php`, `views/log/index.php`,
+`components/audit/{AuditActions,AuditPresenter}.php`, `components/log/{SystemLog,LogParser,LogMask}.php`,
+`assets/LogAsset.php`, исходники экрана — `assets/src/admin/log.js` и `log.css` (префикс `lg-`,
+сборка `sh assets/src/build.sh`). Стражи — `tests/unit/log/AuditJournalTest.php` и `LogParserTest.php`.
+
+**«Действия»** (право `viewReports`) — лента `admin_audit_log` по дням: кто, что сделал, с какой записью;
+в раскрытой записи — изменённые поля, время, IP и браузер. Фильтры: период (сегодня, 7 и 30 дней или свои
+даты — они важнее периода), пользователь, действие, раздел, поиск по названию записи, её номеру и изменённым
+значениям.
+
+- **Свои действия проекта.** `AuditService::log('block', $user, $old)` пишет действие с любым кодом
+  (до 16 символов). Название — в конфиге модуля, иначе в ленте виден код:
+
+```php
+'admin' => [
+    'class' => \Mitisk\Yii2Admin\Module::class,
+    'auditActions' => [
+        'block' => ['label' => 'заблокировал', 'tone' => 'red'],   // tone: green | blue | red | orange | gray
+        'awards' => 'изменил награды',
+    ],
+],
+```
+
+  Фильтр «Действие» строится из кодов, которые есть в журнале. Событие без записи-модели (массовая
+  операция, консоль) — `AuditService::event($action, $modelClass, 'что произошло')`.
+- **Раздел и ссылка на запись** (`AuditPresenter`): компонент админки с этим классом модели → компонент
+  с той же таблицей (проект пишет в журнал свою модель, а раздел заведён на её подкласс) → встроенные
+  модели пакета → короткое имя класса. Отдельной настройки нет.
+- **Изменения** показываются с подписями полей (подписи раздела, `label` поля формы, `attributeLabels()`
+  модели) и читаемыми значениями: поле `posted` — «Да / Нет», `date` и колонки на `_at` / `_date` / `_time`
+  с unix-временем — дата, `select` — подпись варианта, `user` и колонки на `_by` — имя пользователя.
+- **Секреты в журнал не пишутся:** значение поля, имя которого похоже на пароль, ключ или токен
+  (`AuditPresenter::isSensitive()`), заменяется на `AuditService::HIDDEN_VALUE` — видно только, что поле
+  менялось. Старые записи с такими полями при показе скрываются.
+- **Очистка** (`superAdminRole`): «оставить записи за последние N дней» из `LogController::KEEP_DAYS`
+  или удалить все; сама очистка пишется в журнал действием `audit_clear`.
+
+**«Ошибки сайта»** (только роль `admin`: в логе стеки, пути и данные запросов) — лог приложения
+(`logFile` первого `FileTarget`, по умолчанию `@runtime/logs/app.log`) вместе с архивными файлами
+`app.log.1…`, от новых к старым, не больше `SystemLog::BUDGET` (4 МБ) за показ.
+
+- Вид «Проблемы»: одинаковые записи — одной строкой со счётчиком, временем первой и последней и последними
+  случаями (когда, пользователь, IP, страница). Одинаковость — уровень, категория, класс исключения, место
+  и текст без чисел, хешей и скрытых ключей (`LogParser::normalize()`). Вид «Подряд» — все записи, по 100.
+- «Ошибки посетителей» — исключения `HttpException` с кодом 4xx (не найдено, нет доступа, слишком часто):
+  в счётчик «Ошибки сайта сегодня» не входят и скрываются галочкой.
+- Секреты прячет `LogMask` (ключи входа, токены, пароли, идентификаторы сессий — остаются первые четыре
+  символа). Дамп окружения запроса (`logVars`) наружу не уходит: из него берётся только адрес и метод
+  запроса для записей того же запроса.
+- Эндпоинт `GET /admin/log/system-log/` (`view=groups|list`, `level`, `search`, `hide_noise`, `offset`).
+  Новое поле записи лога на экране — в `LogController::present()`: наружу уходят только перечисленные там ключи.
+
+---
+
 ## 10. Подводные камни
 
 1. **Таблица `user` и RBAC-таблицы `auth_*` создаются миграцией модуля.** Если в проекте
@@ -1712,7 +1769,8 @@ functional для `/admin/*` нужен ещё `request.isConsoleRequest = false
 | `Mitisk\Yii2Admin\models\AdminControllerMap`, `components\ExtAdminController` | свои контроллеры |
 | `Mitisk\Yii2Admin\models\AdminWidget` | виджеты дашборда |
 | `Mitisk\Yii2Admin\models\AdminModelInfo` | инструкция к компоненту |
-| `Mitisk\Yii2Admin\components\AuditService`, `models\AuditLog` | аудит |
+| `Mitisk\Yii2Admin\components\AuditService`, `models\AuditLog`, `components\audit\AuditActions`, `components\audit\AuditPresenter` | аудит и его показ (§9g) |
+| `Mitisk\Yii2Admin\components\log\SystemLog`, `LogParser`, `LogMask` | лог приложения во вкладке «Ошибки сайта» (§9g) |
 | `Mitisk\Yii2Admin\components\SelfUpdateService`, `commands\UpdateController` | самообновление через composer |
 | `Mitisk\Yii2Admin\components\SeoManager`, `models\SeoRule` | SEO |
 | `Mitisk\Yii2Admin\widgets\AdminBar`, `components\AdminBarComponent`, `components\AdminBarState`, `controllers\BarController` | панель администратора на сайте (§9a) |

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Mitisk\Yii2Admin\components;
 
+use Mitisk\Yii2Admin\components\audit\AuditPresenter;
 use Mitisk\Yii2Admin\models\AdminModel;
 use Mitisk\Yii2Admin\models\AuditLog;
 use Yii;
@@ -13,6 +14,9 @@ use yii\db\ActiveRecord;
  */
 class AuditService
 {
+    /** Что пишется в журнал вместо пароля, ключа или токена. */
+    public const HIDDEN_VALUE = '•••';
+
     /**
      * Записывает действие в аудит-лог.
      *
@@ -67,6 +71,46 @@ class AuditService
         } catch (\Throwable $e) {
             Yii::error(
                 'AuditService::log failed: ' . $e->getMessage(),
+                'audit'
+            );
+        }
+    }
+
+    /**
+     * Событие без записи-модели: очистка журнала, массовая операция, действие из консоли.
+     *
+     * @param string $action     Код действия (название — настройка модуля auditActions)
+     * @param string $modelClass К какому разделу относится (класс модели)
+     * @param string $label      Что произошло, одной строкой
+     * @param string $modelId    Идентификатор, если он есть
+     *
+     * @return void
+     */
+    public static function event(
+        string $action,
+        string $modelClass,
+        string $label,
+        string $modelId = '0'
+    ): void {
+        try {
+            $isWeb = Yii::$app instanceof \yii\web\Application;
+            $log = new AuditLog();
+            $log->user_id = $isWeb && !Yii::$app->user->isGuest
+                ? (int)Yii::$app->user->id
+                : null;
+            $log->action = $action;
+            $log->model_class = $modelClass;
+            $log->model_id = $modelId;
+            $log->model_label = mb_substr($label, 0, 255);
+            $log->ip = $isWeb ? Yii::$app->request->getUserIP() : null;
+            $log->user_agent = $isWeb
+                ? mb_substr((string)Yii::$app->request->getUserAgent(), 0, 500)
+                : null;
+            $log->created_at = time();
+            $log->save(false);
+        } catch (\Throwable $e) {
+            Yii::error(
+                'AuditService::event failed: ' . $e->getMessage(),
                 'audit'
             );
         }
@@ -134,7 +178,7 @@ class AuditService
             $diff = [];
             foreach ($attrs as $key => $value) {
                 if ($value !== null && $value !== '') {
-                    $diff[$key] = [null, $value];
+                    $diff[$key] = [null, self::storable((string)$key, $value)];
                 }
             }
             return $diff ?: null;
@@ -149,7 +193,10 @@ class AuditService
         foreach ($changed as $attr => $oldValue) {
             $newValue = $model->getAttribute($attr);
             if (!self::sameValue($oldValue, $newValue)) {
-                $diff[$attr] = [$oldValue, $newValue];
+                $diff[$attr] = [
+                    self::storable((string)$attr, $oldValue),
+                    self::storable((string)$attr, $newValue),
+                ];
             }
         }
 
@@ -168,6 +215,21 @@ class AuditService
     public static function sameValue(mixed $old, mixed $new): bool
     {
         return self::comparable($old) === self::comparable($new);
+    }
+
+    /**
+     * Значение для журнала: пароли, ключи и токены в журнал не попадают —
+     * видно только, что поле менялось.
+     */
+    private static function storable(string $attribute, mixed $value): mixed
+    {
+        if ($value === null || $value === ''
+            || !AuditPresenter::isSensitive($attribute)
+        ) {
+            return $value;
+        }
+
+        return self::HIDDEN_VALUE;
     }
 
     private static function comparable(mixed $value): string

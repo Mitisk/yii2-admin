@@ -31,6 +31,15 @@ final class Module extends \yii\base\Module implements BootstrapInterface
      */
     public $cronTasks = [];
 
+    /**
+     * Названия действий проекта в журнале действий (/admin/log/): код, с которым проект зовёт
+     * `AuditService::log()`, => «что сделал» в прошедшем времени или ['label' => …, 'tone' => green|blue|red|orange|gray].
+     * Действие без названия показывается кодом. Пример: ['block' => ['label' => 'заблокировал', 'tone' => 'red']].
+     *
+     * @var array<string, string|array<string, string>>
+     */
+    public array $auditActions = [];
+
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
 
