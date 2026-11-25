@@ -56,8 +56,8 @@
 .et-switch input:focus-visible + .et-switch__track { outline: 2px solid var(--Main, #2275fc); outline-offset: 2px; }
 .et-switch input[type="checkbox"]:not(:checked) ~ .et-switch__text { color: #b45309; }
 
-/* Кнопки */
-.et-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border: 1px solid var(--Stroke, #e6e9ee); border-radius: 10px; background: var(--White, #fff); color: var(--Heading, #111); font-size: 13px; font-weight: 600; line-height: 18px; white-space: nowrap; cursor: pointer; transition: border-color .15s, color .15s; }
+/* Кнопки. Не сжимаются: тема задаёт кнопкам overflow: hidden, и в ряду с полем кнопка становилась уже своего текста */
+.et-btn { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border: 1px solid var(--Stroke, #e6e9ee); border-radius: 10px; background: var(--White, #fff); color: var(--Heading, #111); font-size: 13px; font-weight: 600; line-height: 18px; white-space: nowrap; cursor: pointer; transition: border-color .15s, color .15s; }
 .et-btn:hover { border-color: var(--Main, #2275fc); color: var(--Main, #2275fc); }
 .et-btn:disabled { opacity: .6; cursor: default; }
 .et-btn--primary { height: 42px; border-color: var(--Main, #2275fc); background: var(--Main, #2275fc); color: #fff; }
@@ -111,7 +111,6 @@
 /* Тестовое письмо */
 .et-test__row { display: flex; gap: 8px; }
 .et-test__row .et-input { flex: 1 1 auto; min-width: 0; }
-.et-test__row .et-btn { flex: 0 0 auto; }
 .et-result { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 19px; }
 .et-result.is-ok { background: #dcfce7; color: #166534; }
 .et-result.is-error { background: #fee2e2; color: #991b1b; }

@@ -89,7 +89,7 @@ a.lg-record:hover { color: var(--Main, #2275fc); text-decoration: underline; }
 .lg-none a { color: var(--Main, #2275fc); font-weight: 600; }
 
 /* Кнопки */
-.lg-btn { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border: 1px solid var(--Stroke, #e6e9ee); border-radius: 10px; background: var(--White, #fff); color: var(--Heading, #111); font-size: 13px; font-weight: 600; line-height: 18px; white-space: nowrap; cursor: pointer; transition: border-color .15s, color .15s; }
+.lg-btn { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border: 1px solid var(--Stroke, #e6e9ee); border-radius: 10px; background: var(--White, #fff); color: var(--Heading, #111); font-size: 13px; font-weight: 600; line-height: 18px; white-space: nowrap; cursor: pointer; transition: border-color .15s, color .15s; }
 .lg-btn:hover { border-color: var(--Main, #2275fc); color: var(--Main, #2275fc); }
 .lg-btn--small { height: 30px; padding: 0 10px; font-size: 12px; }
 .lg-btn--danger:hover { border-color: #ef4444; color: #b91c1c; }
