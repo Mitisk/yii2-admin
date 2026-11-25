@@ -9,6 +9,9 @@
  * @var string $storageDir
  * @var array<int, array<string, mixed>> $blocks
  * @var int $blocksTotal
+ * @var bool $bulk          WAF 2.2+: страницы списка, «Снять все», потолок блокировок
+ * @var int $blocksPage
+ * @var int $blocksPages
  * @var array<int, array<string, mixed>> $events
  * @var array{bans: int, active: int, byDay: array<string, int>} $stats
  * @var string $myIp
@@ -130,7 +133,7 @@ $this->params['recordCount'] = $blocksTotal;
                 <?php foreach ([
                     'enabled' => ['Защита включена', 'Выключенная защита не проверяет запросы вообще.'],
                     'observeOnly' => ['Режим наблюдения', 'Только записывать срабатывания в журнал, никого не блокировать. Удобно при первом включении: посмотрите журнал пару дней и убедитесь, что под шаблоны не попадают обычные посетители.'],
-                    'permanentBlock' => ['Блокировать бессрочно', 'Иначе блокировка снимается сама через срок ниже.'],
+                    'permanentBlock' => ['Блокировать бессрочно', 'Иначе блокировка снимается сама через срок ниже. Бессрочный список только растёт, а адреса сканеров со временем достаются обычным людям — лучше срок в 7–30 дней.'],
                 ] as $key => [$label, $hint]) : ?>
                     <fieldset class="mb-10">
                         <input type="hidden" name="Waf[<?= $key ?>]" value="0">
@@ -145,6 +148,13 @@ $this->params['recordCount'] = $blocksTotal;
                     <div class="body-title mb-10">Срок блокировки, часов</div>
                     <input type="number" class="form-control" name="Waf[blockHours]" min="0.02" step="any" value="<?= $hours($config->blockDuration) ?>" style="max-width:200px;">
                 </fieldset>
+                <?php if ($bulk) : ?>
+                    <fieldset class="mb-10">
+                        <div class="body-title mb-10">Потолок числа блокировок</div>
+                        <input type="number" class="form-control" name="Waf[maxBlocks]" min="0" max="100000" step="1" value="<?= (int)$config->maxBlocks ?>" style="max-width:200px;">
+                        <div class="body-text">Когда блокировок больше, самые старые автоматические удаляются; поставленные вручную остаются. 0 — без потолка.</div>
+                    </fieldset>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -293,6 +303,28 @@ $this->params['recordCount'] = $blocksTotal;
 
     <div class="table-card">
         <div class="table-responsive">
+            <?php if ($config->permanentBlock) : ?>
+                <div class="block-warning mb-20">
+                    <i class="icon-alert-octagon"></i>
+                    <div class="body-title-2">
+                        Бессрочные блокировки не снимаются сами: список только растёт<?= $bulk && $config->maxBlocks > 0
+                            ? ', пока не упрётся в потолок (' . (int)$config->maxBlocks . ') — дальше уходят самые старые'
+                            : '' ?>. Адреса сканеров часто временные и позже достаются обычным посетителям.
+                        Надёжнее выключить «Блокировать бессрочно» и задать срок в 7–30 дней.
+                    </div>
+                </div>
+            <?php endif; ?>
+            <?php if ($bulk && $blocksTotal > 0) : ?>
+                <details class="waf-bulk mb-20">
+                    <summary class="tf-button style-1">Снять все блокировки…</summary>
+                    <form method="post" action="<?= Url::to(['unblock-all']) ?>" class="waf-bulk__form">
+                        <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
+                        <div class="body-text">Все автоматически заблокированные адреса снова смогут открыть сайт. Сканер, который вернётся, будет заблокирован заново.</div>
+                        <label class="waf-bulk__check"><input type="checkbox" name="manual" value="1"> снять и поставленные вручную</label>
+                        <button type="submit" class="tf-button">Снять все (<?= (int)$blocksTotal ?>)</button>
+                    </form>
+                </details>
+            <?php endif; ?>
             <table class="modern-table">
                 <thead>
                 <tr>
@@ -346,7 +378,17 @@ $this->params['recordCount'] = $blocksTotal;
             </table>
         </div>
     </div>
-    <?php if ($blocksTotal > count($blocks)) : ?>
+    <?php if ($bulk && $blocksPages > 1) : ?>
+        <div class="waf-pager mt-3">
+            <?php if ($blocksPage > 1) : ?>
+                <a class="tf-button style-1" href="<?= Url::to(['index', 'blocksPage' => $blocksPage - 1, '#' => 'blocks']) ?>">← Новее</a>
+            <?php endif; ?>
+            <span class="body-text">Страница <?= $blocksPage ?> из <?= $blocksPages ?> · всего <?= $blocksTotal ?></span>
+            <?php if ($blocksPage < $blocksPages) : ?>
+                <a class="tf-button style-1" href="<?= Url::to(['index', 'blocksPage' => $blocksPage + 1, '#' => 'blocks']) ?>">Старее →</a>
+            <?php endif; ?>
+        </div>
+    <?php elseif ($blocksTotal > count($blocks)) : ?>
         <div class="body-text mt-3">Показаны последние <?= count($blocks) ?> из <?= $blocksTotal ?>.</div>
     <?php endif; ?>
 </div>
@@ -399,6 +441,13 @@ $this->params['recordCount'] = $blocksTotal;
 
 <?php
 $this->registerCss(<<<'CSS'
+.waf-bulk > summary { display: inline-flex; list-style: none; cursor: pointer; }
+.waf-bulk > summary::-webkit-details-marker { display: none; }
+.waf-bulk__form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 12px; padding: 16px; border: 1px solid var(--Stroke); border-radius: 12px; }
+.waf-bulk__form .body-text { flex: 1 1 100%; }
+.waf-bulk__check { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; cursor: pointer; }
+.waf-bulk__check input { position: static; width: 16px; height: 16px; margin: 0; opacity: 1; appearance: auto; -webkit-appearance: checkbox; }
+.waf-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
 /* Две колонки, как на странице «Настройки»: слева заголовок и пояснение, справа поля */
 .waf-box { display: flex; flex-direction: row; gap: 30px; }
 .waf-box > .left { width: 100%; max-width: 320px; flex: none; }

@@ -35,6 +35,17 @@ final class WafSectionTest extends TestCase
         Yii::$app->set('user', Yii::$app->get('adminUser'));
     }
 
+    /** Блокировка «по шаблону», как её ставит сам WAF; $age — на сколько секунд она свежее прочих. */
+    private function automaticBlock(string $ip, int $age = 0): void
+    {
+        $storage = new \Mitisk\Waf\Storage($this->storageDir);
+        $now = time();
+        $storage->saveBlock([
+            'key' => $ip, 'ip' => $ip, 'at' => $now + $age, 'until' => $now + 86400 + $age,
+            'uri' => '/wp-login.php', 'pattern' => '/wp-login', 'reason' => 'pattern',
+        ]);
+    }
+
     protected function tearDown(): void
     {
         if (isset($this->storageDir)) {
@@ -200,6 +211,62 @@ final class WafSectionTest extends TestCase
 
         self::assertSame(['10.0.0.0/8', '203.0.113.9'], $this->control()->settings()['allowIps']);
         self::assertSame([], $this->control()->blocks());
+    }
+
+    public function testUnblockAllKeepsManualBlocksUnlessAsked(): void
+    {
+        $this->loginAs(self::ADMIN_ID);
+        $control = WafBridge::control();
+        $control->block('203.0.113.9', 3600, 'вручную');
+        $this->automaticBlock('203.0.113.10');
+        $this->automaticBlock('203.0.113.11');
+
+        $this->runAction('admin/waf/unblock-all', [], []);
+
+        self::assertSame(1, $control->blocksCount(), 'Ручная блокировка снята без спроса');
+
+        $this->runAction('admin/waf/unblock-all', [], ['manual' => '1']);
+
+        self::assertSame(0, $control->blocksCount());
+    }
+
+    public function testBlocksAreShownByPagesWithTotal(): void
+    {
+        $this->loginAs(self::ADMIN_ID);
+        for ($i = 1; $i <= 55; $i++) {
+            $this->automaticBlock('203.0.113.' . $i, $i);
+        }
+
+        $first = $this->runAction('admin/waf/index');
+        $second = $this->runAction('admin/waf/index', ['blocksPage' => 2]);
+
+        self::assertIsString($first);
+        self::assertStringContainsString('Заблокированные (55)', $first);
+        self::assertStringContainsString('203.0.113.55', $first, 'На первой странице — самые свежие');
+        self::assertStringNotContainsString('>203.0.113.1<', $first);
+        self::assertStringContainsString('blocksPage=2', $first, 'Нет ссылки на следующую страницу');
+        self::assertIsString($second);
+        self::assertStringContainsString('>203.0.113.1<', $second);
+    }
+
+    public function testBlockLimitIsSavedFromForm(): void
+    {
+        $this->loginAs(self::ADMIN_ID);
+
+        $this->runAction('admin/waf/save', [], ['Waf' => ['maxBlocks' => '750']]);
+
+        self::assertSame(750, WafBridge::control()->settings()['maxBlocks']);
+    }
+
+    public function testPermanentModeIsExplainedOnThePage(): void
+    {
+        $this->loginAs(self::ADMIN_ID);
+        $this->runAction('admin/waf/save', [], ['Waf' => ['permanentBlock' => '1']]);
+
+        $html = $this->runAction('admin/waf/index');
+
+        self::assertIsString($html);
+        self::assertStringContainsString('Бессрочные блокировки не снимаются сами', $html);
     }
 
     public function testDashboardWidgetShowsWeeklyBans(): void

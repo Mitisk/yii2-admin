@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Waf\SettingsException;
+use Mitisk\Waf\WafControl;
 use Mitisk\Yii2Admin\components\BaseController;
 use Mitisk\Yii2Admin\components\WafBridge;
 use Yii;
@@ -20,6 +21,8 @@ use yii\web\Response;
 class WafController extends BaseController
 {
     private const LIST_LIMIT = 300;
+    /** Блокировок на странице списка (WAF 2.2+; раньше показывались первые LIST_LIMIT) */
+    private const BLOCKS_PER_PAGE = 50;
 
     /**
      * {@inheritdoc}
@@ -40,6 +43,7 @@ class WafController extends BaseController
                     'reset' => ['POST'],
                     'block' => ['POST'],
                     'unblock' => ['POST'],
+                    'unblock-all' => ['POST'],
                     'allow-ip' => ['POST'],
                 ],
             ],
@@ -76,15 +80,32 @@ class WafController extends BaseController
         $control = WafBridge::control();
         $config = WafBridge::config();
         $checkUri = trim((string)Yii::$app->request->get('check', ''));
-        $blocks = $control->blocks();
+
+        // WAF 2.2+: счётчик без чтения файлов и список по страницам; старее — первые LIST_LIMIT записей
+        $bulk = WafControl::API >= 2;
+        $blocksPage = 1;
+        $blocksPages = 1;
+        if ($bulk) {
+            $blocksTotal = $control->blocksCount();
+            $blocksPages = max(1, (int)ceil($blocksTotal / self::BLOCKS_PER_PAGE));
+            $blocksPage = min($blocksPages, max(1, (int)Yii::$app->request->get('blocksPage', 1)));
+            $blocks = $control->blocksPage(self::BLOCKS_PER_PAGE, ($blocksPage - 1) * self::BLOCKS_PER_PAGE);
+        } else {
+            $all = $control->blocks();
+            $blocksTotal = count($all);
+            $blocks = array_slice($all, 0, self::LIST_LIMIT);
+        }
 
         return $this->render('index', [
+            'bulk' => $bulk,
+            'blocksPage' => $blocksPage,
+            'blocksPages' => $blocksPages,
             'config' => $config,
             'saved' => $control->settings(),
             'running' => WafBridge::isRunning(),
             'storageDir' => $control->storageDir(),
-            'blocks' => array_slice($blocks, 0, self::LIST_LIMIT),
-            'blocksTotal' => count($blocks),
+            'blocks' => $blocks,
+            'blocksTotal' => $blocksTotal,
             'events' => $control->events(self::LIST_LIMIT),
             'stats' => $control->stats(7),
             'myIp' => WafBridge::clientIp(),
@@ -193,6 +214,23 @@ class WafController extends BaseController
     }
 
     /**
+     * Снять все блокировки разом (WAF 2.2+). Поставленные вручную остаются, если не отмечено «и ручные».
+     */
+    public function actionUnblockAll(): Response
+    {
+        if (!WafBridge::isSupported() || WafControl::API < 2) {
+            Yii::$app->session->setFlash('error', 'Обновите mitisk/yii2-lightweight-waf до версии 2.2: в установленной снять все блокировки разом нельзя.');
+            return $this->redirect(['index', '#' => 'blocks']);
+        }
+
+        $withManual = filter_var(Yii::$app->request->post('manual'), FILTER_VALIDATE_BOOLEAN);
+        $removed = WafBridge::control()->unblockAll(!$withManual);
+        Yii::$app->session->setFlash('success', 'Снято блокировок: ' . $removed . ($withManual ? '.' : '. Поставленные вручную оставлены.'));
+
+        return $this->redirect(['index', '#' => 'blocks']);
+    }
+
+    /**
      * Поля формы → настройки WAF: часы и минуты в секунды, отмеченные шаблоны — в список выключенных.
      *
      * @param array<string, mixed> $form
@@ -210,6 +248,9 @@ class WafController extends BaseController
             if (array_key_exists($key, $form)) {
                 $settings[$key] = is_string($form[$key]) ? $form[$key] : '';
             }
+        }
+        if (array_key_exists('maxBlocks', $form)) {
+            $settings['maxBlocks'] = is_scalar($form['maxBlocks']) ? trim((string)$form['maxBlocks']) : '';
         }
         if (array_key_exists('blockHours', $form)) {
             $settings['blockDuration'] = (int)round((float)str_replace(',', '.', (string)$form['blockHours']) * 3600);
