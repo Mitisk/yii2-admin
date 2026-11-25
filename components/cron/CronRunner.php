@@ -6,32 +6,43 @@ namespace Mitisk\Yii2Admin\components\cron;
 
 use Mitisk\Yii2Admin\models\CronLog;
 use Mitisk\Yii2Admin\models\CronTask;
+use Mitisk\Yii2Admin\models\Settings;
 use Yii;
+use yii\helpers\FileHelper;
 
 /**
  * Диспетчер планировщика. Раз в минуту его вызывает единственная строка crontab сервера
- * (`php yii admin/cron/run`), а расписание задач живёт в админке (/admin/cron/).
+ * (`php yii admin/cron/run`); задачи — из кода проекта (Module::$cronTasks) и созданные в /admin/cron/.
  *
- * За один вызов: находит задачи, которым пора (по расписанию или по кнопке «Запустить сейчас»),
- * запускает их отдельными процессами, пишет итог в журнал и чистит журнал от старых записей.
- * Задача, которая ещё идёт с прошлого раза, второй раз не запускается.
+ * За один вызов:
+ * - под замком забирает минуты: от последней обработанной до текущей. Пропущенные минуты (сервер
+ *   или крон стоял) догоняются, но не старше часа; первый в истории вызов берёт только текущую минуту.
+ *   Минуту обрабатывает ровно один вызов, даже если в crontab две строки;
+ * - собирает задачи, которым пора, в группы по первой подходящей минуте и запускает группы по
+ *   очереди (при догоне ночной порядок сохраняется), задачи группы — параллельно;
+ * - каждую задачу держит замком-файлом, пока идёт её процесс: идущая задача второй раз не стартует,
+ *   а упавший диспетчер замок отпускает сам;
+ * - пишет итог в журнал и чистит журнал от старых записей.
  */
 final class CronRunner
 {
     /** Сколько байт вывода команды хранится в журнале */
     public const OUTPUT_LIMIT = 20000;
 
-    /** Запас к лимиту времени задачи, после которого «идущая» задача считается зависшей, секунд */
-    private const STALE_MARGIN = 300;
+    /** Насколько давние пропущенные минуты ещё выполняются, секунд */
+    public const CATCH_UP_SECONDS = 3600;
 
     /** Диспетчер молчит дольше — раздел подсказывает, как его подключить, секунд */
     public const SILENCE_AFTER = 180;
+
+    /** Сколько ждать замок соседнего вызова при разборе минут, секунд */
+    private const CLAIM_WAIT_SECONDS = 5;
 
     /** @var callable(array<int, array{command: string[], timeout: int}>): array<int, array{exit: int|null, output: string, duration: int, timedOut: bool}> */
     private $launcher;
 
     /**
-     * @param callable|null $launcher запуск процессов; по умолчанию — ProcessLauncher через точку входа консоли
+     * @param callable|null $launcher запуск процессов группы; по умолчанию — ProcessLauncher через точку входа консоли
      */
     public function __construct(?callable $launcher = null)
     {
@@ -39,38 +50,20 @@ final class CronRunner
     }
 
     /**
-     * @return array{started: int, ok: int, failed: int}
+     * @return array{started: int, ok: int, failed: int, skipped: int}
      */
     public function run(?int $now = null): array
     {
         $now ??= time();
+        $realStart = time();
         Yii::$app->settings->set('HIDDEN', 'cron_heartbeat', (string) $now, 'integer');
+        CodeTasks::sync();
 
-        $jobs = [];
-        $sources = [];
-        foreach (CronTask::find()->orderBy(['id' => SORT_ASC])->all() as $task) {
-            $source = $this->sourceFor($task, $now);
-            if ($source === null) {
-                continue;
-            }
-            // Условное обновление: два диспетчера одной минуты не возьмут задачу вдвоём
-            $taken = CronTask::updateAll(
-                ['running_since' => $now, 'run_requested_at' => null],
-                ['and', ['id' => $task->id], $task->running_since === null ? ['running_since' => null] : ['running_since' => $task->running_since]]
-            );
-            if ($taken !== 1) {
-                continue;
-            }
-            $jobs[$task->id] = ['command' => $task->commandParts(), 'timeout' => (int) $task->timeout];
-            $sources[$task->id] = $source;
-        }
-
-        $summary = ['started' => count($jobs), 'ok' => 0, 'failed' => 0];
-        if ($jobs !== []) {
-            $results = ($this->launcher)($jobs);
-            foreach ($jobs as $id => $job) {
-                $status = $this->record($id, $sources[$id], $now, $results[$id] ?? null);
-                $summary[$status === CronTask::STATUS_OK ? 'ok' : 'failed']++;
+        $summary = ['started' => 0, 'ok' => 0, 'failed' => 0, 'skipped' => 0];
+        $minutes = $this->claimMinutes($now);
+        if ($minutes !== []) {
+            foreach ($this->groups($minutes) as $group) {
+                $this->runGroup($group, $now + max(0, time() - $realStart), $summary);
             }
         }
 
@@ -90,6 +83,17 @@ final class CronRunner
     }
 
     /**
+     * Файл-замок задачи: его держит процесс диспетчера, пока задача выполняется.
+     */
+    public static function lockFile(int $taskId): string
+    {
+        $dir = Yii::getAlias('@runtime/admin-cron');
+        FileHelper::createDirectory($dir);
+
+        return $dir . DIRECTORY_SEPARATOR . 'task-' . $taskId . '.lock';
+    }
+
+    /**
      * Самоочистка журнала: записи старше CRON.log_days дней и всё сверх CRON.log_rows последних на задачу.
      */
     public function cleanLog(int $now): void
@@ -105,58 +109,156 @@ final class CronRunner
             ->having(['>', 'COUNT(*)', $rows])
             ->column();
         foreach ($crowded as $taskId) {
-            // id самой старой записи, которая ещё остаётся: всё, что старше, удаляется
+            // Самая старая запись, которая ещё остаётся: всё, что старше, удаляется
             $edge = CronLog::find()
-                ->select('id')
                 ->where(['task_id' => $taskId])
                 ->orderBy(['started_at' => SORT_DESC, 'id' => SORT_DESC])
                 ->offset($rows - 1)
                 ->limit(1)
-                ->scalar();
-            if ($edge === false || $edge === null) {
-                continue;
-            }
-            $edgeRow = CronLog::findOne((int) $edge);
-            if ($edgeRow === null) {
+                ->one();
+            if ($edge === null) {
                 continue;
             }
             CronLog::deleteAll([
                 'and',
                 ['task_id' => $taskId],
                 ['or',
-                    ['<', 'started_at', $edgeRow->started_at],
-                    ['and', ['started_at' => $edgeRow->started_at], ['<', 'id', $edgeRow->id]],
+                    ['<', 'started_at', $edge->started_at],
+                    ['and', ['started_at' => $edge->started_at], ['<', 'id', $edge->id]],
                 ],
             ]);
         }
     }
 
     /**
-     * Почему задачу надо запустить сейчас: 'manual', 'schedule' или null — не надо.
+     * Минуты, которые достаются этому вызову (начала минут по возрастанию). Пусто — минуту уже
+     * обработал соседний вызов или замок разбора занят дольше CLAIM_WAIT_SECONDS.
+     *
+     * @return int[]
      */
-    private function sourceFor(CronTask $task, int $now): ?string
+    private function claimMinutes(int $now): array
     {
-        if ($task->running_since !== null && $now - (int) $task->running_since <= (int) $task->timeout + self::STALE_MARGIN) {
-            return null;
+        $current = intdiv($now, 60) * 60;
+        $lockPath = Yii::getAlias('@runtime/admin-cron');
+        FileHelper::createDirectory($lockPath);
+        $lock = @fopen($lockPath . DIRECTORY_SEPARATOR . 'claim.lock', 'c');
+        if ($lock === false) {
+            return [];
         }
-        if ($task->run_requested_at !== null) {
-            return CronLog::SOURCE_MANUAL;
+        try {
+            $deadline = microtime(true) + self::CLAIM_WAIT_SECONDS;
+            while (!flock($lock, LOCK_EX | LOCK_NB)) {
+                if (microtime(true) > $deadline) {
+                    return [];
+                }
+                usleep(100000);
+            }
+
+            // Мимо кэша настроек: значение меняют соседние процессы
+            $last = (int) Settings::find()
+                ->select('value')
+                ->where(['model_name' => 'HIDDEN', 'attribute' => 'cron_last_minute'])
+                ->scalar();
+            if ($last === $current) {
+                return [];
+            }
+            $from = $current;
+            if ($last > 0 && $last < $current) {
+                $from = max($last + 60, $current - self::CATCH_UP_SECONDS + 60);
+            }
+            Yii::$app->settings->set('HIDDEN', 'cron_last_minute', (string) $current, 'integer');
+
+            return range($from, $current, 60);
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
-        if (!$task->enabled || !CronExpression::isDue((string) $task->schedule, $now)) {
-            return null;
+    }
+
+    /**
+     * Задачи, которым пора, по группам первой подходящей минуты; «Запустить сейчас» — в группу текущей.
+     *
+     * @param int[] $minutes
+     * @return array<int, array<int, array{task: CronTask, source: string}>>
+     */
+    private function groups(array $minutes): array
+    {
+        $tasks = CronTask::find()->orderBy(['id' => SORT_ASC])->all();
+        $groups = [];
+        $taken = [];
+        foreach ($minutes as $minute) {
+            foreach ($tasks as $task) {
+                if (isset($taken[$task->id]) || !$task->enabled) {
+                    continue;
+                }
+                if (CronExpression::isDue((string) $task->schedule, $minute)) {
+                    $taken[$task->id] = true;
+                    $groups[$minute][] = ['task' => $task, 'source' => CronLog::SOURCE_SCHEDULE];
+                }
+            }
         }
-        // Уже запускалась в эту минуту (crontab дёрнул диспетчер дважды)
-        if ($task->last_run_at !== null && intdiv((int) $task->last_run_at, 60) === intdiv($now, 60)) {
-            return null;
+        $current = (int) end($minutes);
+        foreach ($tasks as $task) {
+            if ($task->run_requested_at !== null && !isset($taken[$task->id])) {
+                $groups[$current][] = ['task' => $task, 'source' => CronLog::SOURCE_MANUAL];
+            }
+        }
+        ksort($groups);
+
+        return array_values($groups);
+    }
+
+    /**
+     * Запускает задачи группы параллельно и ждёт их. Задача, чей замок занят, пропускается.
+     *
+     * @param array<int, array{task: CronTask, source: string}> $group
+     * @param array{started: int, ok: int, failed: int, skipped: int} $summary
+     */
+    private function runGroup(array $group, int $startedAt, array &$summary): void
+    {
+        $jobs = [];
+        $locks = [];
+        $sources = [];
+        foreach ($group as ['task' => $task, 'source' => $source]) {
+            $lock = @fopen(self::lockFile((int) $task->id), 'c');
+            if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+                if ($lock !== false) {
+                    fclose($lock);
+                }
+                $summary['skipped']++;
+                continue;
+            }
+            $locks[$task->id] = $lock;
+            $sources[$task->id] = $source;
+            CronTask::updateAll(['running_since' => $startedAt, 'run_requested_at' => null], ['id' => $task->id]);
+            $jobs[$task->id] = ['command' => $task->commandParts(), 'timeout' => (int) $task->timeout];
         }
 
-        return CronLog::SOURCE_SCHEDULE;
+        if ($jobs === []) {
+            return;
+        }
+        try {
+            $results = ($this->launcher)($jobs);
+            foreach ($group as ['task' => $task]) {
+                if (!isset($jobs[$task->id])) {
+                    continue;
+                }
+                $status = $this->record($task, $sources[$task->id], $startedAt, $results[$task->id] ?? null);
+                $summary['started']++;
+                $summary[$status === CronTask::STATUS_OK ? 'ok' : 'failed']++;
+            }
+        } finally {
+            foreach ($locks as $lock) {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+            }
+        }
     }
 
     /**
      * @param array{exit: int|null, output: string, duration: int, timedOut: bool}|null $result
      */
-    private function record(int $taskId, string $source, int $startedAt, ?array $result): string
+    private function record(CronTask $task, string $source, int $startedAt, ?array $result): string
     {
         $result ??= ['exit' => null, 'output' => 'Процесс не вернул результат.', 'duration' => 0, 'timedOut' => false];
         $status = !empty($result['timedOut'])
@@ -176,8 +278,13 @@ final class CronRunner
             $output = trim($output . "\nЗадача не уложилась в лимит времени и остановлена.");
         }
 
+        // «Только ошибки»: из успешных запусков остаётся последний
+        if ($status === CronTask::STATUS_OK && $task->log_mode === CronTask::LOG_FAILURES) {
+            CronLog::deleteAll(['task_id' => $task->id, 'status' => CronTask::STATUS_OK]);
+        }
+
         $log = new CronLog([
-            'task_id' => $taskId,
+            'task_id' => $task->id,
             'started_at' => $startedAt,
             'finished_at' => $startedAt + (int) ceil($duration / 1000),
             'duration_ms' => $duration,
@@ -193,7 +300,7 @@ final class CronRunner
             'last_run_at' => $startedAt,
             'last_status' => $status,
             'last_duration_ms' => $duration,
-        ], ['id' => $taskId]);
+        ], ['id' => $task->id]);
 
         return $status;
     }

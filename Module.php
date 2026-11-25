@@ -21,6 +21,16 @@ final class Module extends \yii\base\Module implements BootstrapInterface
      */
     public array $modelNamespaces = ['app\models' => '@app/models'];
 
+    /**
+     * Задачи планировщика из кода проекта (раздел «Планировщик», §9f инструкции): список описаний
+     * или callable, который его возвращает. Описание — ['key' => 'account-purge', 'command' => 'account/purge',
+     * 'schedule' => '30 1 * * *', 'name' => '…', 'timeout' => 0, 'log' => 'all' | 'failures'].
+     * Задаётся одинаково в web- и консольном конфиге: консоль их запускает, веб показывает.
+     *
+     * @var array<int, array<string, mixed>>|callable
+     */
+    public $cronTasks = [];
+
     public $controllerNamespace = 'Mitisk\Yii2Admin\controllers';
     public $checkAccessPermissionAdministrateRbac = true;
 

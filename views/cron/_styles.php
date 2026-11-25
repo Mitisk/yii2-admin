@@ -37,6 +37,13 @@ $this->registerCss(<<<'CSS'
 .cr-chip--ok { background: #dcfce7; color: #15803d; }
 .cr-chip--fail { background: #fee2e2; color: #b91c1c; }
 .cr-chip--run { background: #dbeafe; color: #1d4ed8; }
+.cr-chip--code { margin-left: 8px; background: rgba(34, 117, 252, .1); color: #1d4ed8; vertical-align: middle; }
+.cr-errors { margin: 0; padding-left: 18px; font-size: 13px; line-height: 20px; color: #b45309; }
+.cr-readonly { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px 16px; margin: 0 0 18px; }
+.cr-readonly dt { font-size: 13px; font-weight: 700; line-height: 20px; color: var(--Heading, #111); }
+.cr-readonly dd { margin: 0; font-size: 14px; line-height: 20px; color: var(--Heading, #111); overflow-wrap: anywhere; }
+.cr-readonly code { padding: 1px 6px; border-radius: 6px; background: var(--bg-table-1, #f1f5f9); font-size: 12.5px; }
+@media (max-width: 575px) { .cr-readonly { grid-template-columns: 1fr; gap: 2px 0; } .cr-readonly dd { margin-bottom: 8px; } }
 .cr-chip--manual { background: var(--bg-table-1, #f1f5f9); color: var(--Body-Text, #575864); }
 .cr-task__tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .cr-task__tools form { margin: 0; }

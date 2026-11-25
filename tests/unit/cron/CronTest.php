@@ -143,13 +143,20 @@ final class CronTest extends TestCase
     {
         $task = $this->savedTask(['schedule' => '* * * * *']);
         $now = mktime(10, 5, 0, 11, 23, 2026);
-        $task->updateAttributes(['running_since' => $now - 120]);
+        // Задача идёт: её замок держит процесс диспетчера, запустивший её
+        $lock = fopen(CronRunner::lockFile((int) $task->id), 'c');
+        self::assertTrue(flock($lock, LOCK_EX | LOCK_NB));
 
-        $this->runner()->run($now);
-        self::assertSame([], $this->launched, 'Вторая копия задачи поверх первой');
+        try {
+            $this->runner()->run($now);
+            self::assertSame([], $this->launched, 'Вторая копия задачи поверх первой');
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
 
-        // Зависшая дольше своего лимита задача считается мёртвой
-        $task->updateAttributes(['running_since' => $now - $task->timeout - 600]);
+        // Диспетчер упал, отметка в базе осталась, но замок свободен — задача снова запускается
+        $task->updateAttributes(['running_since' => $now - 30]);
         $this->runner()->run($now + 60);
         self::assertCount(1, $this->launched);
     }

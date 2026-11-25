@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mitisk\Yii2Admin\controllers;
 
 use Mitisk\Yii2Admin\components\BaseController;
+use Mitisk\Yii2Admin\components\cron\CodeTasks;
 use Mitisk\Yii2Admin\components\cron\CronExpression;
 use Mitisk\Yii2Admin\components\cron\CronRunner;
 use Mitisk\Yii2Admin\models\CronLog;
@@ -12,6 +13,7 @@ use Mitisk\Yii2Admin\models\CronTask;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
+use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
@@ -21,6 +23,8 @@ use yii\web\Response;
  */
 class CronController extends BaseController
 {
+    private const CODE_TASK_MESSAGE = 'Задача задана в коде проекта: расписание, команду и включение меняют в коде и выкладкой. Отсюда её можно только запустить вручную.';
+
     /** Сколько последних запусков показывать на странице задачи */
     private const LOG_ON_PAGE = 50;
 
@@ -49,7 +53,11 @@ class CronController extends BaseController
     {
         $now = time();
         $heartbeat = CronRunner::heartbeat();
-        $tasks = CronTask::find()->orderBy(['enabled' => SORT_DESC, 'name' => SORT_ASC])->all();
+        // Задачи из кода видны сразу, ещё до первого запуска диспетчера
+        $codeErrors = CodeTasks::sync();
+        $tasks = CronTask::find()
+            ->orderBy([new \yii\db\Expression('[[code_key]] IS NULL'), 'enabled' => SORT_DESC, 'name' => SORT_ASC])
+            ->all();
 
         $next = [];
         foreach ($tasks as $task) {
@@ -62,6 +70,7 @@ class CronController extends BaseController
             'heartbeat' => $heartbeat,
             'alive' => $heartbeat !== null && $now - $heartbeat <= CronRunner::SILENCE_AFTER,
             'crontabLine' => '* * * * * cd ' . Yii::getAlias('@app') . ' && php yii admin/cron/run >/dev/null 2>&1',
+            'codeErrors' => $codeErrors,
             'failedToday' => (int) CronLog::find()->where(['<>', 'status', CronTask::STATUS_OK])->andWhere(['>=', 'started_at', $now - 86400])->count(),
         ]);
     }
@@ -80,7 +89,12 @@ class CronController extends BaseController
     public function actionUpdate(int $id)
     {
         $task = $this->findTask($id);
-        if ($task->load(Yii::$app->request->post()) && $task->save()) {
+        if ($task->isFromCode()) {
+            if (Yii::$app->request->isPost) {
+                Yii::$app->session->setFlash('warning', self::CODE_TASK_MESSAGE);
+                return $this->redirect(['update', 'id' => $task->id]);
+            }
+        } elseif ($task->load(Yii::$app->request->post()) && $task->save()) {
             Yii::$app->session->setFlash('success', 'Задача «' . $task->name . '» сохранена.');
             return $this->redirect(['index']);
         }
@@ -93,7 +107,7 @@ class CronController extends BaseController
 
     public function actionToggle(int $id): Response
     {
-        $task = $this->findTask($id);
+        $task = $this->findEditableTask($id);
         $task->updateAttributes(['enabled' => $task->enabled ? 0 : 1]);
         Yii::$app->session->setFlash('success', 'Задача «' . $task->name . '» ' . ($task->enabled ? 'включена' : 'выключена') . '.');
 
@@ -126,11 +140,24 @@ class CronController extends BaseController
 
     public function actionDelete(int $id): Response
     {
-        $task = $this->findTask($id);
+        $task = $this->findEditableTask($id);
         $task->delete();
         Yii::$app->session->setFlash('success', 'Задача «' . $task->name . '» удалена вместе с журналом.');
 
         return $this->redirect(['index']);
+    }
+
+    /**
+     * Задача, которую можно менять из админки: задачи из кода проекта выключают и удаляют в коде.
+     */
+    private function findEditableTask(int $id): CronTask
+    {
+        $task = $this->findTask($id);
+        if ($task->isFromCode()) {
+            throw new ForbiddenHttpException(self::CODE_TASK_MESSAGE);
+        }
+
+        return $task;
     }
 
     private function findTask(int $id): CronTask

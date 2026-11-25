@@ -39,6 +39,26 @@ $next = $isNew || !$task->enabled ? null : CronExpression::nextRun($schedule, ti
 ?>
 <div class="cr">
     <div class="cr-form">
+        <?php if ($task->isFromCode()) : ?>
+        <div class="cr-card">
+            <div class="cr-card__title">Задача из кода проекта</div>
+            <p class="cr-text">Расписание, команду и включение задаёт код проекта (настройка <code>cronTasks</code> модуля админки) — они меняются в коде и выкладкой, а не здесь. Отсюда задачу можно запустить вручную и посмотреть её журнал.</p>
+            <dl class="cr-readonly">
+                <dt>Название</dt><dd><?= Html::encode($task->name) ?></dd>
+                <dt>Команда</dt><dd><code>php yii <?= Html::encode($task->command) ?></code></dd>
+                <dt>Расписание</dt><dd><?= Html::encode(CronExpression::describe($schedule)) ?><?php if (CronExpression::describe($schedule) !== $schedule) : ?> <span class="cr-muted">· <?= Html::encode($schedule) ?></span><?php endif; ?></dd>
+                <dt>Лимит времени</dt><dd><?= (int) $task->timeout > 0 ? (int) $task->timeout . ' с' : 'без лимита' ?></dd>
+                <dt>Журнал</dt><dd><?= $task->log_mode === CronTask::LOG_FAILURES ? 'ошибки и последний успешный запуск' : 'все запуски' ?></dd>
+                <dt>Ключ</dt><dd><code><?= Html::encode($task->code_key) ?></code></dd>
+            </dl>
+            <?php if ($next !== null) : ?>
+                <div class="cr-schedule-read">Ближайший запуск: <?= Html::encode($formatter->asDatetime($next, 'dd.MM.yyyy HH:mm')) ?> (<?= Html::encode($formatter->asRelativeTime($next)) ?>)</div>
+            <?php endif; ?>
+            <div class="cr-actions" style="margin-top:18px;">
+                <a class="cr-link" href="<?= Url::to(['index']) ?>">← К списку задач</a>
+            </div>
+        </div>
+        <?php else : ?>
         <form method="post" class="cr-card" id="cr-form">
             <?= $csrf ?>
 
@@ -80,9 +100,18 @@ $next = $isNew || !$task->enabled ? null : CronExpression::nextRun($schedule, ti
 
             <label class="cr-field" style="max-width:260px;">
                 <span class="cr-field__label">Лимит времени, секунд</span>
-                <input type="number" name="CronTask[timeout]" min="10" max="86400" step="1" value="<?= (int) $task->timeout ?>">
+                <input type="number" name="CronTask[timeout]" min="0" max="86400" step="1" value="<?= (int) $task->timeout ?>">
                 <span class="cr-error"><?= Html::encode($task->getFirstError('timeout')) ?></span>
-                <span class="cr-hint">Задача, которая не уложилась, останавливается.</span>
+                <span class="cr-hint">Задача, которая не уложилась, останавливается. 0 — без лимита.</span>
+            </label>
+
+            <label class="cr-field" style="max-width:360px;">
+                <span class="cr-field__label">Журнал</span>
+                <select name="CronTask[log_mode]">
+                    <option value="<?= CronTask::LOG_ALL ?>"<?= $task->log_mode !== CronTask::LOG_FAILURES ? ' selected' : '' ?>>Все запуски</option>
+                    <option value="<?= CronTask::LOG_FAILURES ?>"<?= $task->log_mode === CronTask::LOG_FAILURES ? ' selected' : '' ?>>Ошибки и последний успешный запуск</option>
+                </select>
+                <span class="cr-hint">Для частых задач (каждую минуту) удобнее второе: ошибки не теряются среди сотен успешных запусков.</span>
             </label>
 
             <input type="hidden" name="CronTask[enabled]" value="0">
@@ -96,6 +125,7 @@ $next = $isNew || !$task->enabled ? null : CronExpression::nextRun($schedule, ti
                 <a class="cr-link" href="<?= Url::to(['index']) ?>">Отмена</a>
             </div>
         </form>
+        <?php endif; ?>
 
         <?php if (!$isNew) : ?>
             <aside class="cr-side">
@@ -111,6 +141,7 @@ $next = $isNew || !$task->enabled ? null : CronExpression::nextRun($schedule, ti
                         </button>
                     </form>
                 </div>
+                <?php if (!$task->isFromCode()) : ?>
                 <div class="cr-card">
                     <div class="cr-card__title">Удалить задачу</div>
                     <p class="cr-text">Вместе с задачей удалится её журнал.</p>
@@ -122,6 +153,7 @@ $next = $isNew || !$task->enabled ? null : CronExpression::nextRun($schedule, ti
                         </details>
                     </form>
                 </div>
+                <?php endif; ?>
             </aside>
         <?php endif; ?>
     </div>

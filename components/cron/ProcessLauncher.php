@@ -29,66 +29,99 @@ final class ProcessLauncher
      */
     public function __invoke(array $jobs): array
     {
+        $raw = [];
+        foreach ($jobs as $id => $job) {
+            $raw[$id] = ['args' => array_merge([$this->script], $job['command']), 'timeout' => (int) $job['timeout']];
+        }
+
+        return $this->runRaw($raw);
+    }
+
+    /**
+     * Запускает `php <args>` для каждой задачи и ждёт всех.
+     *
+     * @param array<int, array{args: string[], timeout: int}> $jobs timeout 0 — без лимита времени
+     * @return array<int, array{exit: int|null, output: string, duration: int, timedOut: bool}>
+     */
+    private function runRaw(array $jobs): array
+    {
         $running = [];
         $results = [];
         foreach ($jobs as $id => $job) {
+            // Вывод — во временный файл, а не в канал: канал не переполнится у болтливой задачи, а опрос
+            // процесса не ждёт чтения (на Windows каналы не бывают неблокирующими — лимит времени не работал бы)
+            $outputFile = tempnam(sys_get_temp_dir(), 'admin-cron-');
+            $output = $outputFile !== false ? @fopen($outputFile, 'w+') : false;
+            if ($output === false) {
+                $results[$id] = ['exit' => null, 'output' => 'Не удалось создать временный файл для вывода задачи.', 'duration' => 0, 'timedOut' => false];
+                continue;
+            }
             $pipes = [];
             $process = @proc_open(
-                array_merge([$this->php, $this->script], $job['command']),
-                [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+                array_merge([$this->php], $job['args']),
+                [0 => ['pipe', 'r'], 1 => $output, 2 => $output],
                 $pipes,
                 dirname($this->script)
             );
             if (!is_resource($process)) {
+                fclose($output);
+                @unlink($outputFile);
                 $results[$id] = ['exit' => null, 'output' => 'Не удалось запустить процесс: проверьте, что функция proc_open разрешена.', 'duration' => 0, 'timedOut' => false];
                 continue;
             }
             fclose($pipes[0]);
-            stream_set_blocking($pipes[1], false);
-            stream_set_blocking($pipes[2], false);
-            $running[$id] = ['process' => $process, 'pipes' => $pipes, 'started' => microtime(true), 'timeout' => max(1, (int) $job['timeout']), 'output' => ''];
+            $running[$id] = [
+                'process' => $process,
+                'output' => $output,
+                'outputFile' => $outputFile,
+                'started' => microtime(true),
+                'timeout' => max(0, (int) $job['timeout']),
+            ];
         }
 
         while ($running !== []) {
-            foreach ($running as $id => &$item) {
-                foreach ([1, 2] as $pipe) {
-                    $chunk = stream_get_contents($item['pipes'][$pipe]);
-                    if (is_string($chunk) && $chunk !== '') {
-                        $item['output'] = substr($item['output'] . $chunk, -self::OUTPUT_BUFFER);
-                    }
-                }
+            foreach ($running as $id => $item) {
                 $status = proc_get_status($item['process']);
                 $elapsed = microtime(true) - $item['started'];
-                $timedOut = $status['running'] && $elapsed > $item['timeout'];
+                $timedOut = $status['running'] && $item['timeout'] > 0 && $elapsed > $item['timeout'];
                 if ($status['running'] && !$timedOut) {
                     continue;
                 }
                 if ($timedOut) {
                     proc_terminate($item['process']);
                 }
-                foreach ([1, 2] as $pipe) {
-                    $rest = stream_get_contents($item['pipes'][$pipe]);
-                    if (is_string($rest) && $rest !== '') {
-                        $item['output'] = substr($item['output'] . $rest, -self::OUTPUT_BUFFER);
-                    }
-                    fclose($item['pipes'][$pipe]);
-                }
+                // Код выхода — из этого proc_get_status(): в PHP < 8.3 proc_close() после него вернёт -1
                 $exit = $status['running'] ? null : (int) $status['exitcode'];
                 proc_close($item['process']);
                 $results[$id] = [
                     'exit' => $timedOut ? null : $exit,
-                    'output' => $item['output'],
+                    'output' => self::tail($item['output']),
                     'duration' => (int) round($elapsed * 1000),
                     'timedOut' => $timedOut,
                 ];
+                fclose($item['output']);
+                @unlink($item['outputFile']);
                 unset($running[$id]);
             }
-            unset($item);
             if ($running !== []) {
                 usleep(100000);
             }
         }
 
         return $results;
+    }
+
+    /**
+     * Конец вывода задачи: последние OUTPUT_BUFFER байт.
+     *
+     * @param resource $handle
+     */
+    private static function tail($handle): string
+    {
+        fflush($handle);
+        $size = (int) (fstat($handle)['size'] ?? 0);
+        fseek($handle, max(0, $size - self::OUTPUT_BUFFER));
+
+        return (string) stream_get_contents($handle);
     }
 }

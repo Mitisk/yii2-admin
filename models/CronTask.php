@@ -15,12 +15,17 @@ use yii\db\ActiveRecord;
  * Команда — маршрут консоли Yii и аргументы («catalog/reindex --force=1»), а не строка для shell:
  * диспетчер запускает её как `php yii <маршрут> <аргументы>` без командной оболочки.
  *
+ * Задача из кода проекта (Module::$cronTasks) хранит здесь только состояние и журнал: её расписание
+ * и команду при каждом запуске диспетчера перезаписывает код (CodeTasks::sync()).
+ *
  * @property int $id
+ * @property string|null $code_key ключ задачи из кода; NULL — задача создана в админке
  * @property string $name
  * @property string $command
  * @property string $schedule
  * @property int $enabled
- * @property int $timeout
+ * @property int $timeout секунд; 0 — без лимита
+ * @property string $log_mode all | failures
  * @property int|null $run_requested_at
  * @property int|null $running_since
  * @property int|null $last_run_at
@@ -34,6 +39,11 @@ class CronTask extends ActiveRecord
     public const STATUS_OK = 'ok';
     public const STATUS_FAIL = 'fail';
     public const STATUS_TIMEOUT = 'timeout';
+
+    /** Журнал: все запуски */
+    public const LOG_ALL = 'all';
+    /** Журнал: ошибки и последний успешный запуск — для частых задач */
+    public const LOG_FAILURES = 'failures';
 
     /** Маршрут консоли «контроллер/действие» (до четырёх частей) из строчных букв, цифр и дефисов */
     private const ROUTE_PATTERN = '~^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*){1,3}$~';
@@ -61,7 +71,9 @@ class CronTask extends ActiveRecord
             [['enabled'], 'boolean'],
             [['enabled'], 'default', 'value' => 1],
             [['timeout'], 'default', 'value' => 600],
-            [['timeout'], 'integer', 'min' => 10, 'max' => 86400],
+            [['timeout'], 'integer', 'min' => 0, 'max' => 86400],
+            [['log_mode'], 'default', 'value' => self::LOG_ALL],
+            [['log_mode'], 'in', 'range' => [self::LOG_ALL, self::LOG_FAILURES]],
             [['command'], 'validateCommand'],
             [['schedule'], 'validateSchedule'],
         ];
@@ -75,7 +87,16 @@ class CronTask extends ActiveRecord
             'schedule' => 'Расписание',
             'enabled' => 'Включена',
             'timeout' => 'Лимит времени, секунд',
+            'log_mode' => 'Журнал',
         ];
+    }
+
+    /**
+     * Задача задана в коде проекта: расписание и команду из админки не меняют, выключить и удалить нельзя.
+     */
+    public function isFromCode(): bool
+    {
+        return (string) $this->code_key !== '';
     }
 
     public function validateCommand(string $attribute): void

@@ -12,6 +12,7 @@ use yii\helpers\Url;
 /* @var $alive bool */
 /* @var $crontabLine string */
 /* @var $failedToday int */
+/* @var $codeErrors string[] */
 
 $this->title = 'Планировщик';
 $this->params['breadcrumbs'][] = $this->title;
@@ -58,6 +59,18 @@ $statusLabels = [
         </div>
     <?php endif; ?>
 
+    <?php if ($codeErrors !== []) : ?>
+        <div class="cr-card cr-setup">
+            <div class="cr-card__title">В описании задач из кода есть ошибки</div>
+            <p class="cr-text">Эти задачи пропущены, пока описание не исправят в коде проекта (настройка <code>cronTasks</code> модуля):</p>
+            <ul class="cr-errors">
+                <?php foreach ($codeErrors as $error) : ?>
+                    <li><?= Html::encode($error) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
+
     <?php if ($tasks === []) : ?>
         <div class="cr-card cr-empty">
             <div class="cr-card__title">Задач пока нет</div>
@@ -74,6 +87,9 @@ $statusLabels = [
                 <div class="cr-card cr-task<?= $task->enabled ? '' : ' is-off' ?>">
                     <div class="cr-task__main">
                         <a class="cr-task__name" href="<?= Url::to(['update', 'id' => $task->id]) ?>"><?= Html::encode($task->name) ?></a>
+                        <?php if ($task->isFromCode()) : ?>
+                            <span class="cr-chip cr-chip--code" title="Расписание задано в коде проекта: меняется в коде и выкладкой">из кода</span>
+                        <?php endif; ?>
                         <code class="cr-task__command">php yii <?= Html::encode($task->command) ?></code>
                         <div class="cr-task__schedule">
                             <i class="icon-clock" aria-hidden="true"></i>
@@ -124,11 +140,13 @@ $statusLabels = [
                                 <i class="icon-play" aria-hidden="true"></i> Запустить
                             </button>
                         </form>
-                        <form method="post" action="<?= Url::to(['toggle', 'id' => $task->id]) ?>">
-                            <?= $csrf ?>
-                            <button type="submit" class="cr-btn"><?= $task->enabled ? 'Выключить' : 'Включить' ?></button>
-                        </form>
-                        <a class="cr-btn" href="<?= Url::to(['update', 'id' => $task->id]) ?>">Журнал и настройки</a>
+                        <?php if (!$task->isFromCode()) : ?>
+                            <form method="post" action="<?= Url::to(['toggle', 'id' => $task->id]) ?>">
+                                <?= $csrf ?>
+                                <button type="submit" class="cr-btn"><?= $task->enabled ? 'Выключить' : 'Включить' ?></button>
+                            </form>
+                        <?php endif; ?>
+                        <a class="cr-btn" href="<?= Url::to(['update', 'id' => $task->id]) ?>"><?= $task->isFromCode() ? 'Журнал' : 'Журнал и настройки' ?></a>
                     </div>
                 </div>
             <?php endforeach; ?>
